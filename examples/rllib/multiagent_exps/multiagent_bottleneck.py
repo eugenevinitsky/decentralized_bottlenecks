@@ -330,7 +330,4 @@ if __name__ == '__main__':
     if args.use_s3:
         exp_dict['upload_dir'] = s3_string
 
-    if args.multi_node:
-        run(**exp_dict, queue_trials=True)
-    else:
-        run(**exp_dict, queue_trials=False)
+    run(**exp_dict, queue_trials=False)
