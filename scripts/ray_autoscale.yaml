@@ -82,7 +82,7 @@ setup_commands:
     - cd ~/flow && git fetch cdc_bottlenecks && git checkout cdc_bottlenecks/flow_merge
     # set up ray by pip installing and copying over rllib and tune folder
     - pip install --upgrade pyzmq notebook
-    - pip install ray==0.7.3
+    - pip install -r ~/flow/requirements.txt
 
 # Custom commands that will be run on the head node after common setup.
 head_setup_commands: []

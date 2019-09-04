@@ -470,14 +470,14 @@ class TraCIVehicle(KernelVehicle):
         if len(self._arrived_ids) > 0:
             return self._arrived_ids[-1]
         else:
-            return 0
+            return []
 
     def get_departed_ids(self):
         """See parent class."""
         if len(self._departed_ids) > 0:
             return self._departed_ids[-1]
         else:
-            return 0
+            return []
 
     def get_speed(self, veh_id, error=-1001):
         """See parent class."""

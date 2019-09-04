@@ -138,6 +138,10 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 agg_statistics = self.aggregate_statistics()
                 veh_info = {rl_id: np.concatenate((val, agg_statistics))
                                      for rl_id, val in veh_info.items()}
+            # Go through the human drivers and add zeros if the vehicles have left as a final observation
+            left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
+                                  in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
+            veh_info.update(left_vehicles_dict)
 
             return veh_info
 
