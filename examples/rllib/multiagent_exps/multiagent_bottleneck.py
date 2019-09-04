@@ -40,7 +40,7 @@ def setup_rllib_params(args):
     # number of parallel workers
     n_cpus = args.n_cpus
     # number of rollouts per training iteration scaled by how many sets of rollouts per iter we want
-    n_rollouts = args.n_cpus * args.rollout_scale_factor
+    n_rollouts = int(args.n_cpus * args.rollout_scale_factor)
     return {'horizon': horizon, 'n_cpus': n_cpus, 'n_rollouts': n_rollouts}
 
 
@@ -281,12 +281,12 @@ if __name__ == '__main__':
     parser.add_argument("--checkpoint_freq", type=int, default=50)
     parser.add_argument("--num_samples", type=int, default=1)
     parser.add_argument("--grid_search", action='store_true')
-    parser.add_argument('--rollout_scale_factor', type=int, default=1, help='the total number of rollouts is'
+    parser.add_argument('--rollout_scale_factor', type=float, default=1.0, help='the total number of rollouts is'
                                                                             'args.n_cpus * rollout_scale_factor')
 
     # arguments for flow
     parser.add_argument('--render', action='store_true', help='Show sumo-gui of results')
-    parser.add_argument('--horizon', type=int, default=2000, help='Horizon of the environment')
+    parser.add_argument('--horizon', type=int, default=500, help='Horizon of the environment')
     parser.add_argument('--av_frac', type=float, default=0.1, help='What fraction of the vehicles should be autonomous')
     parser.add_argument('--scaling', type=int, default=1, help='How many lane should we start with. Value of 1 -> 4, '
                                                                '2 -> 8, etc.')

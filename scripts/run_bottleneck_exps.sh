@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ray exec ray_autoscale.yaml \
 "python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py MA_NLC_NCM_NLSTM_NAG_NCN --num_iters 350 --checkpoint_freq 1 \
-    --num_samples 2 --grid_search --n_cpus 30 --multi_node --use_s3" \
+    --num_samples 2 --grid_search --n_cpus 30 --use_s3 --rollout_scale_factor 0.25" \
     --start --stop --cluster-name exp1
 #
 #ray exec ray_autoscale.yaml \

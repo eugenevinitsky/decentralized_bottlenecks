@@ -76,10 +76,10 @@ worker_nodes:
 
     # Additional options in the boto docs.
 
-setup_commands: []
+setup_commands:
     # checkout your desired branch on all worker nodes
     - cd flow && git remote add cdc_bottlenecks https://github.com/eugenevinitsky/cdc_bottlenecks.git
-    - git fetch cdc_bottlenecks && git checkout cdc_bottlenecks/flow_merge && git pull
+    - cd ~/flow && git fetch cdc_bottlenecks && git checkout cdc_bottlenecks/flow_merge
     # set up ray by pip installing and copying over rllib and tune folder
     - pip install --upgrade pyzmq notebook
     - pip install ray==0.7.3
@@ -93,8 +93,7 @@ worker_setup_commands: []
 # Command to start ray on the head node. You don't need to change this.
 head_start_ray_commands:
     - ray stop
-    - ulimit -n 65536; ray start --head --redis-port=6379 --object-manager-port=8076 --autoscaling-config=~/ray_bootstrap_config.yaml
-      # --object-store-memory=80000000000
+    - ulimit -n 65536; ray start --head --redis-port=6379 --object-manager-port=8076 --autoscaling-config=~/ray_bootstrap_config.yaml --object-store-memory=80000000000
 # Command to start ray on worker nodes. You don't need to change this.
 worker_start_ray_commands:
     - ray stop
@@ -103,4 +102,4 @@ worker_start_ray_commands:
       ray start
       --redis-address=$RAY_HEAD_IP:6379
       --object-manager-port=8076
-      # --object-store-memory=80000000000
+      --object-store-memory=80000000000
