@@ -222,7 +222,7 @@ def setup_exps(args):
     # config['use_centralized_vf'] = tune.grid_search([True, False])
     # config['max_vf_agents'] = 140
     config['simple_optimizer'] = True
-    # config['vf_clip_param'] = 100
+    config['vf_clip_param'] = 100
 
     # Grid search things
     if args.grid_search:
@@ -286,7 +286,7 @@ if __name__ == '__main__':
 
     # arguments for flow
     parser.add_argument('--render', action='store_true', help='Show sumo-gui of results')
-    parser.add_argument('--horizon', type=int, default=500, help='Horizon of the environment')
+    parser.add_argument('--horizon', type=int, default=2000, help='Horizon of the environment')
     parser.add_argument('--av_frac', type=float, default=0.1, help='What fraction of the vehicles should be autonomous')
     parser.add_argument('--scaling', type=int, default=1, help='How many lane should we start with. Value of 1 -> 4, '
                                                                '2 -> 8, etc.')
@@ -330,4 +330,7 @@ if __name__ == '__main__':
     if args.use_s3:
         exp_dict['upload_dir'] = s3_string
 
-    run(**exp_dict, queue_trials=True)
+    if args.multi_node:
+        run(**exp_dict, queue_trials=True)
+    else:
+        run(**exp_dict, queue_trials=False)
