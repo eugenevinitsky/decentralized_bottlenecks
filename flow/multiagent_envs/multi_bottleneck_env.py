@@ -242,7 +242,12 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 if num_vehs > 30 * self.scaling:
                     penalty = (num_vehs - 30 * self.scaling) / 10.0
                     reward -= penalty
-            return {rl_id: reward for rl_id in self.k.vehicle.get_rl_ids()}
+            reward_dict = {rl_id: reward for rl_id in self.k.vehicle.get_rl_ids()}
+            # If a vehicle has left, just make sure to return a reward for it
+            left_vehicles_dict = {veh_id: 0 for veh_id
+                                  in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
+            reward_dict.update(left_vehicles_dict)
+            return reward_dict
         else:
             return {}
 
