@@ -80,6 +80,16 @@ class KernelSimulation(object):
         """
         raise NotImplementedError
 
+    def get_colliding_ids(self):
+        """Get the IDs of the vehicles that collided in the last time step.
+
+        Returns
+        -------
+        list of strings
+            List of IDs of the vehicles that were involved in the collision
+        """
+        raise NotImplementedError
+
     def close(self):
         """Close the current simulation instance."""
         raise NotImplementedError

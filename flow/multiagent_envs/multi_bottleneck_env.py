@@ -120,7 +120,10 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if add_params['centralized_obs']:
             rl_ids = self.k.vehicle.get_rl_ids()
             state = self.get_centralized_state()
-            return {rl_id: state for rl_id in rl_ids}
+            veh_info = {rl_id: state for rl_id in rl_ids}
+            left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
+                                  in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
+            veh_info.update(left_vehicles_dict)
         else:
             if self.env_params.additional_params.get('communicate', False):
                 veh_info = {rl_id: np.concatenate((self.state_util(rl_id),
@@ -143,7 +146,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                                   in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
             veh_info.update(left_vehicles_dict)
 
-            return veh_info
+        return veh_info
 
     def get_centralized_state(self):
         """See class definition."""
@@ -249,7 +252,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             reward_dict.update(left_vehicles_dict)
             return reward_dict
         else:
-            return {}
+            return {veh_id: 0 for veh_id
+                    in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
 
     def reset(self, new_inflow_rate=None):
         add_params = self.env_params.additional_params

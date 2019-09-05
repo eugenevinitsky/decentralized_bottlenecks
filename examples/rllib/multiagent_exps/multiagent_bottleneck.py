@@ -177,6 +177,7 @@ def setup_flow_params(args):
             warmup_steps=40,
             sims_per_step=1,
             horizon=args.horizon,
+            clip_actions=False,
             additional_params=additional_env_params,
         ),
 
@@ -217,10 +218,7 @@ def setup_exps(args):
     config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
     config['gamma'] = 0.999  # discount rate
     config['model'].update({'fcnet_hiddens': [64, 64]})
-    config['clip_actions'] = False
     config['horizon'] = args.horizon
-    # config['use_centralized_vf'] = tune.grid_search([True, False])
-    # config['max_vf_agents'] = 140
     config['simple_optimizer'] = True
     config['vf_clip_param'] = 100
 

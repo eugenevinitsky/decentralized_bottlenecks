@@ -67,6 +67,10 @@ class TraCISimulation(KernelSimulation):
         """See parent class."""
         return self.kernel_api.simulation.getStartingTeleportNumber() != 0
 
+    def get_colliding_ids(self):
+        """See parent class."""
+        return self.kernel_api.simulation.getStartingTeleportIDList()
+
     def start_simulation(self, scenario, sim_params):
         """Start a sumo simulation instance.
 

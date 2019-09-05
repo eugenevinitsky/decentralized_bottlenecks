@@ -106,6 +106,8 @@ class MultiEnv(MultiAgentEnv, Env):
 
             # stop collecting new simulation steps if there is a collision
             if crash:
+                self.crash_count += 1
+                print('there are {} crashes already'.format(self.crash_count))
                 break
 
             # render a frame

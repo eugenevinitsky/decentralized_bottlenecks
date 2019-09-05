@@ -174,6 +174,9 @@ class Env(*classdef):
         # store the initial vehicle ids
         self.initial_ids = deepcopy(scenario.vehicles.ids)
 
+        # the number of observed crashes
+        self.crash_count = 0
+
         # store the initial state of the vehicles kernel (needed for restarting
         # the simulation)
         self.k.vehicle.kernel_api = None
@@ -368,6 +371,7 @@ class Env(*classdef):
 
             # stop collecting new simulation steps if there is a collision
             if crash:
+                self.crash_count += 1
                 break
 
             # render a frame
