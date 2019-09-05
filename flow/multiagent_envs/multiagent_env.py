@@ -125,7 +125,7 @@ class MultiEnv(MultiAgentEnv, Env):
                 "**********************************************************"
             )
 
-            done['__all__'] = True
+            done['__all__'] = False
         else:
             done['__all__'] = False
         infos = {key: {} for key in states.keys()}
