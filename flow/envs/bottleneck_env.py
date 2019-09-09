@@ -8,6 +8,10 @@ Control through Deep-RL: Applications to Bottleneck Decongestion," IEEE
 Intelligent Transportation Systems Conference (ITSC), 2018.
 """
 
+from copy import deepcopy
+
+import numpy as np
+from gym.spaces.box import Box
 
 from flow.controllers.rlcontroller import RLController
 from flow.controllers.lane_change_controllers import SimLaneChangeController
@@ -15,11 +19,6 @@ from flow.controllers.routing_controllers import ContinuousRouter
 from flow.core.params import InFlows, NetParams
 from flow.core.params import SumoCarFollowingParams, SumoLaneChangeParams
 from flow.core.params import VehicleParams
-from copy import deepcopy
-
-import numpy as np
-from gym.spaces.box import Box
-
 from flow.core import rewards
 from flow.envs.base_env import Env
 
@@ -998,6 +997,14 @@ class DesiredVelocityEnv(BottleneckEnv):
                         net_params=net_params,
                         initial_config=self.initial_config,
                         traffic_lights=self.scenario.traffic_lights)
+                    # restart the sumo instance
+                    self.restart_simulation(
+                        sim_params=self.sim_params,
+                        render=self.sim_params.render)
+                    self.k.vehicle = deepcopy(self.initial_vehicles)
+                    self.k.vehicle.kernel_api = self.k.kernel_api
+                    self.k.vehicle.master_kernel = self.k
+
                     observation = super().reset()
 
                     # reset the timer to zero

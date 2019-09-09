@@ -15,9 +15,9 @@ parser : ArgumentParser
 import argparse
 import collections
 from datetime import datetime
+from functools import reduce
 import os
 import sys
-import time
 
 import gym
 import matplotlib
@@ -45,7 +45,8 @@ class DefaultMapping(collections.defaultdict):
         self[key] = value = self.default_factory(key)
         return value
 
-@ray.remote(num_cpus=1)
+
+@ray.remote()
 class BottleneckAgent(object):
     def __init__(self, args):
         # TODO(@evinitsky) pull this out so this part is only run once
@@ -169,7 +170,6 @@ class BottleneckAgent(object):
         mean_speed = []
         std_speed = []
 
-        steps = 0
         # keep track of the last 500 points of velocity data for lane 0
         # and 1 in edge 4
         velocity_arr = []
@@ -250,22 +250,17 @@ class BottleneckAgent(object):
                 reward_total += sum(reward.values())
             else:
                 reward_total += reward
-            steps += 1
+            k += 1
             obs = next_obs
 
-            outflow = vehicles.get_outflow_rate(500)
-            final_outflows.append(outflow)
-            inflow = vehicles.get_inflow_rate(500)
-            final_inflows.append(inflow)
-            outflow_arr = [inflow_rate, outflow]
-            if np.all(np.array(final_inflows) > 1e-5):
-                throughput_efficiency = [x / y for x, y in
-                                         zip(final_outflows, final_inflows)]
-            else:
-                throughput_efficiency = [0] * len(final_inflows)
-            mean_speed.append(np.mean(vel))
-            std_speed.append(np.std(vel))
-            return [outflow_arr, velocity_arr, mean_speed, std_speed, throughput_efficiency]
+        outflow = vehicles.get_outflow_rate(500)
+        final_outflows.append(outflow)
+        inflow = vehicles.get_inflow_rate(500)
+        final_inflows.append(inflow)
+        outflow_arr = [inflow_rate, outflow, outflow/inflow_rate]
+        mean_speed.append(np.mean(vel))
+        std_speed.append(np.std(vel))
+        return [outflow_arr, velocity_arr, mean_speed, std_speed]
 
 
 def create_parser():
@@ -333,112 +328,112 @@ if __name__ == '__main__':
     args = parser.parse_args()
     ray.init()
     inflow_grid = list(range(args.outflow_min, args.outflow_max + args.step_size,
-                             args.step_size))
+                             args.step_size)) * args.num_trials
     bottleneck_agent = BottleneckAgent.remote(args)
-    output = [bottleneck_agent.run_bottleneck.remote(inflow) for inflow in inflow_grid]
-    outflow_arr = [elem[0] for elem in ray.get(output)]
-    # velocity_arr = [elem[1] for elem in output]
-    # mean_speed = [elem[2] for elem in output]
-    # std_speed = [elem[3] for elem in output]
-    # throughput_efficiency = [elem[4] for elem in output]
-    #
-    # # parse out the returned results
-    #
-    # print('==== Summary of results ====')
-    #
-    # print('Average, std speed: {}, {}'.format(np.mean(mean_speed), np.std(
-    #     mean_speed)))
-    #
-    # # # Compute arrival rate of vehicles in the last 500 sec of the run
-    # # print('Outflow average, std: {}, {}'.format(np.mean(outflow_arr[1]),
-    # #                                     np.std(final_outflows)))
-    # #
-    # # # Compute departure rate of vehicles in the last 500 sec of the run
-    # # print("Inflows (veh/hr): {}".format(final_inflows))
-    # # print('Average, std: {}, {}'.format(np.mean(final_inflows),
-    # #                                     np.std(final_inflows)))
-    # #
-    # # # Compute throughput efficiency in the last 500 sec of the
-    # # print("Throughput efficiency (veh/hr): {}".format(throughput_efficiency))
-    # # print('Average, std: {}, {}'.format(np.mean(throughput_efficiency),
-    # #                                     np.std(throughput_efficiency)))
-    #
-    # # save the file
-    # output_path = os.path.abspath(os.path.join(
-    #     os.path.dirname(__file__), './trb_data'))
-    # filename = args.filename
-    # outflow_name = 'bottleneck_outflow_{}.txt'.format(filename)
-    # speed_name = 'speed_outflow_{}.txt'.format(filename)
-    # with open(os.path.join(output_path, outflow_name), 'ab') as file:
-    #     np.savetxt(file, outflow_arr, delimiter=', ')
-    # with open(os.path.join(output_path, speed_name), 'ab') as file:
-    #     np.savetxt(file, velocity_arr, delimiter=', ')
-    #
-    # # Plot the inflow results
-    # # open the file and pull from there
-    # unique_inflows = sorted(list(set(outflow_arr[:, 0])))
-    # inflows = outflow_arr[:, 0]
-    # outflows = outflow_arr[:, 1]
-    # sorted_outflows = {inflow: [] for inflow in unique_inflows}
-    #
-    # for inflow, outflow in zip(inflows, outflows):
-    #     sorted_outflows[inflow].append(outflow)
-    # mean_outflows = np.asarray([np.mean(sorted_outflows[inflow])
-    #                             for inflow in unique_inflows])
-    # std_outflows = np.asarray([np.std(sorted_outflows[inflow])
-    #                            for inflow in unique_inflows])
-    #
-    # plt.figure(figsize=(27, 9))
-    # plt.plot(unique_inflows, mean_outflows, linewidth=2, color='orange')
-    # plt.fill_between(unique_inflows, mean_outflows - std_outflows,
-    #                  mean_outflows + std_outflows, alpha=0.25, color='orange')
-    # plt.xlabel('Inflow' + r'$ \ \frac{vehs}{hour}$')
-    # plt.ylabel('Outflow' + r'$ \ \frac{vehs}{hour}$')
-    # plt.tick_params(labelsize=20)
-    # plt.rcParams['xtick.minor.size'] = 20
-    # plt.minorticks_on()
-    # plt.savefig(os.path.join(output_path, 'figures/outflow_{}'.format(filename)) + '.png')
-    #
-    # # plot the velocity results
-    # velocity_arr = np.asarray(velocity_arr)
-    # unique_inflows = sorted(list(set(velocity_arr[:, 0])))
-    # inflows = velocity_arr[:, 0]
-    # lane_0 = velocity_arr[:, 1]
-    # lane_1 = velocity_arr[:, 2]
-    # sorted_vels = {inflow: [] for inflow in unique_inflows}
-    #
-    # for inflow, vel_0, vel_1 in zip(inflows, lane_0, lane_1):
-    #     sorted_vels[inflow] += [vel_0, vel_1]
-    # mean_vels = np.asarray([np.mean(sorted_vels[inflow])
-    #                         for inflow in unique_inflows])
-    # std_vels = np.asarray([np.std(sorted_vels[inflow])
-    #                        for inflow in unique_inflows])
-    #
-    # plt.figure(figsize=(27, 9))
-    #
-    # plt.plot(unique_inflows, mean_vels, linewidth=2, color='orange')
-    # plt.fill_between(unique_inflows, mean_vels - std_vels,
-    #                  mean_vels + std_vels, alpha=0.25, color='orange')
-    # plt.xlabel('Inflow' + r'$ \ \frac{vehs}{hour}$')
-    # plt.ylabel('Velocity' + r'$ \ \frac{m}{s}$')
-    # plt.tick_params(labelsize=20)
-    # plt.rcParams['xtick.minor.size'] = 20
-    # plt.minorticks_on()
-    # plt.savefig(os.path.join(output_path, 'figures/speed_{}'.format(filename)) + '.png')
-    #
-    # # if we wanted to save the render, here we create the movie
-    # if args.save_render:
-    #     dirs = os.listdir(os.path.expanduser('~') + '/flow_rendering')
-    #     # Ignore hidden files
-    #     dirs = [d for d in dirs if d[0] != '.']
-    #     dirs.sort(key=lambda date: datetime.strptime(date, "%Y-%m-%d-%H%M%S"))
-    #     recent_dir = dirs[-1]
-    #     # create the movie
-    #     movie_dir = os.path.expanduser('~') + '/flow_rendering/' + recent_dir
-    #     save_dir = os.path.expanduser('~') + '/flow_movies'
-    #     if not os.path.exists(save_dir):
-    #         os.mkdir(save_dir)
-    #     os_cmd = "cd " + movie_dir + " && ffmpeg -i frame_%06d.png"
-    #     os_cmd += " -pix_fmt yuv420p " + dirs[-1] + ".mp4"
-    #     os_cmd += "&& cp " + dirs[-1] + ".mp4 " + save_dir + "/"
-    #     os.system(os_cmd)
+    temp_output = [bottleneck_agent.run_bottleneck.remote(inflow) for inflow in inflow_grid]
+    final_output = ray.get(temp_output)
+
+    outflow_arr = np.asarray([elem[0] for elem in final_output])
+    velocity_arr = reduce(lambda x, y: x + y, [elem[1] for elem in final_output])
+    mean_speed = reduce(lambda x, y: x + y,  [elem[2] for elem in final_output])
+    std_speed = reduce(lambda x, y: x + y, [elem[3] for elem in final_output])
+
+    # save the file
+    output_path = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), './trb_data'))
+    filename = args.filename
+    outflow_name = 'bottleneck_outflow_{}.txt'.format(filename)
+    speed_name = 'speed_outflow_{}.txt'.format(filename)
+    with open(os.path.join(output_path, outflow_name), 'ab') as file:
+        np.savetxt(file, outflow_arr, delimiter=', ')
+    with open(os.path.join(output_path, speed_name), 'ab') as file:
+        np.savetxt(file, velocity_arr, delimiter=', ')
+
+    # Plot the inflow results
+    # open the file and pull from there
+    unique_inflows = sorted(list(set(outflow_arr[:, 0])))
+    inflows = outflow_arr[:, 0]
+    outflows = outflow_arr[:, 1]
+    throughputs = outflow_arr[:, 2]
+    sorted_outflows = {inflow: [] for inflow in unique_inflows}
+    sorted_throughputs = {inflow: [] for inflow in unique_inflows}
+
+    for inflow, outflow, throughput in zip(inflows, outflows, throughputs):
+        sorted_outflows[inflow].append(outflow)
+        sorted_throughputs[inflow].append(throughput)
+    mean_outflows = np.asarray([np.mean(sorted_outflows[inflow])
+                                for inflow in unique_inflows])
+    std_outflows = np.asarray([np.std(sorted_outflows[inflow])
+                               for inflow in unique_inflows])
+    mean_throughputs = np.asarray([np.mean(sorted_throughputs[inflow])
+                                for inflow in unique_inflows])
+    std_throughputs = np.asarray([np.std(sorted_throughputs[inflow])
+                               for inflow in unique_inflows])
+
+
+    plt.figure(figsize=(27, 9))
+    plt.plot(unique_inflows, mean_outflows, linewidth=2, color='orange')
+    plt.fill_between(unique_inflows, mean_outflows - std_outflows,
+                     mean_outflows + std_outflows, alpha=0.25, color='orange')
+    plt.xlabel('Inflow' + r'$ \ \frac{vehs}{hour}$')
+    plt.ylabel('Outflow' + r'$ \ \frac{vehs}{hour}$')
+    plt.tick_params(labelsize=20)
+    plt.rcParams['xtick.minor.size'] = 20
+    plt.minorticks_on()
+    plt.savefig(os.path.join(output_path, 'figures/outflow_{}'.format(filename)) + '.png')
+
+    # plot the velocity results
+    velocity_arr = np.asarray(velocity_arr)
+    unique_inflows = sorted(list(set(velocity_arr[:, 0])))
+    inflows = velocity_arr[:, 0]
+    lane_0 = velocity_arr[:, 1]
+    lane_1 = velocity_arr[:, 2]
+    sorted_vels = {inflow: [] for inflow in unique_inflows}
+
+    for inflow, vel_0, vel_1 in zip(inflows, lane_0, lane_1):
+        sorted_vels[inflow] += [vel_0, vel_1]
+    mean_vels = np.asarray([np.mean(sorted_vels[inflow])
+                            for inflow in unique_inflows])
+    std_vels = np.asarray([np.std(sorted_vels[inflow])
+                           for inflow in unique_inflows])
+
+    plt.figure(figsize=(27, 9))
+
+    plt.plot(unique_inflows, mean_vels, linewidth=2, color='orange')
+    plt.fill_between(unique_inflows, mean_vels - std_vels,
+                     mean_vels + std_vels, alpha=0.25, color='orange')
+    plt.xlabel('Inflow' + r'$ \ \frac{vehs}{hour}$')
+    plt.ylabel('Velocity' + r'$ \ \frac{m}{s}$')
+    plt.tick_params(labelsize=20)
+    plt.rcParams['xtick.minor.size'] = 20
+    plt.minorticks_on()
+    plt.savefig(os.path.join(output_path, 'figures/speed_{}'.format(filename)) + '.png')
+
+    # Plot the throughput results
+    plt.figure(figsize=(27, 9))
+    plt.plot(unique_inflows, mean_throughputs, linewidth=2, color='orange')
+    plt.fill_between(unique_inflows, mean_throughputs - std_throughputs,
+                     mean_throughputs + std_throughputs, alpha=0.25, color='orange')
+    plt.xlabel('Inflow' + r'$ \ \frac{vehs}{hour}$')
+    plt.ylabel('Throughput' + r'$ \ \frac{vehs}{hour}$')
+    plt.tick_params(labelsize=20)
+    plt.rcParams['xtick.minor.size'] = 20
+    plt.minorticks_on()
+    plt.savefig(os.path.join(output_path, 'figures/throughput_{}'.format(filename)) + '.png')
+
+    # if we wanted to save the render, here we create the movie
+    if args.save_render:
+        dirs = os.listdir(os.path.expanduser('~') + '/flow_rendering')
+        # Ignore hidden files
+        dirs = [d for d in dirs if d[0] != '.']
+        dirs.sort(key=lambda date: datetime.strptime(date, "%Y-%m-%d-%H%M%S"))
+        recent_dir = dirs[-1]
+        # create the movie
+        movie_dir = os.path.expanduser('~') + '/flow_rendering/' + recent_dir
+        save_dir = os.path.expanduser('~') + '/flow_movies'
+        if not os.path.exists(save_dir):
+            os.mkdir(save_dir)
+        os_cmd = "cd " + movie_dir + " && ffmpeg -i frame_%06d.png"
+        os_cmd += " -pix_fmt yuv420p " + dirs[-1] + ".mp4"
+        os_cmd += "&& cp " + dirs[-1] + ".mp4 " + save_dir + "/"
+        os.system(os_cmd)

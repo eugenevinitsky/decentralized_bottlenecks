@@ -4,6 +4,8 @@ This environment was used in:
 TODO(ak): add paper after it has been published.
 """
 
+from copy import deepcopy
+
 from flow.controllers.rlcontroller import RLController
 from flow.controllers.routing_controllers import ContinuousRouter
 from flow.controllers.lane_change_controllers import SimLaneChangeController
@@ -338,6 +340,15 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     self.scenario = self.scenario.__class__(
                         self.scenario.orig_name, vehicles,
                         net_params, self.scenario.initial_config)
+                    self.k.vehicle = deepcopy(self.initial_vehicles)
+                    self.k.vehicle.kernel_api = self.k.kernel_api
+                    self.k.vehicle.master_kernel = self.k
+
+                    # restart the sumo instance
+                    self.restart_simulation(
+                        sim_params=self.sim_params,
+                        render=self.sim_params.render)
+
                     observation = super().reset()
 
                     # reset the timer to zero
