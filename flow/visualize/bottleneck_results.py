@@ -46,7 +46,7 @@ class DefaultMapping(collections.defaultdict):
         return value
 
 
-@ray.remote()
+@ray.remote
 class BottleneckAgent(object):
     def __init__(self, args):
         # TODO(@evinitsky) pull this out so this part is only run once
