@@ -237,23 +237,19 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             else:
                 return 0
 
-        if rl_actions:
-            reward = self.k.vehicle.get_outflow_rate(10 * self.sim_step) / \
-                     (2000.0 * self.scaling) - 3
-            if self.env_params.additional_params["congest_penalty"]:
-                num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
-                if num_vehs > 30 * self.scaling:
-                    penalty = (num_vehs - 30 * self.scaling) / 10.0
-                    reward -= penalty
-            reward_dict = {rl_id: reward for rl_id in self.k.vehicle.get_rl_ids()}
-            # If a vehicle has left, just make sure to return a reward for it
-            left_vehicles_dict = {veh_id: 0 for veh_id
-                                  in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
-            reward_dict.update(left_vehicles_dict)
-            return reward_dict
-        else:
-            return {veh_id: 0 for veh_id
-                    in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
+        reward = self.k.vehicle.get_outflow_rate(10 * self.sim_step) / \
+                 (2000.0 * self.scaling) - 3
+        if self.env_params.additional_params["congest_penalty"]:
+            num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
+            if num_vehs > 30 * self.scaling:
+                penalty = (num_vehs - 30 * self.scaling) / 10.0
+                reward -= penalty
+        reward_dict = {rl_id: reward for rl_id in self.k.vehicle.get_rl_ids()}
+        # If a vehicle has left, just make sure to return a reward for it
+        left_vehicles_dict = {veh_id: 0 for veh_id
+                              in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
+        reward_dict.update(left_vehicles_dict)
+        return reward_dict
 
     def reset(self, new_inflow_rate=None):
         add_params = self.env_params.additional_params
