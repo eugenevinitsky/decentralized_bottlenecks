@@ -147,8 +147,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
                                   in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
             veh_info.update(left_vehicles_dict)
-            veh_info = {key: np.clip(self.observation_space.low, self.observation_space.high, value) for
-                        key, value in veh_info.items()}
+        veh_info = {key: np.clip(self.observation_space.low, self.observation_space.high, value) for
+                    key, value in veh_info.items()}
 
         return veh_info
 
