@@ -341,6 +341,10 @@ if __name__ == '__main__':
     # save the file
     output_path = os.path.abspath(os.path.join(
         os.path.dirname(__file__), './trb_data'))
+    output_path = os.path.join(output_path, datetime.now().strftime("%m-%d-%Y"))
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+        os.makedirs(os.path.join(output_path, 'figures'))
     filename = args.filename
     outflow_name = 'bottleneck_outflow_{}.txt'.format(filename)
     speed_name = 'speed_outflow_{}.txt'.format(filename)
