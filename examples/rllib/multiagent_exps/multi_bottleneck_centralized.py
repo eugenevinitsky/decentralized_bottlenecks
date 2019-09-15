@@ -29,10 +29,13 @@ if __name__ == "__main__":
     ModelCatalog.register_custom_model("cc_model", CentralizedCriticModel)
 
     parser = get_multiagent_bottleneck_parser()
+    parser.add_argument('--central_vf_size', type=int, default=64, help='The number of hidden units in '
+                                                                      'the value function')
     args = parser.parse_args()
 
     alg_run, env_name, config = setup_exps(args)
     config['model']['custom_model'] = "cc_model"
+    config['model']['custom_options']['central_vf_size'] = args.central_vf_size
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:

@@ -41,7 +41,7 @@ parser.add_argument("--stop", type=int, default=100000)
 
 class CentralizedCriticModel(TFModelV2):
     """Multi-agent model that implements a centralized VF."""
-    # TODO(@evinitsky) make this work with more than tuples
+    # TODO(@evinitsky) make this work with more than boxes
 
     def __init__(self, obs_space, action_space, num_outputs, model_config,
                  name):
@@ -57,7 +57,7 @@ class CentralizedCriticModel(TFModelV2):
         self.obs_space_shape = obs_space.shape[0]
         other_obs = tf.keras.layers.Input(shape=(obs_space.shape[0] * self.max_num_agents, ), name="opp_obs")
         central_vf_dense = tf.keras.layers.Dense(
-            model_config.get("central_vf_size", 16), activation=tf.nn.tanh, name="c_vf_dense")(other_obs)
+            model_config.get("central_vf_size", 64), activation=tf.nn.tanh, name="c_vf_dense")(other_obs)
         central_vf_out = tf.keras.layers.Dense(
             1, activation=None, name="c_vf_out")(central_vf_dense)
         self.central_vf = tf.keras.Model(
