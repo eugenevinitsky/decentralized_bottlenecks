@@ -117,7 +117,6 @@ def run_bottleneck(args, inflow_rate, num_trials):
     # Start the environment with the gui turned on and a path for the
     # emission file
     env_params = flow_params['env']
-    sim_params.restart_instance = False
     if args.evaluate:
         env_params.evaluate = True
 
@@ -336,7 +335,7 @@ if __name__ == '__main__':
 
     # save the file
     output_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), './trb_data'))
+        os.path.dirname(__file__), './trb_data/av_results'))
     output_path = os.path.join(output_path, datetime.now().strftime("%m-%d-%Y"))
     if not os.path.exists(output_path):
         os.makedirs(output_path)
