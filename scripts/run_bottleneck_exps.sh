@@ -55,6 +55,8 @@
 #    --num_samples 2 --grid_search --n_cpus 8 --use_s3 --aggregate_info --rollout_scale_factor 1.0 --horizon 2000 --congest_penalty" \
 #    --start --stop --cluster-name exp3 --tmux
 
+####################################################################################################################################################
+####################################################################################################################################################
 # 9/15/19 experiments with centralized vf
 ray exec ray_autoscale.yaml \
 "python flow/examples/rllib/multiagent_exps/multi_bottleneck_centralized.py MA_NLC_NCM_NLSTM_NAG_CN_CVF --num_iters 350 --checkpoint_freq 50 \
@@ -63,5 +65,5 @@ ray exec ray_autoscale.yaml \
 
 ray exec ray_autoscale.yaml \
 "python flow/examples/rllib/multiagent_exps/multi_bottleneck_centralized.py MA_NLC_NCM_NLSTM_AG_NCN_CVF --num_iters 350 --checkpoint_freq 50 \
-    --num_samples 2 --grid_search --n_cpus 8 --use_s3 --aggregate_info --rollout_scale_factor 1.0 --horizon 2000 -central_vf_size 64" \
+    --num_samples 2 --grid_search --n_cpus 8 --use_s3 --aggregate_info --rollout_scale_factor 1.0 --horizon 2000 --central_vf_size 64" \
     --start --stop --cluster-name exp3 --tmux

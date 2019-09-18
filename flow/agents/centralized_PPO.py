@@ -269,7 +269,6 @@ def setup_mixins(policy, obs_space, action_space, config):
 
 def central_vf_stats(policy, train_batch, grads):
     # Report the explained variance of the central value function.
-    #TODO(@evinitsky) do I still need to add the centralized value function
     return {
         "vf_explained_var": explained_variance(
             train_batch[Postprocessing.VALUE_TARGETS],
