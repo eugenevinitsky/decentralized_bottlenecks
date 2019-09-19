@@ -269,6 +269,7 @@ def create_parser():
         'result_dir', type=str, help='Directory containing results')
     parser.add_argument('checkpoint_num', type=str, help='Checkpoint number.')
     parser.add_argument('filename', type=str, help='Specifies the filename to output the results into.')
+    parser.add_argument('cluster_mode', action='store_true', help='Specifies if we run it on a cluster')
 
     # optional input parameters
     parser.add_argument(
@@ -336,7 +337,10 @@ if __name__ == '__main__':
     # save the file
     output_path = os.path.abspath(os.path.join(
         os.path.dirname(__file__), './trb_data/av_results'))
-    output_path = os.path.join(output_path, datetime.now().strftime("%m-%d-%Y"))
+    if args.cluster_mode:
+        output_path = os.path.join(output_path, 'tmp')
+    else:
+        output_path = os.path.join(output_path, datetime.now().strftime("%m-%d-%Y"))
     if not os.path.exists(output_path):
         os.makedirs(output_path)
         os.makedirs(os.path.join(output_path, 'figures'))
