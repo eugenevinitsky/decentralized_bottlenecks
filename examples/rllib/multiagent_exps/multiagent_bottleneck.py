@@ -110,7 +110,7 @@ def setup_flow_params(args):
         'lane_change_duration': 5,
         'max_accel': 3,
         'max_decel': 3,
-        'inflow_range': [800, 2000],
+        'inflow_range': [args.low_inflow, args.high_inflow],
         'start_inflow': flow_rate,
         'congest_penalty': args.congest_penalty,
         'communicate': args.communicate,
@@ -167,7 +167,7 @@ def setup_flow_params(args):
 
         # sumo-related parameters (see flow.core.params.SumoParams)
         sim=SumoParams(
-            sim_step=0.5,
+            sim_step=args.sim_step,
             render=args.render,
             print_warnings=False,
             restart_instance=True,

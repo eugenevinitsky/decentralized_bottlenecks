@@ -10,7 +10,7 @@ ray exec ray_autoscale.yaml "aws s3 sync s3://eugene.experiments/trb_bottleneck_
 \
 python flow/flow/visualize/bottleneck_results.py ~/$startdate/\
 MA_NLC_NCM_NLSTM_AG_NCN_CVF/MA_NLC_NCM_NLSTM_AG_NCN_CVF/CCPPOTrainer_MultiBottleneckEnv-v0_0_lr=5e-05_2019-09-15_21-56-18m90fb4uj 350 MA_NLC_NCM_NLSTM_AG_NCN_CVF \
---num_trials 10 --outflow_min 400 --outflow_max 500 --cluster_mode ; \
+--num_trials 1 --outflow_min 400 --outflow_max 500  --cluster_mode ; \
 \
 mkdir -p ~/flow/flow/visualize/trb_data/av_results/$startdate ; \
 \

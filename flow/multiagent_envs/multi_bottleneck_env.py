@@ -122,8 +122,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if add_params['centralized_obs']:
             rl_ids = self.k.vehicle.get_rl_ids()
             state = self.get_centralized_state()
-            veh_info = {rl_id: np.concatenate(state, self.k.vehicle.get_speed(rl_id), self.k.vehicle.get_headway(rl_id))
-                        for rl_id in rl_ids}
+            veh_info = {rl_id: np.concatenate((state, [self.k.vehicle.get_speed(rl_id)/100.0],
+                                               [self.k.vehicle.get_headway(rl_id)/1000.0])) for rl_id in rl_ids}
             left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
                                   in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
             veh_info.update(left_vehicles_dict)
