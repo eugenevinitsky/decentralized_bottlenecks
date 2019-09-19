@@ -269,7 +269,6 @@ def create_parser():
         'result_dir', type=str, help='Directory containing results')
     parser.add_argument('checkpoint_num', type=str, help='Checkpoint number.')
     parser.add_argument('filename', type=str, help='Specifies the filename to output the results into.')
-    parser.add_argument('cluster_mode', action='store_true', help='Specifies if we run it on a cluster')
 
     # optional input parameters
     parser.add_argument(
@@ -316,6 +315,8 @@ def create_parser():
     parser.add_argument('--num_trials', type=int, default=20, help='How many samples of each inflow to take')
     parser.add_argument('--end_len', type=int, default=500, help='How many last seconds of the run to use for '
                                                                  'calculating the outflow statistics')
+    parser.add_argument('--cluster_mode', action='store_true', help='Specifies if we run it on a cluster')
+
     return parser
 
 

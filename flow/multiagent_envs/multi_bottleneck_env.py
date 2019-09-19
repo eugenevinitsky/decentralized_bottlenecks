@@ -75,11 +75,11 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if add_params['centralized_obs']:
             num_obs = 0
             # density and velocity for rl and non-rl vehicles per segment
-            # Last element is the outflow and inflow
+            # Last element is the outflow and inflow and the vehicles speed and headway
             for segment in self.obs_segments:
                 num_obs += 4 * segment[1] * \
                            self.k.scenario.num_lanes(segment[0])
-            num_obs += 2
+            num_obs += 4
             return Box(low=-3.0, high=3.0, shape=(num_obs,), dtype=np.float32)
         else:
             if self.env_params.additional_params.get('communicate', False):
@@ -122,7 +122,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if add_params['centralized_obs']:
             rl_ids = self.k.vehicle.get_rl_ids()
             state = self.get_centralized_state()
-            veh_info = {rl_id: state for rl_id in rl_ids}
+            veh_info = {rl_id: np.concatenate(state, self.k.vehicle.get_speed(rl_id), self.k.vehicle.get_headway(rl_id))
+                        for rl_id in rl_ids}
             left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
                                   in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
             veh_info.update(left_vehicles_dict)
