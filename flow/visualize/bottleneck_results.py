@@ -161,12 +161,12 @@ def run_bottleneck(args, inflow_rate, num_trials):
     final_inflows = []
     mean_speed = []
     std_speed = []
+    final_rewards = []
 
     # keep track of the last 500 points of velocity data for lane 0
     # and 1 in edge 4
     velocity_arr = []
     vel = []
-    obs = env.reset(inflow_rate)
     mapping_cache = {}  # in case policy_agent_mapping is stochastic
 
     for j in range(num_trials):
@@ -177,6 +177,7 @@ def run_bottleneck(args, inflow_rate, num_trials):
         prev_rewards = collections.defaultdict(lambda: 0.)
         done = False
         reward_total = 0.0
+        obs = env.reset(inflow_rate)
         k = 0
         while k < env_params.horizon and not done:
             vehicles = env.unwrapped.k.vehicle
@@ -255,7 +256,8 @@ def run_bottleneck(args, inflow_rate, num_trials):
         outflow_arr.append([inflow_rate, outflow, outflow/inflow_rate])
         mean_speed.append(np.mean(vel))
         std_speed.append(np.std(vel))
-    return [outflow_arr, velocity_arr, mean_speed, std_speed]
+        final_rewards.append([inflow, reward_total])
+    return [outflow_arr, velocity_arr, mean_speed, std_speed, final_rewards]
 
 
 def create_parser():
@@ -309,6 +311,7 @@ def create_parser():
         '--horizon',
         type=int,
         help='Specifies the horizon.')
+    parser.add_argument('--num_cpus', type=int, default=1, help='how many cpus to run ray with')
     parser.add_argument('--outflow_min', type=int, default=400, help='Lowest inflow to evaluate over')
     parser.add_argument('--outflow_max', type=int, default=2500, help='Lowest inflow to evaluate over')
     parser.add_argument('--step_size', type=int, default=100, help='The size of increments to sweep over inflow in')
@@ -323,7 +326,7 @@ def create_parser():
 if __name__ == '__main__':
     parser = create_parser()
     args = parser.parse_args()
-    ray.init()
+    ray.init(num_cpus=args.num_cpus)
     inflow_grid = list(range(args.outflow_min, args.outflow_max + args.step_size,
                              args.step_size))
     temp_output = [run_bottleneck.remote(args, inflow, args.num_trials) for inflow in inflow_grid]
@@ -334,6 +337,7 @@ if __name__ == '__main__':
     velocity_arr = reduce(lambda x, y: x + y, [elem[1] for elem in final_output])
     mean_speed = reduce(lambda x, y: x + y,  [elem[2] for elem in final_output])
     std_speed = reduce(lambda x, y: x + y, [elem[3] for elem in final_output])
+    final_rewards = np.asarray(reduce(lambda x, y: x + y, [elem[4] for elem in final_output]))
 
     # save the file
     output_path = os.path.abspath(os.path.join(
@@ -361,10 +365,12 @@ if __name__ == '__main__':
     throughputs = outflow_arr[:, 2]
     sorted_outflows = {inflow: [] for inflow in unique_inflows}
     sorted_throughputs = {inflow: [] for inflow in unique_inflows}
+    sorted_rewards = {inflow: [] for inflow in unique_inflows}
 
-    for inflow, outflow, throughput in zip(inflows, outflows, throughputs):
+    for inflow, outflow, throughput, final_reward in zip(inflows, outflows, throughputs, final_rewards[:, 1]):
         sorted_outflows[inflow].append(outflow)
         sorted_throughputs[inflow].append(throughput)
+        sorted_rewards[inflow].append(final_reward)
     mean_outflows = np.asarray([np.mean(sorted_outflows[inflow])
                                 for inflow in unique_inflows])
     std_outflows = np.asarray([np.std(sorted_outflows[inflow])
@@ -372,6 +378,11 @@ if __name__ == '__main__':
     mean_throughputs = np.asarray([np.mean(sorted_throughputs[inflow])
                                 for inflow in unique_inflows])
     std_throughputs = np.asarray([np.std(sorted_throughputs[inflow])
+                               for inflow in unique_inflows])
+
+    mean_rewards = np.asarray([np.mean(sorted_rewards[inflow])
+                                for inflow in unique_inflows])
+    std_rewards = np.asarray([np.std(sorted_rewards[inflow])
                                for inflow in unique_inflows])
 
 
@@ -424,6 +435,18 @@ if __name__ == '__main__':
     plt.rcParams['xtick.minor.size'] = 20
     plt.minorticks_on()
     plt.savefig(os.path.join(output_path, 'figures/throughput_{}'.format(filename)) + '.png')
+
+    # Plot the throughput results
+    plt.figure(figsize=(27, 9))
+    plt.plot(unique_inflows, mean_rewards, linewidth=2, color='orange')
+    plt.fill_between(unique_inflows, mean_rewards - std_rewards,
+                     mean_rewards + std_rewards, alpha=0.25, color='orange')
+    plt.xlabel('Inflow' + r'$ \ \frac{vehs}{hour}$')
+    plt.ylabel('Rewards' + r'$ \ \frac{vehs}{hour}$')
+    plt.tick_params(labelsize=20)
+    plt.rcParams['xtick.minor.size'] = 20
+    plt.minorticks_on()
+    plt.savefig(os.path.join(output_path, 'figures/rewards_{}'.format(filename)) + '.png')
 
     # if we wanted to save the render, here we create the movie
     if args.save_render:
