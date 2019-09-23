@@ -161,7 +161,8 @@ def run_bottleneck(args, inflow_rate, num_trials):
     final_inflows = []
     mean_speed = []
     std_speed = []
-    final_rewards = []
+    mean_rewards = []
+    per_agent_rew = collections.defaultdict(lambda: 0.0)
 
     # keep track of the last 500 points of velocity data for lane 0
     # and 1 in edge 4
@@ -174,7 +175,7 @@ def run_bottleneck(args, inflow_rate, num_trials):
             lambda agent_id: state_init[mapping_cache[agent_id]])
         prev_actions = DefaultMapping(
             lambda agent_id: action_init[mapping_cache[agent_id]])
-        prev_rewards = collections.defaultdict(lambda: 0.)
+        prev_rewards = collections.defaultdict(lambda: 0.0)
         done = False
         reward_total = 0.0
         obs = env.reset(inflow_rate)
@@ -237,6 +238,7 @@ def run_bottleneck(args, inflow_rate, num_trials):
             if multiagent:
                 for agent_id, r in reward.items():
                     prev_rewards[agent_id] = r
+                    per_agent_rew[agent_id] += r
             else:
                 prev_rewards[_DUMMY_AGENT_ID] = reward
 
@@ -256,8 +258,8 @@ def run_bottleneck(args, inflow_rate, num_trials):
         outflow_arr.append([inflow_rate, outflow, outflow/inflow_rate])
         mean_speed.append(np.mean(vel))
         std_speed.append(np.std(vel))
-        final_rewards.append([inflow, reward_total])
-    return [outflow_arr, velocity_arr, mean_speed, std_speed, final_rewards]
+        mean_rewards.append([inflow, np.mean(list(per_agent_rew.values()))])
+    return [outflow_arr, velocity_arr, mean_speed, std_speed, mean_rewards]
 
 
 def create_parser():
@@ -442,7 +444,7 @@ if __name__ == '__main__':
     plt.fill_between(unique_inflows, mean_rewards - std_rewards,
                      mean_rewards + std_rewards, alpha=0.25, color='orange')
     plt.xlabel('Inflow' + r'$ \ \frac{vehs}{hour}$')
-    plt.ylabel('Rewards' + r'$ \ \frac{vehs}{hour}$')
+    plt.ylabel('Mean per-AV Rewards' + r'$ \ \frac{vehs}{hour}$')
     plt.tick_params(labelsize=20)
     plt.rcParams['xtick.minor.size'] = 20
     plt.minorticks_on()

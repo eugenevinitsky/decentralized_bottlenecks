@@ -217,10 +217,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
     def _apply_rl_actions(self, rl_actions):
         """
-        RL actions are split up into 3 levels.
-        First, they're split into edge actions.
-        Then they're split into segment actions.
-        Then they're split into lane actions.
+        Per-vehicle accelerations
         """
         if rl_actions:
             rl_ids = list(rl_actions.keys())
