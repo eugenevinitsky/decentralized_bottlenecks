@@ -75,44 +75,44 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if add_params['centralized_obs']:
             num_obs = 0
             # density and velocity for rl and non-rl vehicles per segment
-            # Last element is the outflow and inflow
+            # Last element is the outflow and inflow and the vehicles speed and headway, edge id, lane, edge pos
             for segment in self.obs_segments:
                 num_obs += 4 * segment[1] * \
                            self.k.scenario.num_lanes(segment[0])
-            num_obs += 2
+            num_obs += 7
             return Box(low=-3.0, high=3.0, shape=(num_obs,), dtype=np.float32)
         else:
-            if self.env_params.additional_params.get('communicate', False):
+            if self.env_params.additional_params['communicate']:
                 # eight possible signals if above
                 if self.env_params.additional_params.get('aggregate_info'):
                     return Box(low=-3.0, high=3.0,
-                               shape=(6 * MAX_LANES * self.scaling + 17,),
+                               shape=(6 * MAX_LANES * self.scaling + 19,),
                                dtype=np.float32)
                 else:
                     return Box(low=-3.0, high=3.0,
-                               shape=(6 * MAX_LANES * self.scaling + 11,),
+                               shape=(6 * MAX_LANES * self.scaling + 13,),
                                dtype=np.float32)
             else:
                 if self.env_params.additional_params.get('aggregate_info'):
                     return Box(low=-3.0, high=3.0,
-                               shape=(6 * MAX_LANES * self.scaling + 9,),
+                               shape=(6 * MAX_LANES * self.scaling + 11,),
                                dtype=np.float32)
                 else:
                     return Box(low=-3.0, high=3.0,
-                               shape=(6 * MAX_LANES * self.scaling + 3,),
+                               shape=(6 * MAX_LANES * self.scaling + 5,),
                                dtype=np.float32)
 
     @property
     def action_space(self):
         """See class definition."""
-        if self.env_params.additional_params.get('communicate', False):
+        if self.env_params.additional_params['communicate']:
             accel = Box(
-                low=-1.5, high=1.0, shape=(1,), dtype=np.float32)
+                low=-3.0, high=3.0, shape=(1,), dtype=np.float32)
             communicate = Discrete(2)
             return Tuple((accel, communicate))
         else:
             return Box(
-                low=-1.5, high=1.0, shape=(1,), dtype=np.float32)
+                low=-3.0, high=3.0, shape=(1,), dtype=np.float32)
 
     def get_state(self, rl_actions=None):
         """See class definition."""
@@ -122,7 +122,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if add_params['centralized_obs']:
             rl_ids = self.k.vehicle.get_rl_ids()
             state = self.get_centralized_state()
-            veh_info = {rl_id: state for rl_id in rl_ids}
+            veh_info = {rl_id: np.concatenate((state, self.veh_statistics(rl_id))) for rl_id in rl_ids}
             left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
                                   in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
             veh_info.update(left_vehicles_dict)
@@ -217,10 +217,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
     def _apply_rl_actions(self, rl_actions):
         """
-        RL actions are split up into 3 levels.
-        First, they're split into edge actions.
-        Then they're split into segment actions.
-        Then they're split into lane actions.
+        Per-vehicle accelerations
         """
         if rl_actions:
             rl_ids = list(rl_actions.keys())
@@ -374,6 +371,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         speed = self.k.vehicle.get_speed(rl_id)/100.0
         edge = self.k.vehicle.get_edge(rl_id)
         lane = (self.k.vehicle.get_lane(rl_id)+1)/10.0
+        headway = self.k.vehicle.get_headway(rl_id) / 2000.0
+        position = self.k.vehicle.get_position(rl_id) / 1000.0
         if edge:
             if edge[0] != ':':
                 edge_id = int(self.k.vehicle.get_edge(rl_id))/10.0
@@ -381,7 +380,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 edge_id = - 1 / 10.0
         else:
             edge_id = - 1/10.0
-        return np.array([speed, edge_id, lane])
+        return np.array([speed, edge_id, lane, headway, position])
 
     def state_util(self, rl_id):
         ''' Returns an array of headway, tailway, leader speed, follower speed
