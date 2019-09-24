@@ -657,8 +657,6 @@ class DesiredVelocityEnv(BottleneckEnv):
         # default (edge, segment, controlled) status
         add_env_params = self.env_params.additional_params
         default = [(str(i), 1, True) for i in range(1, 6)]
-        super(DesiredVelocityEnv, self).__init__(env_params, sim_params,
-                                                 scenario)
         self.segments = add_env_params.get("controlled_segments", default)
 
         # number of segments for each edge
@@ -734,11 +732,11 @@ class DesiredVelocityEnv(BottleneckEnv):
         for (edge, num_segments, controlled) in self.segments:
             if controlled:
                 if self.symmetric:
-                    self.action_index[edge] = [action_list[index]]
-                    action_list += [action_list[index] + controlled]
+                    self.action_index[edge] = action_list[index]
+                    action_list += [action_list[index] + num_segments * controlled]
                 else:
                     num_lanes = self.k.scenario.num_lanes(edge)
-                    self.action_index[edge] = [action_list[index]]
+                    self.action_index[edge] = action_list[index]
                     action_list += [
                         action_list[index] +
                         num_segments * controlled * num_lanes
