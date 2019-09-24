@@ -89,25 +89,54 @@
 ####################################################################################################################################################
 ####################################################################################################################################################
 # 9/20/19 experiments with a state space that contains edge position
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py MA_NLC_NCM_NLSTM_NAG_CN --num_iters 350 --checkpoint_freq 50 \
-    --num_samples 2 --grid_search --n_cpus 8 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --central_obs --high_inflow 2000" \
-    --start --stop --cluster-name exp1 --tmux
-
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py MA_NLC_NCM_NLSTM_NAG_NCN --num_iters 350 --checkpoint_freq 50 \
-    --num_samples 2 --grid_search --n_cpus 8 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --high_inflow 2000" \
-    --start --stop --cluster-name exp2 --tmux
-
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multi_bottleneck_centralized.py MA_NLC_NCM_NLSTM_NAG_NCN_CVF --num_iters 350 --checkpoint_freq 50 \
-    --num_samples 2 --grid_search --n_cpus 8 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --central_vf_size 64 --high_inflow 2000" \
-    --start --stop --cluster-name exp3 --tmux
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py MA_NLC_NCM_NLSTM_NAG_CN --num_iters 350 --checkpoint_freq 50 \
+#    --num_samples 2 --grid_search --n_cpus 8 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --central_obs --high_inflow 2000" \
+#    --start --stop --cluster-name exp1 --tmux
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py MA_NLC_NCM_NLSTM_NAG_NCN --num_iters 350 --checkpoint_freq 50 \
+#    --num_samples 2 --grid_search --n_cpus 8 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --high_inflow 2000" \
+#    --start --stop --cluster-name exp2 --tmux
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multi_bottleneck_centralized.py MA_NLC_NCM_NLSTM_NAG_NCN_CVF --num_iters 350 --checkpoint_freq 50 \
+#    --num_samples 2 --grid_search --n_cpus 8 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --central_vf_size 64 --high_inflow 2000" \
+#    --start --stop --cluster-name exp3 --tmux
 
 ####################################################################################################################################################
 ####################################################################################################################################################
 # 9/23/19 experiments with high inflows
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py MA_NLC_NCM_NLSTM_NAG_NCN_high_in --num_iters 350 --checkpoint_freq 50 \
+#    --num_samples 2 --grid_search --n_cpus 8 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --low_inflow 1600 --high_inflow 2400" \
+#    --start --stop --cluster-name exp2 --tmux
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py MA_NLC_NCM_NLSTM_NAG_NCN_high_in_PEN --num_iters 350 --checkpoint_freq 50 \
+#    --num_samples 2 --grid_search --n_cpus 8 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --low_inflow 1600 --high_inflow 2400 --congest_penalty" \
+#    --start --stop --cluster-name exp3 --tmux
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py fixed_inflow --num_iters 350 --checkpoint_freq 50 \
+#    --num_samples 2 --grid_search --n_cpus 8 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --low_inflow 2300 --high_inflow 2301 --congest_penalty" \
+#    --start --stop --cluster-name exp4 --tmux
+
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py fixed_inflow_lstm --num_iters 350 --checkpoint_freq 50 \
+#    --num_samples 2 --grid_search --n_cpus 8 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --low_inflow 2300 --high_inflow 2301 --congest_penalty --use_lstm" \
+#    --start --stop --cluster-name exp5 --tmux
+
+####################################################################################################################################################
+####################################################################################################################################################
+# 9/23/19 experiments with fixed inflows and CVF
+
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py MA_NLC_NCM_NLSTM_NAG_NCN_high_in --num_iters 350 --checkpoint_freq 50 \
-    --num_samples 2 --grid_search --n_cpus 8 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --low_nflow 1600 --high_inflow 2400" \
+"python flow/examples/rllib/multiagent_exps/multi_bottleneck_centralized.py CVF_high_in --num_iters 350 --checkpoint_freq 50 --central_vf_size 64 \
+    --num_samples 2 --grid_search --n_cpus 8 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --low_inflow 2300 --high_inflow 2301 --num_iters 200" \
+    --start --stop --cluster-name exp1 --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multi_bottleneck_centralized.py CVF_lstm_high_in --num_iters 350 --checkpoint_freq 50 --central_vf_size 64 \
+    --num_samples 2 --grid_search --n_cpus 8 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --low_inflow 2300 --high_inflow 2301 --use_lstm --num_iters 200" \
     --start --stop --cluster-name exp2 --tmux
