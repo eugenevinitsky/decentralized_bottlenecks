@@ -186,12 +186,34 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
 
     penetration_rate = 0.40
 
+    additional_env_params = {
+        "target_velocity": 40,
+        "max_accel": 3,
+        "max_decel": 3,
+        "lane_change_duration": 5,
+        "add_rl_if_exit": False,
+        "disable_tb": disable_tb,
+        "disable_ramp_metering": disable_ramp_meter,
+        "n_crit": n_crit,
+        "q_max": q_max,
+        "q_min": q_min,
+        "feedback_coeff": feedback_coef,
+        "controlled_segments": controlled_segments,
+        "inflow_range": [2200, 2200],
+        "reset_inflow": False,
+        "symmetric": True,
+        "observed_segments": num_observed_segments,
+        "congest_penalty": 1e10,
+        "lc_mode": lc_mode,
+        'start_inflow': flow_rate,
+    }
+
     vehicles.add(
         veh_id="AV",
         lane_change_controller=(SimLaneChangeController, {}),
         routing_controller=(ContinuousRouter, {}),
         # acceleration_controller=(HandTunedVelocityController, {"v_regions": v_regions}),
-        acceleration_controller=(DecentralizedALINEAController, {"stop_edge": "2", "stop_pos": 200}),
+        acceleration_controller=(DecentralizedALINEAController, {"stop_edge": "2", "stop_pos": 200, "additional_env_params": additional_env_params}),
         car_following_params=SumoCarFollowingParams(
             speed_mode=31,
         ),
@@ -212,27 +234,6 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
         ),
         num_vehicles=1)
 
-    additional_env_params = {
-        "target_velocity": 40,
-        "max_accel": 3,
-        "max_decel": 3,
-        "lane_change_duration": 5,
-        "add_rl_if_exit": False,
-        "disable_tb": disable_tb,
-        "disable_ramp_metering": disable_ramp_meter,
-        "n_crit": n_crit,
-        "q_max": q_max,
-        "q_min": q_min,
-        "feedback_coeff": feedback_coef,
-        "controlled_segments": controlled_segments,
-        "inflow_range": [2200, 2200],
-        "reset_inflow": False,
-        "symmetric": True,
-        "observed_segments": num_observed_segments,
-        "congest_penalty": 1e10,
-        "lc_mode": lc_mode,
-        'start_inflow': flow_rate
-    }
     env_params = EnvParams(
         horizon=horizon, additional_params=additional_env_params)
 

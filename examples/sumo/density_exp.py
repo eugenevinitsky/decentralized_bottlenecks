@@ -64,6 +64,8 @@ if __name__ == '__main__':
     parser.add_argument('--ramp_meter', action='store_true', help='If set, ALINEA is active in this scenario')
     parser.add_argument('--alinea_sweep', action='store_true', help='If set, perform a hyperparam sweep over ALINEA '
                                                                     'hyperparams')
+    parser.add_argument('--decentralized_alinea_sweep', action='store_true', help='If set, perform a hyperparam sweep'
+                                                                    ' over hyperparams for decentralized ALINEA controller')
     parser.add_argument('--inflow_min', type=int, default=400)
     parser.add_argument('--inflow_max', type=int, default=2500)
     parser.add_argument('--ncrit_min', type=int, default=6)
@@ -87,6 +89,11 @@ if __name__ == '__main__':
             outer_path = '../../flow/visualize/trb_data/alinea_test'
         else:
             outer_path = '../../flow/visualize/trb_data/alinea_data'
+    if args.decentralized_alinea_sweep:
+        if args.test_run:
+            outer_path = '../../flow/visualize/trb_data/decentraliezd_alinea_test'
+        else:
+            outer_path = '../../flow/visualize/trb_data/decentraliezd_alinea_data'
     else:
         outer_path = '../../flow/visualize/trb_data/human_driving'
 
@@ -123,7 +130,7 @@ if __name__ == '__main__':
 
     num_cpus = multiprocessing.cpu_count()
     ray.init(num_cpus=max(num_cpus - 4, 1))
-    if args.alinea_sweep:
+    if args.alinea_sweep or args.decentralized_alinea_sweep:
         for n_crit in n_crit_range:
             for feedback_coef in feedback_coef_range:
 

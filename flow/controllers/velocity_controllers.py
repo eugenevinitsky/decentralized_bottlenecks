@@ -256,7 +256,7 @@ class TimeDelayVelocityController(SimCarFollowingController):
         cur_speed = env.k.vehicle.get_speed(self.veh_id)
         if int(env.k.vehicle.get_edge(self.veh_id)) > int(self.stop_edge):
             return None
-        elif int(env.k.vehicle.get_edge(self.veh_id)) == int(self.stop_edge) and self.stop_pos - cur_pos < (cur_speed**2) / self.car_following_params.controller_params['decel']:
+        elif int(env.k.vehicle.get_edge(self.veh_id)) == int(self.stop_edge) and self.stop_pos - cur_pos - 4 < (cur_speed**2) / self.car_following_params.controller_params['decel']:
             return None
         else:
             self.set_stop(env)
@@ -265,15 +265,15 @@ class TimeDelayVelocityController(SimCarFollowingController):
 
 
 class DecentralizedALINEAController(TimeDelayVelocityController):
-    def __init__(self, veh_id, stop_edge, stop_pos, car_following_params):
+    def __init__(self, veh_id, stop_edge, stop_pos, additional_env_params, car_following_params):
         super().__init__(veh_id, stop_edge, stop_pos, car_following_params)
         # values for the ALINEA ramp meter algorithm
-        self.n_crit = 8
-        self.q_max = 3600
-        self.q_min = 900
-        self.feedback_coeff = 100
-        self.q = self.q_max  # ramp meter feedback controller
-        self.feedback_update_time = 0.5
+        self.n_crit = additional_env_params.get("n_crit", 8)
+        self.q_max = 14401
+        self.q_min = 200
+        self.feedback_coeff = additional_env_params.get('feedback_coef', 50)
+        self.q = (self.q_max + self.q_min) / 2 # ramp meter feedback controller
+        self.feedback_update_time = 0
         self.feedback_timer = 0.0
         self.duration = 0.0
 
@@ -285,11 +285,9 @@ class DecentralizedALINEAController(TimeDelayVelocityController):
             # find all the vehicles in an edge
             q_update = self.feedback_coeff * (
                 self.n_crit - np.average(env.smoothed_num))
-            self.q = max(
-                self.q + q_update, self.q_min)
+            self.q = min(max(self.q + q_update, self.q_min), self.q_max)
             # convert q to cycle time, we keep track of the previous cycle time to let the cycle coplete
             self.duration = 3600 * env.scaling * 4 / self.q
-            # print(self.q)
 
         return self.duration
 
