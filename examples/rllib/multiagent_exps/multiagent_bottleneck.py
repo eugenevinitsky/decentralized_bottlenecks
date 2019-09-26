@@ -118,8 +118,10 @@ def setup_flow_params(args):
         "aggregate_info": args.aggregate_info,
         "av_frac": args.av_frac,
         "congest_penalty_start": args.congest_penalty_start,
-        "lc_mode": lc_mode
-    }
+        "lc_mode": lc_mode,
+        "life_penalty": args.life_penalty,
+        'keep_past_actions': args.keep_past_actions
+        }
 
     # percentage of flow coming out of each lane
     inflow = InFlows()
@@ -175,7 +177,7 @@ def setup_flow_params(args):
 
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
-            warmup_steps=200,
+            warmup_steps=400,
             sims_per_step=1,
             horizon=args.horizon,
             clip_actions=False,
@@ -229,7 +231,7 @@ def setup_exps(args):
     config['model']['use_lstm'] = args.use_lstm
     if args.use_lstm:
         config['model']["max_seq_len"] = tune.grid_search([5, 10])
-    config['model']["lstm_cell_size"] = 64
+    config['model']["lstm_cell_size"] = 32
 
     # save the flow params for replay
     flow_json = json.dumps(

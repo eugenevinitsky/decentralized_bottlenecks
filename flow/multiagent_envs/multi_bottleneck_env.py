@@ -4,7 +4,13 @@ This environment was used in:
 TODO(ak): add paper after it has been published.
 """
 
+from collections import defaultdict
 from copy import deepcopy
+
+from gym.spaces.box import Box
+from gym.spaces.discrete import Discrete
+from gym.spaces.tuple_space import Tuple
+import numpy as np
 
 from flow.controllers.rlcontroller import RLController
 from flow.controllers.routing_controllers import ContinuousRouter
@@ -13,11 +19,6 @@ from flow.multiagent_envs.multiagent_env import MultiEnv
 from flow.envs.bottleneck_env import DesiredVelocityEnv
 from flow.core.params import InFlows, NetParams, VehicleParams, \
     SumoCarFollowingParams, SumoLaneChangeParams
-
-import numpy as np
-from gym.spaces.box import Box
-from gym.spaces.discrete import Discrete
-from gym.spaces.tuple_space import Tuple
 
 MAX_LANES = 4  # base number of largest number of lanes in the network
 EDGE_LIST = ["1", "2", "3", "4", "5"]  # Edge 1 is before the toll booth
@@ -72,36 +73,34 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         # the number of vehicles in the congested section
         # the average velocity on each edge 3,4,5
         add_params = self.env_params.additional_params
+        num_obs = 0
         if add_params['centralized_obs']:
-            num_obs = 0
             # density and velocity for rl and non-rl vehicles per segment
             # Last element is the outflow and inflow and the vehicles speed and headway, edge id, lane, edge pos
             for segment in self.obs_segments:
                 num_obs += 4 * segment[1] * \
                            self.k.scenario.num_lanes(segment[0])
             num_obs += 7
-            return Box(low=-3.0, high=3.0, shape=(num_obs,), dtype=np.float32)
         else:
             if self.env_params.additional_params['communicate']:
                 # eight possible signals if above
                 if self.env_params.additional_params.get('aggregate_info'):
-                    return Box(low=-3.0, high=3.0,
-                               shape=(6 * MAX_LANES * self.scaling + 19,),
-                               dtype=np.float32)
+                    num_obs = 6 * MAX_LANES * self.scaling + 19
                 else:
-                    return Box(low=-3.0, high=3.0,
-                               shape=(6 * MAX_LANES * self.scaling + 13,),
-                               dtype=np.float32)
+                    num_obs = 6 * MAX_LANES * self.scaling + 13
             else:
                 if self.env_params.additional_params.get('aggregate_info'):
-                    return Box(low=-3.0, high=3.0,
-                               shape=(6 * MAX_LANES * self.scaling + 11,),
-                               dtype=np.float32)
+                    num_obs = 6 * MAX_LANES * self.scaling + 11
                 else:
-                    return Box(low=-3.0, high=3.0,
-                               shape=(6 * MAX_LANES * self.scaling + 5,),
-                               dtype=np.float32)
+                    num_obs = 6 * MAX_LANES * self.scaling + 5
 
+        # TODO(@evinitsky) eventually remove the get once backwards compatibility is no longer needed
+        if self.env_params.additional_params.get('keep_past_actions', False):
+            self.num_past_actions = 60
+            num_obs += self.num_past_actions
+        return Box(low=-3.0, high=3.0,
+                   shape=(num_obs,),
+                   dtype=np.float32)
     @property
     def action_space(self):
         """See class definition."""
@@ -123,9 +122,6 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             rl_ids = self.k.vehicle.get_rl_ids()
             state = self.get_centralized_state()
             veh_info = {rl_id: np.concatenate((state, self.veh_statistics(rl_id))) for rl_id in rl_ids}
-            left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
-                                  in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
-            veh_info.update(left_vehicles_dict)
         else:
             if self.env_params.additional_params.get('communicate', False):
                 veh_info = {rl_id: np.concatenate((self.state_util(rl_id),
@@ -143,10 +139,24 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 agg_statistics = self.aggregate_statistics()
                 veh_info = {rl_id: np.concatenate((val, agg_statistics))
                                      for rl_id, val in veh_info.items()}
-            # Go through the human drivers and add zeros if the vehicles have left as a final observation
-            left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
-                                  in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
-            veh_info.update(left_vehicles_dict)
+
+        if self.env_params.additional_params.get('keep_past_actions', False):
+            # update the actions history with the most recent actions
+            for rl_id in self.k.vehicle.get_rl_ids():
+                agent_past_dict, num_steps = self.past_actions_dict[rl_id]
+                if rl_actions and rl_id in rl_actions.keys():
+                    agent_past_dict[num_steps] = rl_actions[rl_id] / self.action_space.high
+                num_steps += 1
+                num_steps %= self.num_past_actions
+            actions_history = {rl_id: self.past_actions_dict[rl_id][0] for rl_id in self.k.vehicle.get_rl_ids()}
+            veh_info = {rl_id: np.concatenate((actions_history[rl_id], veh_info[rl_id])) for
+                        rl_id in self.k.vehicle.get_rl_ids()}
+
+        # Go through the human drivers and add zeros if the vehicles have left as a final observation
+        left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
+                              in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
+        veh_info.update(left_vehicles_dict)
+
         veh_info = {key: np.clip(self.observation_space.low, self.observation_space.high, value) for
                     key, value in veh_info.items()}
 
@@ -239,7 +249,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 return 0
 
         reward = self.k.vehicle.get_outflow_rate(10 * self.sim_step) / \
-                 (2000.0 * self.scaling) - 3
+                 (2000.0 * self.scaling) - self.env_params.additional_params["life_penalty"]
         if self.env_params.additional_params["congest_penalty"]:
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
             if num_vehs > 30 * self.scaling:
@@ -253,6 +263,11 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         return reward_dict
 
     def reset(self, new_inflow_rate=None):
+
+        # dict tracking past actions
+        if self.env_params.additional_params.get('keep_past_actions', False):
+            self.past_actions_dict = defaultdict(lambda: [np.zeros(self.num_past_actions), 0])
+
         add_params = self.env_params.additional_params
         if add_params.get("reset_inflow"):
             inflow_range = add_params.get("inflow_range")

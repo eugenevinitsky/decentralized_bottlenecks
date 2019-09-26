@@ -113,7 +113,7 @@ class MultiEnv(MultiAgentEnv, Env):
             # render a frame
             self.render()
 
-        states = self.get_state()
+        states = self.get_state(rl_actions)
         done = {key: key in self.k.vehicle.get_arrived_ids()
                 for key in states.keys()}
         if crash:

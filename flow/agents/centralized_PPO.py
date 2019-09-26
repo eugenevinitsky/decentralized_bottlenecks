@@ -24,7 +24,10 @@ from ray.rllib.evaluation.postprocessing import compute_advantages, \
 from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.policy.tf_policy import LearningRateSchedule, \
     EntropyCoeffSchedule, ACTION_LOGP
+from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
+from ray.rllib.models.tf.recurrent_tf_modelv2 import RecurrentTFModelV2
+from ray.rllib.utils.annotations import override
 from ray.rllib.models.tf.fcnet_v2 import FullyConnectedNetwork
 from ray.rllib.utils.explained_variance import explained_variance
 from ray.rllib.utils import try_import_tf
@@ -76,10 +79,94 @@ class CentralizedCriticModel(TFModelV2):
         return self.model.value_function()  # not used
 
 
+# TODO(@evinitsky) support recurrence
+class CentralizedCriticModelRNN(RecurrentTFModelV2):
+    """Example of using the Keras functional API to define a RNN model."""
+
+    def __init__(self,
+                 obs_space,
+                 action_space,
+                 num_outputs,
+                 model_config,
+                 name,
+                 hiddens_size=64,
+                 cell_size=64):
+        super(CentralizedCriticModelRNN, self).__init__(obs_space, action_space, num_outputs,
+                                         model_config, name)
+        self.cell_size = cell_size
+
+        # Define input layers
+        input_layer = tf.keras.layers.Input(
+            shape=(None, obs_space.shape[0]), name="inputs")
+        state_in_h = tf.keras.layers.Input(shape=(cell_size, ), name="h")
+        state_in_c = tf.keras.layers.Input(shape=(cell_size, ), name="c")
+        seq_in = tf.keras.layers.Input(shape=(), name="seq_in")
+
+        # Preprocess observation with a hidden layer and send to LSTM cell
+        dense1 = tf.keras.layers.Dense(
+            hiddens_size, activation=tf.nn.relu, name="dense1")(input_layer)
+        lstm_out, state_h, state_c = tf.keras.layers.LSTM(
+            cell_size, return_sequences=True, return_state=True, name="lstm")(
+                inputs=dense1,
+                mask=tf.sequence_mask(seq_in),
+                initial_state=[state_in_h, state_in_c])
+
+        # Postprocess LSTM output with another hidden layer and compute values
+        logits = tf.keras.layers.Dense(
+            self.num_outputs,
+            activation=tf.keras.activations.linear,
+            name="logits")(lstm_out)
+        values = tf.keras.layers.Dense(
+            1, activation=None, name="values")(lstm_out)
+
+        # Create the RNN model
+        self.model = tf.keras.Model(
+            inputs=[input_layer, seq_in, state_in_h, state_in_c],
+            outputs=[logits, values, state_h, state_c])
+        self.register_variables(self.model.variables)
+        self.model.summary()
+
+        #TODO(@evinitsky) add layer sharing to the VF
+        # Create the centralized VF
+        # Central VF maps (obs, opp_ops, opp_act) -> vf_pred
+        self.max_num_agents = model_config.get("max_num_agents", 120)
+        self.obs_space_shape = obs_space.shape[0]
+        other_obs = tf.keras.layers.Input(shape=(obs_space.shape[0] * self.max_num_agents,), name="opp_obs")
+        central_vf_dense = tf.keras.layers.Dense(
+            model_config.get("central_vf_size", 64), activation=tf.nn.tanh, name="c_vf_dense")(other_obs)
+        central_vf_out = tf.keras.layers.Dense(
+            1, activation=None, name="c_vf_out")(central_vf_dense)
+        self.central_vf = tf.keras.Model(
+            inputs=[other_obs], outputs=central_vf_out)
+        self.register_variables(self.central_vf.variables)
+
+    @override(RecurrentTFModelV2)
+    def forward_rnn(self, inputs, state, seq_lens):
+        model_out, self._value_out, h, c = self.model([inputs, seq_lens] +
+                                                          state)
+        return model_out, [h, c]
+
+    @override(ModelV2)
+    def get_initial_state(self):
+        return [
+            np.zeros(self.cell_size, np.float32),
+            np.zeros(self.cell_size, np.float32),
+        ]
+
+    def central_value_function(self, obs, opponent_obs):
+        return tf.reshape(
+            self.central_vf(
+                [opponent_obs]), [-1])
+
+    def value_function(self):
+        return tf.reshape(self._value_out, [-1])  # not used
+
+
 class CentralizedValueMixin(object):
     """Add methods to evaluate the central value function from the model."""
 
     def __init__(self):
+        # TODO(@evinitsky) clean up naming
         self.central_value_function = self.model.central_value_function(
             self.get_placeholder(SampleBatch.CUR_OBS),
             self.get_placeholder(OPPONENT_OBS)
@@ -152,7 +239,7 @@ def centralized_critic_postprocessing(policy,
         obs_shape = sample_batch[SampleBatch.CUR_OBS].shape[1]
         obs_shape = (1, obs_shape * (policy.model.max_num_agents))
         sample_batch[OPPONENT_OBS] = np.zeros(obs_shape)
-        # TODO(evinitsky) put in the right shape. Will break if actions aren't 11
+        # TODO(evinitsky) put in the right shape. Will break if actions aren't 1
         sample_batch[SampleBatch.VF_PREDS] = np.zeros(1, dtype=np.float32)
 
     train_batch = compute_advantages(
