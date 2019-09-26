@@ -40,7 +40,7 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument('--congest_penalty_start', type=int, default=30, help='If congest_penalty is true, this '
                                                                               'sets the number of vehicles in edge 4'
                                                                               'at which the penalty sets in')
-    parser.add_argument('--life_penalty', type=int, default=3, help='How much to subtract in the reward at each '
+    parser.add_argument('--life_penalty', type=float, default=3, help='How much to subtract in the reward at each '
                                                                      'time-step for remaining in the system.')
     parser.add_argument('--keep_past_actions', action='store_true', help='If true we append the agents past actions '
                                                                          'to its observations')

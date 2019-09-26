@@ -3,11 +3,11 @@ In this example, each agent is given a single acceleration per timestep.
 
 The agents all share a single model.
 """
-import argparse
 from datetime import datetime
 import json
 
 import numpy as np
+import pytz
 import ray
 import ray.rllib.agents.ppo as ppo
 from ray import tune
@@ -273,8 +273,11 @@ if __name__ == '__main__':
         ray.init(redis_address='localhost:6379')
     else:
         ray.init()
+    eastern = pytz.timezone('US/Eastern')
+    date = datetime.now(tz=pytz.utc)
+    date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
     s3_string = "s3://eugene.experiments/trb_bottleneck_paper/" \
-                + datetime.now().strftime("%m-%d-%Y") + '/' + args.exp_title
+                + date + '/' + args.exp_title
     config['env'] = env_name
     exp_dict = {
             'name': args.exp_title,

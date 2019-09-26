@@ -12,10 +12,10 @@ See also: centralized_critic_2.py for a simpler approach that instead
 modifies the environment.
 """
 
-import argparse
 from datetime import datetime
-import numpy as np
 
+import numpy as np
+import pytz
 import ray
 from ray import tune
 from ray.rllib.models import ModelCatalog
@@ -53,8 +53,11 @@ if __name__ == "__main__":
         ray.init(redis_address='localhost:6379')
     else:
         ray.init()
+    eastern = pytz.timezone('US/Eastern')
+    date = datetime.now(tz=pytz.utc)
+    date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
     s3_string = "s3://eugene.experiments/trb_bottleneck_paper/" \
-                + datetime.now().strftime("%m-%d-%Y") + '/' + args.exp_title
+                + date + '/' + args.exp_title
     config['env'] = env_name
     exp_dict = {
             'name': args.exp_title,
