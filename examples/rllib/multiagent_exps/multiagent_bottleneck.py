@@ -177,7 +177,7 @@ def setup_flow_params(args):
 
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
-            warmup_steps=400,
+            warmup_steps=int(200  / args.sim_step),
             sims_per_step=1,
             horizon=args.horizon,
             clip_actions=False,
@@ -212,6 +212,16 @@ def setup_flow_params(args):
     return flow_params
 
 
+def on_episode_end(info):
+    env = info['env'].get_unwrapped()[0]
+    outflow_over_last_500 = env.k.vehicle.get_outflow_rate(int(500 / env.sim_step))
+    inflow_over_first_200 = env.k.vehicle.get_inflow_rate(-200)
+    # round it to 100
+    inflow_over_first_200 = int(inflow_over_first_200 / 100) * 100
+    episode = info["episode"]
+    episode.custom_metrics["net_outflow_{}".format(inflow_over_first_200)] = outflow_over_last_500
+
+
 def setup_exps(args):
     rllib_params = setup_rllib_params(args)
     flow_params = setup_flow_params(args)
@@ -220,7 +230,7 @@ def setup_exps(args):
     config['num_workers'] = rllib_params['n_cpus']
     config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
     config['gamma'] = 0.999  # discount rate
-    config['model'].update({'fcnet_hiddens': [64, 64]})
+    config['model'].update({'fcnet_hiddens': [256, 256]})
     config['horizon'] = args.horizon
 
     # Grid search things
@@ -279,6 +289,10 @@ if __name__ == '__main__':
     s3_string = "s3://eugene.experiments/trb_bottleneck_paper/" \
                 + date + '/' + args.exp_title
     config['env'] = env_name
+
+    # store custom metrics
+    config["callbacks"] = {"on_episode_end": tune.function(on_episode_end)}
+
     exp_dict = {
             'name': args.exp_title,
             'run_or_experiment': alg_run,

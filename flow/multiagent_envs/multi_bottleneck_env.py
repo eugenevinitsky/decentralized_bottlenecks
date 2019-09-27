@@ -96,7 +96,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
         # TODO(@evinitsky) eventually remove the get once backwards compatibility is no longer needed
         if self.env_params.additional_params.get('keep_past_actions', False):
-            self.num_past_actions = 60
+            self.num_past_actions = 100
             num_obs += self.num_past_actions
         return Box(low=-3.0, high=3.0,
                    shape=(num_obs,),

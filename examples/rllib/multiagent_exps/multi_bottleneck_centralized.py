@@ -20,7 +20,7 @@ import ray
 from ray import tune
 from ray.rllib.models import ModelCatalog
 
-from examples.rllib.multiagent_exps.multiagent_bottleneck import setup_exps
+from examples.rllib.multiagent_exps.multiagent_bottleneck import setup_exps, on_episode_end
 from flow.agents.centralized_PPO import CentralizedCriticModel, CentralizedCriticModelRNN
 from flow.agents.centralized_PPO import CCTrainer
 from flow.utils.parsers import get_multiagent_bottleneck_parser
@@ -48,6 +48,8 @@ if __name__ == "__main__":
     config['model']['custom_model'] = "cc_model"
     config['model']['custom_options']['central_vf_size'] = args.central_vf_size
 
+    # store custom metrics
+    config["callbacks"] = {"on_episode_end": tune.function(on_episode_end)}
 
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
