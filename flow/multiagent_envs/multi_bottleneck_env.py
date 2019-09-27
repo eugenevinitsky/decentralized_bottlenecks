@@ -144,7 +144,6 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             # update the actions history with the most recent actions
             for rl_id in self.k.vehicle.get_rl_ids():
                 agent_past_dict, num_steps = self.past_actions_dict[rl_id]
-                print('agent past dict for id {} is {} and number is {}'.format(rl_id, agent_past_dict, num_steps))
                 if rl_actions and rl_id in rl_actions.keys():
                     agent_past_dict[num_steps] = rl_actions[rl_id] / self.action_space.high
                 num_steps += 1
