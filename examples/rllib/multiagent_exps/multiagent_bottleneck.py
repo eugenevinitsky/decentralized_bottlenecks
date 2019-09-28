@@ -215,11 +215,11 @@ def setup_flow_params(args):
 def on_episode_end(info):
     env = info['env'].get_unwrapped()[0]
     outflow_over_last_500 = env.k.vehicle.get_outflow_rate(int(500 / env.sim_step))
-    inflow_over_first_200 = env.k.vehicle.get_inflow_rate(-200)
+    inflow = env.inflow
     # round it to 100
-    inflow_over_first_200 = int(inflow_over_first_200 / 100) * 100
+    inflow = int(inflow / 100) * 100
     episode = info["episode"]
-    episode.custom_metrics["net_outflow_{}".format(inflow_over_first_200)] = outflow_over_last_500
+    episode.custom_metrics["net_outflow_{}".format(inflow)] = outflow_over_last_500
 
 
 def setup_exps(args):
