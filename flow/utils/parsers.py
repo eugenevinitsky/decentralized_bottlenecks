@@ -20,7 +20,7 @@ def get_multiagent_bottleneck_parser():
     
     # arguments for flow
     parser.add_argument('--render', action='store_true', help='Show sumo-gui of results')
-    parser.add_argument('--horizon', type=int, default=2000, help='Horizon of the environment')
+    parser.add_argument('--horizon', type=int, default=1000, help='Horizon of the environment')
     parser.add_argument('--sim_step', type=float, default=0.5, help='dt of a timestep')
     parser.add_argument('--low_inflow', type=int, default=800, help='the lowest inflow to sample from')
     parser.add_argument('--high_inflow', type=int, default=2000, help='the highest inflow to sample from')
