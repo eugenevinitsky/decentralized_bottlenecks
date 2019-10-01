@@ -48,9 +48,9 @@ class MultiEnv(MultiAgentEnv, Env):
         info : dict
             contains other diagnostic information from the previous action
         """
+        self.step_counter += 1
         for _ in range(self.env_params.sims_per_step):
             self.time_counter += 1
-            self.step_counter += 1
 
             # perform acceleration actions for controlled human-driven vehicles
             if len(self.k.vehicle.get_controlled_ids()) > 0:

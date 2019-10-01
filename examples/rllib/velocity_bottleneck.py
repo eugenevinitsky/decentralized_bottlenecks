@@ -6,11 +6,13 @@ in a segment of space
 import argparse
 from datetime import datetime
 import json
+import sys
 
 import numpy as np
 import pytz
 import ray
 import ray.rllib.agents.ppo as ppo
+import ray.rllib.agents.a3c as a3c
 from ray import tune
 from ray.tune import run_experiments
 from ray.tune.registry import register_env
@@ -155,7 +157,7 @@ def setup_flow_params(args):
 
         # sumo-related parameters (see flow.core.params.SumoParams)
         sim=SumoParams(
-            sim_step=0.5,
+            sim_step=args.sim_step,
             render=args.render,
             print_warnings=False,
             restart_instance=True,
@@ -163,8 +165,8 @@ def setup_flow_params(args):
 
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
-            warmup_steps=40,
-            sims_per_step=2,
+            warmup_steps=int(args.warmup_steps / (args.sims_per_step * args.sim_step)),
+            sims_per_step=args.sims_per_step,
             horizon=args.horizon,
             additional_params=additional_env_params,
         ),
@@ -201,8 +203,21 @@ def setup_flow_params(args):
 def setup_exps(args):
     rllib_params = setup_rllib_params(args)
     flow_params = setup_flow_params(args)
-    alg_run = 'PPO'
-    config = ppo.DEFAULT_CONFIG.copy()
+    alg_run = args.algorithm
+    if alg_run == 'PPO':
+        config = ppo.DEFAULT_CONFIG.copy()
+        config['vf_clip_param'] = 100
+        config['vf_share_layers'] = True
+        config['simple_optimizer'] = False
+
+        if args.grid_search:
+            config['num_sgd_iter'] = tune.grid_search([10, 30])
+    elif alg_run == 'A3C':
+        config = a3c.DEFAULT_CONFIG.copy()
+    else:
+        sys.exit("Please specify a valid algorithm amongst A3C or PPO")
+
+    # General config params
     config['num_workers'] = rllib_params['n_cpus']
     config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
     config['gamma'] = 0.995  # discount rate
@@ -212,14 +227,10 @@ def setup_exps(args):
         config['model'].update({'fcnet_hiddens': [256, 256]})
     config['clip_actions'] = True
     config['horizon'] = args.horizon
-    config['simple_optimizer'] = False
-    config['vf_clip_param'] = 100
-    config['vf_share_layers'] = True
 
     # Grid search things
     if args.grid_search:
         config['lr'] = tune.grid_search([5e-5, 5e-4])
-        config['num_sgd_iter'] = tune.grid_search([10, 30])
 
     # LSTM Things
     config['model']['use_lstm'] = args.use_lstm
@@ -266,12 +277,17 @@ if __name__ == '__main__':
     parser.add_argument("--checkpoint_freq", type=int, default=50)
     parser.add_argument("--num_samples", type=int, default=1)
     parser.add_argument("--grid_search", action='store_true')
+    parser.add_argument("--algorithm", type=str, default='PPO', help='Algorithm of choice. Current supported options are'
+                                                                     'PPO and A3C')
 
     # arguments for flow
     parser.add_argument('--low_inflow', type=int, default=800, help='the lowest inflow to sample from')
     parser.add_argument('--high_inflow', type=int, default=2000, help='the highest inflow to sample from')
     parser.add_argument('--render', action='store_true', help='Show sumo-gui of results')
     parser.add_argument('--horizon', type=int, default=1000, help='Horizon of the environment')
+    parser.add_argument('--warmup_steps', type=int, default=100, help='How many seconds worth of warmup steps to take')
+    parser.add_argument('--sim_step', type=float, default=0.5, help='Time step of the simulator')
+    parser.add_argument('--sims_per_step', type=int, default=1, help='Time step of the simulator')
     parser.add_argument('--av_frac', type=float, default=0.1, help='What fraction of the vehicles should be autonomous')
     parser.add_argument('--scaling', type=int, default=1, help='How many lane should we start with. Value of 1 -> 4, '
                                                                '2 -> 8, etc.')

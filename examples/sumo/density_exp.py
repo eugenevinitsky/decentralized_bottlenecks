@@ -193,16 +193,31 @@ if __name__ == '__main__':
             bottleneckdensities.append(bottleneckdensity)
 
         path = os.path.dirname(os.path.abspath(__file__))
-        np.savetxt(path + '/../../flow/visualize/trb_data/human_driving/rets_LC.csv',
-                   np.matrix([densities,
-                              outflows,
-                              velocities,
-                              bottleneckdensities]).T,
-                   delimiter=',')
-        np.savetxt(path + '/../../flow/visualize/trb_data/human_driving/inflows_outflows_LC.csv',
-                   np.matrix([rollout_inflows,
-                              rollout_outflows]).T,
-                   delimiter=',')
-        np.savetxt(path + '/../../flow/visualize/trb_data/human_driving/inflows_velocity_LC.csv',
-                   np.matrix(lane_4_vels),
-                   delimiter=',')
+        if args.lc_on:
+            np.savetxt(path + '/../../flow/visualize/trb_data/human_driving/rets_LC.csv',
+                       np.matrix([densities,
+                                  outflows,
+                                  velocities,
+                                  bottleneckdensities]).T,
+                       delimiter=',')
+            np.savetxt(path + '/../../flow/visualize/trb_data/human_driving/inflows_outflows_LC.csv',
+                       np.matrix([rollout_inflows,
+                                  rollout_outflows]).T,
+                       delimiter=',')
+            np.savetxt(path + '/../../flow/visualize/trb_data/human_driving/inflows_velocity_LC.csv',
+                       np.matrix(lane_4_vels),
+                       delimiter=',')
+        else:
+            np.savetxt(path + '/../../flow/visualize/trb_data/human_driving/rets.csv',
+                       np.matrix([densities,
+                                  outflows,
+                                  velocities,
+                                  bottleneckdensities]).T,
+                       delimiter=',')
+            np.savetxt(path + '/../../flow/visualize/trb_data/human_driving/inflows_outflows.csv',
+                       np.matrix([rollout_inflows,
+                                  rollout_outflows]).T,
+                       delimiter=',')
+            np.savetxt(path + '/../../flow/visualize/trb_data/human_driving/inflows_velocity.csv',
+                       np.matrix(lane_4_vels),
+                       delimiter=',')
