@@ -155,7 +155,7 @@ def setup_flow_params(args):
 
         # sumo-related parameters (see flow.core.params.SumoParams)
         sim=SumoParams(
-            sim_step=0.5,
+            sim_step=args.sim_step,
             render=args.render,
             print_warnings=False,
             restart_instance=True,
@@ -163,8 +163,8 @@ def setup_flow_params(args):
 
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
-            warmup_steps=40,
-            sims_per_step=2,
+            warmup_steps=int(args.warmup_steps / (args.sims_per_step * args.sim_step)),
+            sims_per_step=args.sims_per_step,
             horizon=args.horizon,
             additional_params=additional_env_params,
         ),
@@ -272,6 +272,9 @@ if __name__ == '__main__':
     parser.add_argument('--high_inflow', type=int, default=2000, help='the highest inflow to sample from')
     parser.add_argument('--render', action='store_true', help='Show sumo-gui of results')
     parser.add_argument('--horizon', type=int, default=1000, help='Horizon of the environment')
+    parser.add_argument('--warmup_steps', type=int, default=100, help='How many seconds worth of warmup steps to take')
+    parser.add_argument('--sim_step', type=float, default=0.5, help='Time step of the simulator')
+    parser.add_argument('--sims_per_step', type=int, default=1, help='Time step of the simulator')
     parser.add_argument('--av_frac', type=float, default=0.1, help='What fraction of the vehicles should be autonomous')
     parser.add_argument('--scaling', type=int, default=1, help='How many lane should we start with. Value of 1 -> 4, '
                                                                '2 -> 8, etc.')

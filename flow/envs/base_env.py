@@ -313,9 +313,9 @@ class Env(*classdef):
         info : dict
             contains other diagnostic information from the previous action
         """
+        self.step_counter += 1
         for _ in range(self.env_params.sims_per_step):
             self.time_counter += 1
-            self.step_counter += 1
 
             # perform acceleration actions for controlled human-driven vehicles
             if len(self.k.vehicle.get_controlled_ids()) > 0:
@@ -388,7 +388,7 @@ class Env(*classdef):
 
         # test if the environment should terminate due to a collision or the
         # time horizon being met
-        done = crash or (self.time_counter >= self.env_params.warmup_steps
+        done = crash or (self.step_counter >= self.env_params.warmup_steps
                          + self.env_params.horizon)
 
         # compute the info for each agent
