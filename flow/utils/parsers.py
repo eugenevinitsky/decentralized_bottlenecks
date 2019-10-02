@@ -20,7 +20,7 @@ def get_multiagent_bottleneck_parser():
     
     # arguments for flow
     parser.add_argument('--render', action='store_true', help='Show sumo-gui of results')
-    parser.add_argument('--horizon', type=int, default=2000, help='Horizon of the environment')
+    parser.add_argument('--horizon', type=int, default=1000, help='Horizon of the environment')
     parser.add_argument('--sim_step', type=float, default=0.5, help='dt of a timestep')
     parser.add_argument('--low_inflow', type=int, default=800, help='the lowest inflow to sample from')
     parser.add_argument('--high_inflow', type=int, default=2000, help='the highest inflow to sample from')
@@ -40,6 +40,10 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument('--congest_penalty_start', type=int, default=30, help='If congest_penalty is true, this '
                                                                               'sets the number of vehicles in edge 4'
                                                                               'at which the penalty sets in')
+    parser.add_argument('--life_penalty', type=float, default=3, help='How much to subtract in the reward at each '
+                                                                     'time-step for remaining in the system.')
+    parser.add_argument('--keep_past_actions', action='store_true', help='If true we append the agents past actions '
+                                                                         'to its observations')
     
     # arguments for ray
     parser.add_argument('--use_lstm', action='store_true')

@@ -32,7 +32,7 @@ from ray.rllib.evaluation.episode import _flatten_action
 from ray.rllib.policy.sample_batch import DEFAULT_POLICY_ID
 from ray.tune.registry import register_env
 from ray.rllib.models import ModelCatalog
-from flow.agents.centralized_PPO import CentralizedCriticModel
+from flow.agents.centralized_PPO import CentralizedCriticModel, CentralizedCriticModelRNN
 
 from flow.utils.registry import make_create_env
 from flow.utils.rllib import get_flow_params
@@ -85,7 +85,10 @@ def run_bottleneck(args, inflow_rate, num_trials):
 
     # if using a custom model
     if config['model']['custom_model']=="cc_model":
-        ModelCatalog.register_custom_model("cc_model", CentralizedCriticModel)
+        if config['model']['use_lstm']:
+            ModelCatalog.register_custom_model("cc_model", CentralizedCriticModelRNN)
+        else:
+            ModelCatalog.register_custom_model("cc_model", CentralizedCriticModel)
         from flow.agents.centralized_PPO import CCTrainer
         agent_cls = CCTrainer
 
@@ -117,6 +120,9 @@ def run_bottleneck(args, inflow_rate, num_trials):
     # Start the environment with the gui turned on and a path for the
     # emission file
     env_params = flow_params['env']
+    # TODO(@evinitsky) remove this this is a backwards compatibility hack
+    if 'life_penalty' not in env_params.additional_params.keys():
+        env_params.additional_params['life_penalty'] = - 3
     if args.evaluate:
         env_params.evaluate = True
 

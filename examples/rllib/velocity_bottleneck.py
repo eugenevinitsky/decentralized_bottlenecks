@@ -8,6 +8,7 @@ from datetime import datetime
 import json
 
 import numpy as np
+import pytz
 import ray
 import ray.rllib.agents.ppo as ppo
 from ray import tune
@@ -30,7 +31,7 @@ def setup_rllib_params(args):
     # number of parallel workers
     n_cpus = args.n_cpus
     # number of rollouts per training iteration scaled by how many sets of rollouts per iter we want
-    n_rollouts = args.n_cpus * args.rollout_scale_factor
+    n_rollouts = int(args.n_cpus * args.rollout_scale_factor)
     return {'horizon': horizon, 'n_cpus': n_cpus, 'n_rollouts': n_rollouts}
 
 
@@ -99,11 +100,13 @@ def setup_flow_params(args):
         'lane_change_duration': 5,
         'max_accel': 3,
         'max_decel': 3,
-        'inflow_range': [800, 2000],
+        'inflow_range': [args.low_inflow, args.high_inflow],
         'start_inflow': flow_rate,
         'congest_penalty': args.congest_penalty,
+        "life_penalty": args.life_penalty,
         "av_frac": args.av_frac,
-        "lc_mode": lc_mode
+        "lc_mode": lc_mode,
+        "congest_penalty_start": args.congest_penalty_start,
     }
 
     # percentage of flow coming out of each lane
@@ -152,7 +155,7 @@ def setup_flow_params(args):
 
         # sumo-related parameters (see flow.core.params.SumoParams)
         sim=SumoParams(
-            sim_step=0.5,
+            sim_step=args.sim_step,
             render=args.render,
             print_warnings=False,
             restart_instance=True,
@@ -160,8 +163,8 @@ def setup_flow_params(args):
 
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
-            warmup_steps=40,
-            sims_per_step=1,
+            warmup_steps=int(args.warmup_steps / (args.sims_per_step * args.sim_step)),
+            sims_per_step=args.sims_per_step,
             horizon=args.horizon,
             additional_params=additional_env_params,
         ),
@@ -202,14 +205,16 @@ def setup_exps(args):
     config = ppo.DEFAULT_CONFIG.copy()
     config['num_workers'] = rllib_params['n_cpus']
     config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
-    config['gamma'] = 0.999  # discount rate
-    config['model'].update({'fcnet_hiddens': [64, 64]})
-    config['clip_actions'] = False
+    config['gamma'] = 0.995  # discount rate
+    if args.use_lstm:
+        config['model'].update({'fcnet_hiddens': []})
+    else:
+        config['model'].update({'fcnet_hiddens': [256, 256]})
+    config['clip_actions'] = True
     config['horizon'] = args.horizon
-    # config['use_centralized_vf'] = tune.grid_search([True, False])
-    # config['max_vf_agents'] = 140
-    config['simple_optimizer'] = True
-    # config['vf_clip_param'] = 100
+    config['simple_optimizer'] = False
+    config['vf_clip_param'] = 100
+    config['vf_share_layers'] = True
 
     # Grid search things
     if args.grid_search:
@@ -236,6 +241,16 @@ def setup_exps(args):
     return alg_run, env_name, config
 
 
+def on_episode_end(info):
+    env = info['env'].get_unwrapped()[0]
+    outflow_over_last_500 = env.k.vehicle.get_outflow_rate(int(500 / env.sim_step))
+    inflow = env.inflow
+    # round it to 100
+    inflow = int(inflow / 100) * 100
+    episode = info["episode"]
+    episode.custom_metrics["net_outflow_{}".format(inflow)] = outflow_over_last_500
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -253,17 +268,26 @@ if __name__ == '__main__':
     parser.add_argument("--grid_search", action='store_true')
 
     # arguments for flow
+    parser.add_argument('--low_inflow', type=int, default=800, help='the lowest inflow to sample from')
+    parser.add_argument('--high_inflow', type=int, default=2000, help='the highest inflow to sample from')
     parser.add_argument('--render', action='store_true', help='Show sumo-gui of results')
-    parser.add_argument('--horizon', type=int, default=2000, help='Horizon of the environment')
+    parser.add_argument('--horizon', type=int, default=1000, help='Horizon of the environment')
+    parser.add_argument('--warmup_steps', type=int, default=100, help='How many seconds worth of warmup steps to take')
+    parser.add_argument('--sim_step', type=float, default=0.5, help='Time step of the simulator')
+    parser.add_argument('--sims_per_step', type=int, default=1, help='Time step of the simulator')
     parser.add_argument('--av_frac', type=float, default=0.1, help='What fraction of the vehicles should be autonomous')
     parser.add_argument('--scaling', type=int, default=1, help='How many lane should we start with. Value of 1 -> 4, '
                                                                '2 -> 8, etc.')
     parser.add_argument('--lc_on', action='store_true', help='If true, lane changing is enabled.')
-    parser.add_argument('--congest_penalty', action='store_trye', help='If true, an additional penalty is added '
+    parser.add_argument('--congest_penalty', action='store_true', help='If true, an additional penalty is added '
                                                                             'for vehicles queueing in the bottleneck')
-
+    parser.add_argument('--life_penalty', type=float, default=3, help='How much to subtract in the reward at each '
+                                                                     'time-step for remaining in the system.')
+    parser.add_argument('--congest_penalty_start', type=int, default=30, help='If congest_penalty is true, this '
+                                                                              'sets the number of vehicles in edge 4'
+                                                                              'at which the penalty sets in')
     # arguments for ray
-    parser.add_argument('--rollout_scale_factor', type=int, default=1, help='the total number of rollouts is'
+    parser.add_argument('--rollout_scale_factor', type=float, default=1, help='the total number of rollouts is'
                                                                             'args.n_cpus * rollout_scale_factor')
     parser.add_argument('--use_lstm', action='store_true')
 
@@ -274,8 +298,16 @@ if __name__ == '__main__':
         ray.init(redis_address='localhost:6379')
     else:
         ray.init(num_cpus=args.n_cpus + 1)
+
+    # store custom metrics
+    config["callbacks"] = {"on_episode_end": tune.function(on_episode_end)}
+
+    eastern = pytz.timezone('US/Eastern')
+    date = datetime.now(tz=pytz.utc)
+    date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
     s3_string = "s3://eugene.experiments/trb_bottleneck_paper/" \
-                + datetime.now().strftime("%m-%d-%Y") + '/' + args.exp_title
+                + date + '/' + args.exp_title
+
     exp_dict = {
         args.exp_title: {
             'run': alg_run,

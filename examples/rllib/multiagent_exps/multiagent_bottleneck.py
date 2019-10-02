@@ -3,11 +3,11 @@ In this example, each agent is given a single acceleration per timestep.
 
 The agents all share a single model.
 """
-import argparse
 from datetime import datetime
 import json
 
 import numpy as np
+import pytz
 import ray
 import ray.rllib.agents.ppo as ppo
 from ray import tune
@@ -118,8 +118,10 @@ def setup_flow_params(args):
         "aggregate_info": args.aggregate_info,
         "av_frac": args.av_frac,
         "congest_penalty_start": args.congest_penalty_start,
-        "lc_mode": lc_mode
-    }
+        "lc_mode": lc_mode,
+        "life_penalty": args.life_penalty,
+        'keep_past_actions': args.keep_past_actions
+        }
 
     # percentage of flow coming out of each lane
     inflow = InFlows()
@@ -175,8 +177,8 @@ def setup_flow_params(args):
 
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
-            warmup_steps=200,
-            sims_per_step=1,
+            warmup_steps=int(200  / args.sim_step),
+            sims_per_step=2,
             horizon=args.horizon,
             clip_actions=False,
             additional_params=additional_env_params,
@@ -210,6 +212,16 @@ def setup_flow_params(args):
     return flow_params
 
 
+def on_episode_end(info):
+    env = info['env'].get_unwrapped()[0]
+    outflow_over_last_500 = env.k.vehicle.get_outflow_rate(int(500 / env.sim_step))
+    inflow = env.inflow
+    # round it to 100
+    inflow = int(inflow / 100) * 100
+    episode = info["episode"]
+    episode.custom_metrics["net_outflow_{}".format(inflow)] = outflow_over_last_500
+
+
 def setup_exps(args):
     rllib_params = setup_rllib_params(args)
     flow_params = setup_flow_params(args)
@@ -218,7 +230,7 @@ def setup_exps(args):
     config['num_workers'] = rllib_params['n_cpus']
     config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
     config['gamma'] = 0.999  # discount rate
-    config['model'].update({'fcnet_hiddens': [64, 64]})
+    config['model'].update({'fcnet_hiddens': [256, 256]})
     config['horizon'] = args.horizon
 
     # Grid search things
@@ -229,7 +241,7 @@ def setup_exps(args):
     config['model']['use_lstm'] = args.use_lstm
     if args.use_lstm:
         config['model']["max_seq_len"] = tune.grid_search([5, 10])
-    config['model']["lstm_cell_size"] = 64
+    config['model']["lstm_cell_size"] = 32
 
     # save the flow params for replay
     flow_json = json.dumps(
@@ -271,9 +283,16 @@ if __name__ == '__main__':
         ray.init(redis_address='localhost:6379')
     else:
         ray.init()
+    eastern = pytz.timezone('US/Eastern')
+    date = datetime.now(tz=pytz.utc)
+    date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
     s3_string = "s3://eugene.experiments/trb_bottleneck_paper/" \
-                + datetime.now().strftime("%m-%d-%Y") + '/' + args.exp_title
+                + date + '/' + args.exp_title
     config['env'] = env_name
+
+    # store custom metrics
+    config["callbacks"] = {"on_episode_end": tune.function(on_episode_end)}
+
     exp_dict = {
             'name': args.exp_title,
             'run_or_experiment': alg_run,
