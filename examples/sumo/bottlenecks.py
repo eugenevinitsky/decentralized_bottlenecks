@@ -184,7 +184,7 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
                  23,
                  23, 23, 23]
 
-    penetration_rate = 0.99
+    penetration_rate = 0.40
 
     additional_env_params = {
         "target_velocity": 40,
@@ -216,7 +216,7 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
         lane_change_controller=(SimLaneChangeController, {}),
         routing_controller=(ContinuousRouter, {}),
         # acceleration_controller=(HandTunedVelocityController, {"v_regions": v_regions}),
-        acceleration_controller=(DecentralizedALINEAController, {"stop_edge": "2", "stop_pos": 200, "additional_env_params": additional_env_params}),
+        # acceleration_controller=(DecentralizedALINEAController, {"stop_edge": "2", "stop_pos": 200, "additional_env_params": additional_env_params}),
         car_following_params=SumoCarFollowingParams(
             speed_mode=31,
         ),
