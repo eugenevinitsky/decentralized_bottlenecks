@@ -15,7 +15,7 @@ from examples.sumo.bottlenecks import bottleneck_example
 
 @ray.remote
 def run_bottleneck(flow_rate, num_trials, num_steps, render=None, disable_ramp_meter=True, n_crit=8,
-                   feedback_coef=20, lc_on=False, q_init=400):
+                   feedback_coef=20, lc_on=False, q_init=400, pen_rate=0.4):
     """Run a rollout of the bottleneck environment.
 
     Parameters
@@ -42,10 +42,10 @@ def run_bottleneck(flow_rate, num_trials, num_steps, render=None, disable_ramp_m
     float
         inflow rate
     """
-    print('Running experiment for inflow rate: ', flow_rate, render)
+    print('Running experiment for inflow rate: ', flow_rate, render, q_init, pen_rate, feedback_coef)
     exp = bottleneck_example(flow_rate, num_steps, render=render, restart_instance=True,
                              disable_ramp_meter=disable_ramp_meter,
-                             feedback_coef=feedback_coef, n_crit=n_crit, lc_on=lc_on, q_init=q_init)
+                             feedback_coef=feedback_coef, n_crit=n_crit, lc_on=lc_on, q_init=q_init, penetration_rate=pen_rate)
     info_dict = exp.run(num_trials, num_steps)
 
     return info_dict['average_outflow'], \
@@ -66,6 +66,7 @@ if __name__ == '__main__':
                                                                     'hyperparams')
     parser.add_argument('--decentralized_alinea_sweep', action='store_true', help='If set, perform a hyperparam sweep'
                                                                     ' over hyperparams for decentralized ALINEA controller')
+    parser.add_argument('--penetration_rate', type=float, help='percentage of AVs in the system', default=0.0)
     parser.add_argument('--inflow_min', type=int, default=400)
     parser.add_argument('--inflow_max', type=int, default=2500)
     parser.add_argument('--ncrit_min', type=int, default=6)
@@ -132,7 +133,7 @@ if __name__ == '__main__':
 
     num_cpus = multiprocessing.cpu_count()
     ray.init(num_cpus=max(num_cpus - 4, 1))
-    if args.alinea_sweep or args.decentralized_alinea_sweep:
+    if args.alinea_sweep or (args.decentralized_alinea_sweep and args.penetration_rate != 0):
         for n_crit in n_crit_range:
             for q_init in q_init_range:
                 for feedback_coef in feedback_coef_range:
@@ -151,7 +152,8 @@ if __name__ == '__main__':
                     bottleneck_outputs = [run_bottleneck.remote(d, args.num_trials, args.horizon, render=args.render,
                                                                 disable_ramp_meter=not args.ramp_meter,
                                                                 lc_on=args.lc_on,
-                                                                feedback_coef=feedback_coef, n_crit=n_crit, q_init=q_init)
+                                                                feedback_coef=feedback_coef, n_crit=n_crit, q_init=q_init,
+                                                                pen_rate=args.penetration_rate)
                                         for d in densities]
                     for output in ray.get(bottleneck_outputs):
                         outflow, velocity, bottleneckdensity, \
@@ -188,8 +190,10 @@ if __name__ == '__main__':
 
 
     else:
+        if args.penetration_rate == 0.0:
+            print("Penetration rate is 0.0, running human curve exp.")
         bottleneck_outputs = [run_bottleneck.remote(d, args.num_trials, args.horizon, render=args.render,
-                                                    lc_on=args.lc_on)
+                                                    lc_on=args.lc_on, pen_rate=args.penetration_rate)
                               for d in densities]
         for output in ray.get(bottleneck_outputs):
             outflow, velocity, bottleneckdensity, \

@@ -123,7 +123,8 @@ class BottleneckDensityExperiment(Experiment):
 
 def bottleneck_example(flow_rate, horizon, restart_instance=False,
                        render=False, scaling=1, disable_ramp_meter=True, disable_tb=True,
-                       lc_on=False, n_crit=8.0, q_max=3000, q_min=200, feedback_coef=1, q_init=2300):
+                       lc_on=False, n_crit=8.0, q_max=3000, q_min=200, feedback_coef=1, q_init=2300, 
+                       penetration_rate=0.4):
     """
     Perform a simulation of vehicles on a bottleneck.
 
@@ -184,8 +185,6 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
                  23,
                  23, 23, 23]
 
-    penetration_rate = 0.40
-
     additional_env_params = {
         "target_velocity": 40,
         "max_accel": 3,
@@ -241,20 +240,26 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
         horizon=horizon, additional_params=additional_env_params)
 
     inflow = InFlows()
-    inflow.add(
-        veh_type="AV",
-        edge="1",
-        vehsPerHour=flow_rate * (penetration_rate),
-        departLane="random",
-        departSpeed=23)
+
+    if penetration_rate != 0.0:
+        av_veh_per_hour = flow_rate * (penetration_rate)
+        human_veh_per_hour = flow_rate * (1 - penetration_rate)
+
+        inflow.add(
+            veh_type="AV",
+            edge="1",
+            vehsPerHour=av_veh_per_hour,
+            departLane="random",
+            departSpeed=23)
+    else: 
+        human_veh_per_hour = flow_rate
 
     inflow.add(
         veh_type="human",
         edge="1",
-        vehsPerHour=flow_rate * (1 - penetration_rate),
+        vehsPerHour=human_veh_per_hour,
         departLane="random",
         departSpeed=23)
-
 
     traffic_lights = TrafficLightParams()
     if not disable_tb:
