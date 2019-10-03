@@ -123,7 +123,7 @@ class BottleneckDensityExperiment(Experiment):
 
 def bottleneck_example(flow_rate, horizon, restart_instance=False,
                        render=False, scaling=1, disable_ramp_meter=True, disable_tb=True,
-                       lc_on=False, n_crit=8.0, q_max=3000, q_min=900, feedback_coef=20):
+                       lc_on=False, n_crit=8.0, q_max=3000, q_min=200, feedback_coef=1, q_init=2300):
     """
     Perform a simulation of vehicles on a bottleneck.
 
@@ -184,7 +184,7 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
                  23,
                  23, 23, 23]
 
-    penetration_rate = 0.40
+    penetration_rate = 0.99
 
     additional_env_params = {
         "target_velocity": 40,
@@ -197,6 +197,7 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
         "n_crit": n_crit,
         "q_max": q_max,
         "q_min": q_min,
+        "q_init": q_init,
         "feedback_coeff": feedback_coef,
         "controlled_segments": controlled_segments,
         "inflow_range": [2200, 2200],
@@ -206,6 +207,8 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
         "congest_penalty": 1e10,
         "lc_mode": lc_mode,
         'start_inflow': flow_rate,
+        'life_penalty': 0.00,
+
     }
 
     vehicles.add(
@@ -293,9 +296,12 @@ if __name__ == '__main__':
     parser.add_argument('--ramp_meter', action='store_true', help='If set, ALINEA is active in this scenario')
     parser.add_argument('--render', type=int, default=1)
     parser.add_argument('--num_runs', type=int, default=5)
+    parser.add_argument('--horizon', type=int, default=2000)
+    parser.add_argument('--q_init', type=int, default=400)
+    parser.add_argument('--lc', action="store_true")
     args = parser.parse_args()
     if args.render:
-        exp = bottleneck_example(args.inflow, 1000, disable_ramp_meter=not args.ramp_meter, render=True)
+        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter, lc_on=args.lc, render=True, q_init=args.q_init)
     else:
-        exp = bottleneck_example(args.inflow, 1000, disable_ramp_meter=not args.ramp_meter, render=False)
-    exp.run(args.num_runs, 3000)
+        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter,  lc_on=args.lc, render=False, q_init=args.q_init)
+    exp.run(args.num_runs, args.horizon)

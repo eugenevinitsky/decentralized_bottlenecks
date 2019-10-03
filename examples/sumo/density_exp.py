@@ -15,7 +15,7 @@ from examples.sumo.bottlenecks import bottleneck_example
 
 @ray.remote
 def run_bottleneck(flow_rate, num_trials, num_steps, render=None, disable_ramp_meter=True, n_crit=8,
-                   feedback_coef=20, lc_on=False):
+                   feedback_coef=20, lc_on=False, q_init=400):
     """Run a rollout of the bottleneck environment.
 
     Parameters
@@ -45,7 +45,7 @@ def run_bottleneck(flow_rate, num_trials, num_steps, render=None, disable_ramp_m
     print('Running experiment for inflow rate: ', flow_rate, render)
     exp = bottleneck_example(flow_rate, num_steps, render=render, restart_instance=True,
                              disable_ramp_meter=disable_ramp_meter,
-                             feedback_coef=feedback_coef, n_crit=n_crit, lc_on=lc_on)
+                             feedback_coef=feedback_coef, n_crit=n_crit, lc_on=lc_on, q_init=q_init)
     info_dict = exp.run(num_trials, num_steps)
 
     return info_dict['average_outflow'], \
@@ -108,13 +108,15 @@ if __name__ == '__main__':
                 print(e)
 
     n_crit_range = list(range(args.ncrit_min, args.ncrit_max + args.ncrit_step_size, args.ncrit_step_size))
-    feedback_coef_range = [5, 10, 20, 40, 100]
+    feedback_coef_range = [1, 3, 5, 10]
+    q_init_range = [200, 500, 1000, 1500, 2000]
     densities = list(range(args.inflow_min, args.inflow_max + args.step_size, args.step_size))
     if args.test_run:
         args.num_trials = 2
         densities = [500, 600]
         n_crit_range = [7, 8]
         feedback_coef_range = [5]
+        q_init_range = [500, 100]
 
     outflows = []
     velocities = []
@@ -132,56 +134,57 @@ if __name__ == '__main__':
     ray.init(num_cpus=max(num_cpus - 4, 1))
     if args.alinea_sweep or args.decentralized_alinea_sweep:
         for n_crit in n_crit_range:
-            for feedback_coef in feedback_coef_range:
+            for q_init in q_init_range:
+                for feedback_coef in feedback_coef_range:
 
-                outflows = []
-                velocities = []
-                lane_4_vels = []
-                bottleneckdensities = []
+                    outflows = []
+                    velocities = []
+                    lane_4_vels = []
+                    bottleneckdensities = []
 
-                per_step_densities = []
-                per_step_avg_velocities = []
-                per_step_outflows = []
+                    per_step_densities = []
+                    per_step_avg_velocities = []
+                    per_step_outflows = []
 
-                rollout_inflows = []
-                rollout_outflows = []
-                bottleneck_outputs = [run_bottleneck.remote(d, args.num_trials, args.horizon, render=args.render,
-                                                            disable_ramp_meter=not args.ramp_meter,
-                                                            lc_on=args.lc_on,
-                                                            feedback_coef=feedback_coef, n_crit=n_crit)
-                                      for d in densities]
-                for output in ray.get(bottleneck_outputs):
-                    outflow, velocity, bottleneckdensity, \
-                    per_rollout_outflows, flow_rate, lane_4_vel = output
-                    for i, _ in enumerate(per_rollout_outflows):
-                        rollout_outflows.append(per_rollout_outflows[i])
-                        rollout_inflows.append(flow_rate)
-                    outflows.append(outflow)
-                    velocities.append(velocity)
-                    lane_4_vels += lane_4_vel
-                    bottleneckdensities.append(bottleneckdensity)
+                    rollout_inflows = []
+                    rollout_outflows = []
+                    bottleneck_outputs = [run_bottleneck.remote(d, args.num_trials, args.horizon, render=args.render,
+                                                                disable_ramp_meter=not args.ramp_meter,
+                                                                lc_on=args.lc_on,
+                                                                feedback_coef=feedback_coef, n_crit=n_crit, q_init=q_init)
+                                        for d in densities]
+                    for output in ray.get(bottleneck_outputs):
+                        outflow, velocity, bottleneckdensity, \
+                        per_rollout_outflows, flow_rate, lane_4_vel = output
+                        for i, _ in enumerate(per_rollout_outflows):
+                            rollout_outflows.append(per_rollout_outflows[i])
+                            rollout_inflows.append(flow_rate)
+                        outflows.append(outflow)
+                        velocities.append(velocity)
+                        lane_4_vels += lane_4_vel
+                        bottleneckdensities.append(bottleneckdensity)
 
-                # save the returns
-                if args.lc_on:
-                    ret_string = 'rets_LC_n{}_fcoeff{}_alinea.csv'.format(n_crit, feedback_coef)
-                    inflow_outflow_str = 'inflows_outflows_LC_n{}_fcoeff{}_alinea.csv'.format(n_crit, feedback_coef)
-                    inflow_velocity_str = 'inflows_velocity_LC_n{}_fcoeff{}_alinea.csv'.format(n_crit, feedback_coef)
+                    # save the returns
+                    if args.lc_on:
+                        ret_string = 'rets_LC_n{}_fcoeff{}_qinit{}_alinea.csv'.format(n_crit, feedback_coef, q_init)
+                        inflow_outflow_str = 'inflows_outflows_LC_n{}_fcoeff{}_qinit{}_alinea.csv'.format(n_crit, feedback_coef, q_init)
+                        inflow_velocity_str = 'inflows_velocity_LC_n{}_fcoeff{}_qinit{}_alinea.csv'.format(n_crit, feedback_coef, q_init)
 
-                else:
-                    ret_string = 'rets_n{}_fcoeff{}_alinea.csv'.format(n_crit, feedback_coef)
-                    inflow_outflow_str = 'inflows_outflows_n{}_fcoeff{}_alinea.csv'.format(n_crit, feedback_coef)
-                    inflow_velocity_str = 'inflows_velocity_n{}_fcoeff{}_alinea.csv'.format(n_crit, feedback_coef)
+                    else:
+                        ret_string = 'rets_n{}_fcoeff{}_qinit{}_alinea.csv'.format(n_crit, feedback_coef, q_init)
+                        inflow_outflow_str = 'inflows_outflows_n{}_fcoeff{}_qinit{}_alinea.csv'.format(n_crit, feedback_coef, q_init)
+                        inflow_velocity_str = 'inflows_velocity_n{}_fcoeff{}_qinit{}_alinea.csv'.format(n_crit, feedback_coef, q_init)
 
-                ret_path = os.path.join(path, os.path.join(outer_path, ret_string))
-                outflow_path = os.path.join(path, os.path.join(outer_path, inflow_outflow_str))
-                vel_path = os.path.join(path, os.path.join(outer_path, inflow_velocity_str))
+                    ret_path = os.path.join(path, os.path.join(outer_path, ret_string))
+                    outflow_path = os.path.join(path, os.path.join(outer_path, inflow_outflow_str))
+                    vel_path = os.path.join(path, os.path.join(outer_path, inflow_velocity_str))
 
-                with open(ret_path, 'ab') as file:
-                    np.savetxt(file, np.matrix([densities, outflows, velocities, bottleneckdensities]).T, delimiter=',')
-                with open(outflow_path, 'ab') as file:
-                    np.savetxt(file,  np.matrix([rollout_inflows, rollout_outflows]).T, delimiter=',')
-                with open(vel_path, 'ab') as file:
-                    np.savetxt(file,  np.matrix(lane_4_vels), delimiter=',')
+                    with open(ret_path, 'ab') as file:
+                        np.savetxt(file, np.matrix([densities, outflows, velocities, bottleneckdensities]).T, delimiter=',')
+                    with open(outflow_path, 'ab') as file:
+                        np.savetxt(file,  np.matrix([rollout_inflows, rollout_outflows]).T, delimiter=',')
+                    with open(vel_path, 'ab') as file:
+                        np.savetxt(file,  np.matrix(lane_4_vels), delimiter=',')
 
 
     else:

@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
     # import the csv file
     if os.path.isdir(args.file):
-        files = glob.glob(os.path.join(args.file, "*inflows_outflows*"))
+        files = glob.glob(os.path.join(args.file, "*.csv"))
     else:
         files = [args.file]
 
@@ -126,17 +126,19 @@ if __name__ == '__main__':
 
         # perform plotting operation
         plt.plot(unique_inflows, mean_outflows, linewidth=2, c=colors[i])
-        if not os.path.isdir(args.file):
-            plt.fill_between(unique_inflows, mean_outflows - std_outflows,
-                             mean_outflows + std_outflows, alpha=0.25, color=colors[i])
-    legend_names = [file.split('outflows_')[1].split('.')[0] for file in files]
+        # if not os.path.isdir(args.file):
+        plt.fill_between(unique_inflows, mean_outflows - std_outflows,
+                            mean_outflows + std_outflows, alpha=0.25, color=colors[i])
+    legend_names = files
+    # legend_names = [file.split('outflows_')[1].split('.')[0] for file in files]
     plt.xlabel('Inflow' + r'$ \ \frac{vehs}{hour}$')
     plt.ylabel('Outflow' + r'$ \ \frac{vehs}{hour}$')
     plt.tick_params(labelsize=20)
     plt.rcParams['xtick.minor.size'] = 20
     plt.minorticks_on()
     plt.legend(legend_names, loc='upper left')
-    if len(files) > 1:
-    	plt.savefig('trb_data/alinea_data/alinea_comp.png')
-    else:
-        plt.savefig('trb_data/alinea_data/{}.png'.format(legend_names[0]))
+    plt.show()
+    # if len(files) > 1:
+    # 	plt.savefig('trb_data/alinea_data/alinea_comp.png')
+    # else:
+        # plt.savefig('trb_data/alinea_data/{}.png'.format(legend_names[0]))
