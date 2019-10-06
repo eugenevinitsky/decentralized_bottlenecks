@@ -108,7 +108,7 @@ if __name__ == '__main__':
             except Exception as e:
                 print(e)
 
-    n_crit_range = list(range(args.ncrit_min, args.ncrit_max + args.ncrit_step_size, args.ncrit_step_size))
+    n_crit_range = [6, 9, 12] #list(range(args.ncrit_min, args.ncrit_max + args.ncrit_step_size, args.ncrit_step_size))
     feedback_coef_range = [1, 3, 5, 10]
     q_init_range = [200, 500, 1000, 1500, 2000]
     densities = list(range(args.inflow_min, args.inflow_max + args.step_size, args.step_size))
