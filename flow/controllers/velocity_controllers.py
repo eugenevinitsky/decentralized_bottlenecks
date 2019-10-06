@@ -268,11 +268,12 @@ class DecentralizedALINEAController(TimeDelayVelocityController):
     def __init__(self, veh_id, stop_edge, stop_pos, additional_env_params, car_following_params):
         super().__init__(veh_id, stop_edge, stop_pos, car_following_params)
         # values for the ALINEA ramp meter algorithm
-        self.n_crit = additional_env_params.get("n_crit", 12)
+        self.n_crit = additional_env_params.get("n_crit", 6)
         self.q_max = 14401
         self.q_min = 200
         self.feedback_coeff = additional_env_params.get('feedback_coef', 1)
-        self.q = additional_env_params.get('q_init', 600)# 600 # ramp meter feedback controller
+        # self.negative_coef = 1  # self.feedback_coeff * 5
+        self.q = additional_env_params.get('q_init', 600)  # 600 # ramp meter feedback controller
         self.feedback_update_time = 0
         self.feedback_timer = 0.0
         self.duration = 0.0
@@ -287,7 +288,7 @@ class DecentralizedALINEAController(TimeDelayVelocityController):
                 self.n_crit - np.average(env.smoothed_num))
             self.q = min(max(self.q + q_update, self.q_min), self.q_max)
             # convert q to cycle time, we keep track of the previous cycle time to let the cycle coplete
-            self.duration = 1.1
+            self.duration = 3600 * env.scaling * 4 / self.q
         return self.duration
 
     

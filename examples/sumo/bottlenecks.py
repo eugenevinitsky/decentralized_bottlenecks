@@ -303,10 +303,11 @@ if __name__ == '__main__':
     parser.add_argument('--num_runs', type=int, default=5)
     parser.add_argument('--horizon', type=int, default=2000)
     parser.add_argument('--q_init', type=int, default=400)
+    parser.add_argument('--penetration_rate', type=float, default=0.4)
     parser.add_argument('--lc', action="store_true")
     args = parser.parse_args()
     if args.render:
-        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter, lc_on=args.lc, render=True, q_init=args.q_init)
+        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter, lc_on=args.lc, render=True, q_init=args.q_init, penetration_rate=args.penetration_rate)
     else:
-        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter,  lc_on=args.lc, render=False, q_init=args.q_init)
+        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter,  lc_on=args.lc, render=False, q_init=args.q_init, penetration_rate=args.penetration_rate)
     exp.run(args.num_runs, args.horizon)

@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
     # import the csv file
     if os.path.isdir(args.file):
-        files = glob.glob(os.path.join(args.file, "*.csv"))
+        files = glob.glob(os.path.join(args.file, "*inflows_outflows*"))
     else:
         files = [args.file]
 
@@ -127,8 +127,8 @@ if __name__ == '__main__':
         # perform plotting operation
         plt.plot(unique_inflows, mean_outflows, linewidth=2, c=colors[i])
         # if not os.path.isdir(args.file):
-        plt.fill_between(unique_inflows, mean_outflows - std_outflows,
-                            mean_outflows + std_outflows, alpha=0.25, color=colors[i])
+        # plt.fill_between(unique_inflows, mean_outflows - std_outflows,
+        #                     mean_outflows + std_outflows, alpha=0.25, color=colors[i])
     legend_names = files
     # legend_names = [file.split('outflows_')[1].split('.')[0] for file in files]
     plt.xlabel('Inflow' + r'$ \ \frac{vehs}{hour}$')
