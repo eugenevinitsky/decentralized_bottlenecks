@@ -272,7 +272,6 @@ class DecentralizedALINEAController(TimeDelayVelocityController):
         self.q_max = 14401
         self.q_min = 200
         self.feedback_coeff = additional_env_params.get('feedback_coef', 1)
-        # self.negative_coef = 1  # self.feedback_coeff * 5
         self.q = additional_env_params.get('q_init', 600)  # 600 # ramp meter feedback controller
         self.feedback_update_time = 0
         self.feedback_timer = 0.0
