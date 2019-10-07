@@ -132,8 +132,8 @@ if __name__ == '__main__':
     rollout_outflows = []
 
     num_cpus = multiprocessing.cpu_count()
-    # ray.init(redis_address="localhost:6379")
-    ray.init()
+    ray.init(redis_address="localhost:6379")
+    # ray.init()
     if args.alinea_sweep or (args.decentralized_alinea_sweep and args.penetration_rate != 0):
         bottleneck_outputs = []
         hyperparams = []
