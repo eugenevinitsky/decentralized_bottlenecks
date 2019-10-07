@@ -181,12 +181,12 @@ if __name__ == '__main__':
                     outflow_path = os.path.join(path, os.path.join(outer_path, inflow_outflow_str))
                     vel_path = os.path.join(path, os.path.join(outer_path, inflow_velocity_str))
 
-                    with open(ret_path, 'ab') as file:
-                        np.savetxt(file, np.matrix([densities, outflows, velocities, bottleneckdensities]).T, delimiter=',')
+                    # with open(ret_path, 'ab') as file:
+                    #     np.savetxt(file, np.matrix([densities, outflows, velocities, bottleneckdensities]).T, delimiter=',')
                     with open(outflow_path, 'ab') as file:
                         np.savetxt(file,  np.matrix([rollout_inflows, rollout_outflows]).T, delimiter=',')
-                    with open(vel_path, 'ab') as file:
-                        np.savetxt(file,  np.matrix(lane_4_vels), delimiter=',')
+                    # with open(vel_path, 'ab') as file:
+                    #     np.savetxt(file,  np.matrix(lane_4_vels), delimiter=',')
 
 
     else:
