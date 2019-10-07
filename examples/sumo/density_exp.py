@@ -132,7 +132,7 @@ if __name__ == '__main__':
     rollout_outflows = []
 
     num_cpus = multiprocessing.cpu_count()
-    ray.init(num_cpus=max(num_cpus - 4, 1), redis_address="localhost:6379")
+    ray.init(redis_address="localhost:6379")
     if args.alinea_sweep or (args.decentralized_alinea_sweep and args.penetration_rate != 0):
         for n_crit in n_crit_range:
             for q_init in q_init_range:
