@@ -176,7 +176,7 @@ if __name__ == '__main__':
                 velocities.append(velocity)
                 lane_4_vels += lane_4_vel
                 bottleneckdensities.append(bottleneckdensity)
-
+            n_crit, q_init, feedback_coef = params
             # save the returns
             if args.lc_on:
                 ret_string = 'rets_LC_n{}_fcoeff{}_qinit{}_alinea.csv'.format(n_crit, feedback_coef, q_init)
