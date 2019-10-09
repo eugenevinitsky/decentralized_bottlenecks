@@ -71,6 +71,7 @@ class CFMController(BaseController):
 
     def get_accel(self, env):
         """See parent class."""
+        env.k.vehicle.set_color(self.veh_id, (0, 255, 0))
         lead_id = env.k.vehicle.get_leader(self.veh_id)
         if not lead_id:  # no car ahead
             return self.max_accel

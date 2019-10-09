@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
     # import the csv file
     if os.path.isdir(args.file):
-        files = glob.glob(os.path.join(args.file, "*inflows_outflows*"))
+        files = glob.glob(os.path.join(args.file, "*"))
     else:
         files = [args.file]
 
@@ -136,7 +136,8 @@ if __name__ == '__main__':
     plt.tick_params(labelsize=20)
     plt.rcParams['xtick.minor.size'] = 20
     plt.minorticks_on()
-    plt.legend(legend_names, loc='upper left')
+    lgd = plt.legend(legend_names, loc='upper left', borderaxespad=0.)
+    # plt.tight_layout(pad=7)
     plt.show()
     # if len(files) > 1:
     # 	plt.savefig('trb_data/alinea_data/alinea_comp.png')
