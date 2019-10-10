@@ -218,8 +218,9 @@ if __name__ == '__main__':
 
         if args.penetration_rate == 0.0:
             print("Penetration rate is 0.0, running human curve exp.")
-        bottleneck_outputs = [run_bottleneck.remote(d, args.num_trials, args.horizon, render=args.render,
-                                                    lc_on=args.lc_on, pen_rate=args.penetration_rate)
+        bottleneck_outputs = [run_bottleneck.remote(flow_rate=d, penetration_rate=args.penetration_rate, num_trials=args.num_trials, num_steps=args.horizon, render=args.render,
+                                                                     disable_ramp_meter=not args.ramp_meter,
+                                                                     lc_on=args.lc_on)
                               for d in densities]
         for output in ray.get(bottleneck_outputs):
             outflow, velocity, bottleneckdensity, \
@@ -232,11 +233,12 @@ if __name__ == '__main__':
             lane_4_vels += lane_4_vel
             bottleneckdensities.append(bottleneckdensity)
 
+        import ipdb; ipdb.set_trace()
         path = os.path.dirname(os.path.abspath(__file__))
         np.savetxt(path + '/../../flow/visualize/trb_data/human_driving/rets_LC.csv',
                    np.matrix([densities,
                               outflows,
-                              velocities,
+                              [np.sum(np.logical_and(velocity != -1, velocity < 5)) for velocity in velocities],
                               bottleneckdensities]).T,
                    delimiter=',')
         np.savetxt(path + '/../../flow/visualize/trb_data/human_driving/inflows_outflows_LC.csv',
