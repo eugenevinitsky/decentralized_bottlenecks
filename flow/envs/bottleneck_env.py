@@ -128,10 +128,10 @@ class BottleneckEnv(Env):
         self.next_period = START_RECORD_TIME / self.sim_step
 
         # values for the ALINEA ramp meter algorithm
-        self.n_crit = env_add_params.get("n_crit", 8)
-        self.q_max = env_add_params.get("q_max", 3000)
-        self.q_min = env_add_params.get("q_min", 900)
-        self.feedback_coeff = env_add_params.get("feedback_coeff", 20)
+        self.n_crit = env_add_params.get("n_crit")
+        self.q_max = env_add_params.get("q_max")
+        self.q_min = env_add_params.get("q_min")
+        self.feedback_coeff = env_add_params.get("feedback_coeff")
         self.q = self.q_max  # ramp meter feedback controller
         self.feedback_update_time = env_add_params.get("feedback_update", 30)
         self.feedback_timer = 0.0

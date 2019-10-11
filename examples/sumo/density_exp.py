@@ -15,7 +15,7 @@ from examples.sumo.bottlenecks import bottleneck_example
 
 @ray.remote
 def run_bottleneck(flow_rate, penetration_rate, num_trials, num_steps, render=None, disable_ramp_meter=True, n_crit=8,
-                   feedback_coef=20, lc_on=False, q_init=400,):
+                   feedback_coef=20, lc_on=False, q_init=400):
     """Run a rollout of the bottleneck environment.
 
     Parameters
@@ -54,7 +54,6 @@ def run_bottleneck(flow_rate, penetration_rate, num_trials, num_steps, render=No
         np.mean(info_dict['average_rollout_density_outflow']), \
         info_dict['per_rollout_outflows'], \
         flow_rate, info_dict['lane_4_vels'],
-        
 
 
 if __name__ == '__main__':
@@ -80,6 +79,8 @@ if __name__ == '__main__':
     parser.add_argument('--step_size', type=int, default=100)
     parser.add_argument('--num_trials', type=int, default=20)
     parser.add_argument('--horizon', type=int, default=2000)
+    parser.add_argument('--opt_feedback_coef', type=int, help="feedback coef for a single sweep")
+    parser.add_argument('--opt_n_crit', type=int, help="n_crit for a single sweep")
     parser.add_argument('--lc_on', action='store_true')
     parser.add_argument('--multi_node', action='store_true')
     parser.add_argument('--clear_data', action='store_true', help='If true, clean the folder where the files are '
@@ -88,8 +89,12 @@ if __name__ == '__main__':
                         help='If true, sweep over a tiny grid')
     args = parser.parse_args()
 
-    assert (args.alinea_sweep and args.ramp_meter) or (not args.alinea_sweep and not args.ramp_meter), \
-        "If alinea sweep is on, the ramp meter must be on as well"
+    if args.alinea_sweep:
+        assert args.ramp_meter, \
+            "If alinea sweep is on, the ramp meter must be on as well, or a fully human sweep"
+    elif args.ramp_meter:
+        assert args.penetration_rate == 0.0, \
+            "Shouldn't have AVs and ramp meter!"
 
     path = os.path.dirname(os.path.abspath(__file__))
     if args.alinea_sweep:
@@ -116,6 +121,7 @@ if __name__ == '__main__':
                 print(e)
 
     # list(range(args.ncrit_min, args.ncrit_max + args.ncrit_step_size, args.ncrit_step_size))
+    # TODO(kp): make this work for both alinea and decentralized alinea
     n_crit_range = [6, 9, 12]
     feedback_coef_range = [1, 3, 5, 10]
     q_init_range = [200, 500, 1000, 1500, 2000]
@@ -139,7 +145,9 @@ if __name__ == '__main__':
         for n_crit in n_crit_range:
             for q_init in q_init_range:
                 for feedback_coef in feedback_coef_range:
-                    bottleneck_outputs.extend([run_bottleneck.remote(flow_rate=d, penetration_rate=args.penetration_rate, num_trials=args.num_trials, num_steps=args.horizon, render=args.render,
+                    bottleneck_outputs.extend([run_bottleneck.remote(flow_rate=d, penetration_rate=args.penetration_rate,
+                                                                     num_trials=args.num_trials, num_steps=args.horizon, 
+                                                                     render=args.render,
                                                                      disable_ramp_meter=not args.ramp_meter,
                                                                      lc_on=args.lc_on,
                                                                      feedback_coef=feedback_coef, n_crit=n_crit, q_init=q_init,)
@@ -171,7 +179,9 @@ if __name__ == '__main__':
                 velocities.append(np.mean(per_step_velocities))
                 congested = 0
                 for rollout_per_step_vels in per_step_velocities:
-                    congested += np.sum(np.logical_and(rollout_per_step_vels != -1, rollout_per_step_vels < 5)) # cars in bottleneck, velocity less than 5
+                    # cars in bottleneck, velocity less than 5
+                    congested += np.sum(np.logical_and(
+                        rollout_per_step_vels != -1, rollout_per_step_vels < 5))
                 percent_congested.append(congested / args.horizon)
                 lane_4_vels += lane_4_vel
                 bottleneckdensities.append(bottleneckdensity)
@@ -200,12 +210,11 @@ if __name__ == '__main__':
                 outer_path, inflow_velocity_str))
 
             with open(ret_path, 'wb') as file:
-                np.savetxt(file, np.matrix([densities, outflows, velocities, percent_congested, bottleneckdensities]).T, delimiter=',')
+                np.savetxt(file, np.matrix(
+                    [densities, outflows, velocities, percent_congested, bottleneckdensities]).T, delimiter=',')
             with open(outflow_path, 'wb') as file:
                 np.savetxt(file,  np.matrix(
                     [rollout_inflows, rollout_outflows]).T, delimiter=',')
-            # with open(vel_path, 'ab') as file:
-            #     np.savetxt(file,  np.matrix(lane_4_vels), delimiter=',')
 
     else:
         outflows = []
@@ -218,9 +227,19 @@ if __name__ == '__main__':
 
         if args.penetration_rate == 0.0:
             print("Penetration rate is 0.0, running human curve exp.")
-        bottleneck_outputs = [run_bottleneck.remote(flow_rate=d, penetration_rate=args.penetration_rate, num_trials=args.num_trials, num_steps=args.horizon, render=args.render,
-                                                                     disable_ramp_meter=not args.ramp_meter,
-                                                                     lc_on=args.lc_on)
+        # TODO(kp): add q_init here too
+        if args.ramp_meter or args.penetration_rate:
+            assert args.opt_feedback_coef, "feedback coef must be defined to run sweep"
+            assert args.opt_n_crit, "feedback coef must be defined to run sweep"
+        
+
+        bottleneck_outputs = [run_bottleneck.remote(flow_rate=d, penetration_rate=args.penetration_rate,
+                                                    num_trials=args.num_trials, num_steps=args.horizon,
+                                                    render=args.render,
+                                                    disable_ramp_meter=not args.ramp_meter,
+                                                    lc_on=args.lc_on,
+                                                    feedback_coef=args.opt_feedback_coef,
+                                                    n_crit=args.opt_n_crit)
                               for d in densities]
         for output in ray.get(bottleneck_outputs):
             outflow, velocity, bottleneckdensity, \
@@ -233,12 +252,12 @@ if __name__ == '__main__':
             lane_4_vels += lane_4_vel
             bottleneckdensities.append(bottleneckdensity)
 
-        import ipdb; ipdb.set_trace()
         path = os.path.dirname(os.path.abspath(__file__))
         np.savetxt(path + '/../../flow/visualize/trb_data/human_driving/rets_LC.csv',
                    np.matrix([densities,
                               outflows,
-                              [np.sum(np.logical_and(velocity != -1, velocity < 5)) for velocity in velocities],
+                              [np.mean([np.sum(np.logical_and(velocity != -1, velocity < 5))
+                                        for velocity in velocities_at_d]) / args.horizon for velocities_at_d in velocities],
                               bottleneckdensities]).T,
                    delimiter=',')
         np.savetxt(path + '/../../flow/visualize/trb_data/human_driving/inflows_outflows_LC.csv',

@@ -124,7 +124,7 @@ class BottleneckDensityExperiment(Experiment):
 
 def bottleneck_example(flow_rate, horizon, restart_instance=False,
                        render=False, scaling=1, disable_ramp_meter=True, disable_tb=True,
-                       lc_on=False, n_crit=8.0, q_max=3000, q_min=200, feedback_coef=1, q_init=2300, 
+                       lc_on=False, n_crit=8.0, q_max=None, q_min=None, feedback_coef=1, q_init=2300, 
                        penetration_rate=0.4):
     """
     Perform a simulation of vehicles on a bottleneck.
@@ -185,6 +185,19 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
                  23, 23, 23,
                  23,
                  23, 23, 23]
+
+    ## set default q_max, q_min values
+    if not q_max:
+        if disable_ramp_meter:
+            q_max = 14401
+        else:
+            q_max = 3000
+    
+    if not q_min:
+        if disable_ramp_meter:
+            q_min = 200
+        else:
+            q_min = 900
 
     additional_env_params = {
         "target_velocity": 40,
