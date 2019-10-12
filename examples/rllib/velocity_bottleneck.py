@@ -231,9 +231,9 @@ def setup_exps(args):
         if args.grid_search:
             config['tau'] = tune.grid_search([5e-3, 5e-4])
             config['optimization']['actor_learning_rate'] = tune.grid_search([5e-3, 5e-4])
-            config['optimization']['critic_learning_rate'] = tune.grid_search([5e-3, 5e-4])
-            config['optimization']['entropy_learning_rate'] = tune.grid_search([5e-3, 5e-4])
-            config['no_done_at_end'] = tune.grid_search([True, False])
+            # config['optimization']['critic_learning_rate'] = tune.grid_search([5e-3, 5e-4])
+            # config['optimization']['entropy_learning_rate'] = tune.grid_search([5e-3, 5e-4])
+            # config['no_done_at_end'] = tune.grid_search([True, False])
     else:
         sys.exit("Please specify a valid algorithm amongst A3C, PPO, SAC, or DQN")
 
@@ -246,7 +246,7 @@ def setup_exps(args):
 
     # Grid search things
     if args.grid_search and (alg_run == 'PPO' or alg_run == 'A3C'):
-        config['lr'] = tune.grid_search([5e-5, 5e-4])
+        config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
 
     if args.use_lstm and args.use_gru:
         sys.exit("You should not specify both an LSTM and a GRU")

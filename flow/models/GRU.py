@@ -55,7 +55,7 @@ class GRU(RecurrentTFModelV2):
                 mask=tf.sequence_mask(seq_in),
                 initial_state=[state_in_h])
 
-        # Postprocess LSTM output with another hidden layer and compute values
+        # Postprocess GRU output with another hidden layer and compute values using a shared layer
         logits = tf.keras.layers.Dense(
             self.num_outputs,
             activation=tf.keras.activations.linear,
