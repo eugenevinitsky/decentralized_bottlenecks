@@ -214,13 +214,12 @@ def setup_exps(args):
         config['vf_clip_param'] = 100
         config['vf_share_layers'] = True
         config['simple_optimizer'] = False
-
         if args.grid_search:
             config['num_sgd_iter'] = tune.grid_search([10, 30])
     elif alg_run == 'A3C':
+        config = a3c.DEFAULT_CONFIG.copy()
         if args.grid_search:
             config['sample_batch_size'] = tune.grid_search([10, 100])
-        config = a3c.DEFAULT_CONFIG.copy()
     elif alg_run == 'DQN':
         if alg_run == 'DQN' and not args.discrete:
             sys.exit("If you are using DQN, make sure to pass in the --discrete flag as well.")
@@ -229,6 +228,12 @@ def setup_exps(args):
         if args.use_gru or args.use_lstm:
             sys.exit("SAC does not support LSTM or GRU")
         config = sac.DEFAULT_CONFIG.copy()
+        if args.grid_search:
+            config['tau'] = tune.grid_search([5e-3, 5e-4])
+            config['optimization']['actor_learning_rate'] = tune.grid_search([5e-3, 5e-4])
+            config['optimization']['critic_learning_rate'] = tune.grid_search([5e-3, 5e-4])
+            config['optimization']['entropy_learning_rate'] = tune.grid_search([5e-3, 5e-4])
+            config['no_done_at_end'] = tune.grid_search([True, False])
     else:
         sys.exit("Please specify a valid algorithm amongst A3C, PPO, SAC, or DQN")
 
@@ -251,16 +256,15 @@ def setup_exps(args):
         config['model']["max_seq_len"] = tune.grid_search([10, 20])
         config['model'].update({'fcnet_hiddens': []})
         config['model']["lstm_cell_size"] = 64
-    else:
-        config['model'].update({'fcnet_hiddens': [256, 256]})
-
-    if args.use_gru:
+    elif args.use_gru:
         config['model']["max_seq_len"] = tune.grid_search([10, 20])
         config['model'].update({'fcnet_hiddens': []})
         model_name = "GRU"
         ModelCatalog.register_custom_model(model_name, GRU)
         config['model']['custom_model'] = model_name
         config['model']['custom_options'] = {"cell_size": 64}
+    else:
+        config['model'].update({'fcnet_hiddens': [256, 256]})
 
     # save the flow params for replay
     flow_json = json.dumps(
