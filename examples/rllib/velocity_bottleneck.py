@@ -11,20 +11,24 @@ import sys
 import numpy as np
 import pytz
 import ray
-import ray.rllib.agents.ppo as ppo
-import ray.rllib.agents.a3c as a3c
 from ray import tune
+import ray.rllib.agents.a3c as a3c
+import ray.rllib.agents.dqn as dqn
+import ray.rllib.agents.ppo as ppo
+import ray.rllib.agents.sac as sac
+from ray.rllib.models import ModelCatalog
 from ray.tune import run_experiments
 from ray.tune.registry import register_env
 
-from flow.utils.registry import make_create_env
-from flow.utils.rllib import FlowParamsEncoder
 from flow.core.params import SumoParams, EnvParams, InitialConfig, NetParams, \
     InFlows, SumoCarFollowingParams, SumoLaneChangeParams
 from flow.core.params import TrafficLightParams
 from flow.core.params import VehicleParams
 from flow.controllers import RLController, ContinuousRouter, \
     SimLaneChangeController
+from flow.models.GRU import GRU
+from flow.utils.registry import make_create_env
+from flow.utils.rllib import FlowParamsEncoder
 
 
 def setup_rllib_params(args):
@@ -109,6 +113,7 @@ def setup_flow_params(args):
         "av_frac": args.av_frac,
         "lc_mode": lc_mode,
         "congest_penalty_start": args.congest_penalty_start,
+        "discrete": args.discrete
     }
 
     # percentage of flow coming out of each lane
@@ -213,30 +218,49 @@ def setup_exps(args):
         if args.grid_search:
             config['num_sgd_iter'] = tune.grid_search([10, 30])
     elif alg_run == 'A3C':
+        if args.grid_search:
+            config['sample_batch_size'] = tune.grid_search([10, 100])
         config = a3c.DEFAULT_CONFIG.copy()
+    elif alg_run == 'DQN':
+        if alg_run == 'DQN' and not args.discrete:
+            sys.exit("If you are using DQN, make sure to pass in the --discrete flag as well.")
+        config = dqn.DEFAULT_CONFIG.copy()
+    elif alg_run == 'SAC':
+        if args.use_gru or args.use_lstm:
+            sys.exit("SAC does not support LSTM or GRU")
+        config = sac.DEFAULT_CONFIG.copy()
     else:
-        sys.exit("Please specify a valid algorithm amongst A3C or PPO")
+        sys.exit("Please specify a valid algorithm amongst A3C, PPO, SAC, or DQN")
 
     # General config params
     config['num_workers'] = rllib_params['n_cpus']
     config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
     config['gamma'] = 0.995  # discount rate
-    if args.use_lstm:
-        config['model'].update({'fcnet_hiddens': []})
-    else:
-        config['model'].update({'fcnet_hiddens': [256, 256]})
     config['clip_actions'] = True
     config['horizon'] = args.horizon
 
     # Grid search things
-    if args.grid_search:
+    if args.grid_search and (alg_run == 'PPO' or alg_run == 'A3C'):
         config['lr'] = tune.grid_search([5e-5, 5e-4])
 
-    # LSTM Things
+    if args.use_lstm and args.use_gru:
+        sys.exit("You should not specify both an LSTM and a GRU")
+    # Model setup things
     config['model']['use_lstm'] = args.use_lstm
     if args.use_lstm:
-        config['model']["max_seq_len"] = tune.grid_search([5, 10])
-    config['model']["lstm_cell_size"] = 64
+        config['model']["max_seq_len"] = tune.grid_search([10, 20])
+        config['model'].update({'fcnet_hiddens': []})
+        config['model']["lstm_cell_size"] = 64
+    else:
+        config['model'].update({'fcnet_hiddens': [256, 256]})
+
+    if args.use_gru:
+        config['model']["max_seq_len"] = tune.grid_search([10, 20])
+        config['model'].update({'fcnet_hiddens': []})
+        model_name = "GRU"
+        ModelCatalog.register_custom_model(model_name, GRU)
+        config['model']['custom_model'] = model_name
+        config['model']['custom_options'] = {"cell_size": 64}
 
     # save the flow params for replay
     flow_json = json.dumps(
@@ -279,6 +303,7 @@ if __name__ == '__main__':
     parser.add_argument("--grid_search", action='store_true')
     parser.add_argument("--algorithm", type=str, default='PPO', help='Algorithm of choice. Current supported options are'
                                                                      'PPO and A3C')
+    parser.add_argument("--use_gru", action='store_true', help='Whether to use a GRU as the model')
 
     # arguments for flow
     parser.add_argument('--low_inflow', type=int, default=800, help='the lowest inflow to sample from')
@@ -299,6 +324,8 @@ if __name__ == '__main__':
     parser.add_argument('--congest_penalty_start', type=int, default=30, help='If congest_penalty is true, this '
                                                                               'sets the number of vehicles in edge 4'
                                                                               'at which the penalty sets in')
+    parser.add_argument('--discrete', action='store_true', help='If true the action space is discrete')
+
     # arguments for ray
     parser.add_argument('--rollout_scale_factor', type=float, default=1, help='the total number of rollouts is'
                                                                             'args.n_cpus * rollout_scale_factor')

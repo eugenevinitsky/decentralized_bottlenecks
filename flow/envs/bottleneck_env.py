@@ -85,7 +85,9 @@ ADDITIONAL_VSL_ENV_PARAMS = {
     # initial inflow
     "start_inflow": 1900,
     # the lane changing mode. 1621 for LC on for humans, 0 for it off.
-    "lc_mode": 1621
+    "lc_mode": 1621,
+    # whether the action space is discrete
+    "discrete": False
 }
 
 START_RECORD_TIME = 0.0  # Time to start recording

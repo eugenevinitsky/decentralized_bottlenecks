@@ -296,13 +296,13 @@
 ####################################################################################################################################################
 # 1/01/19 experiments with centralized controller. Added a grid search.
 
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_LSTM --num_iters 400 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 100 \
---num_samples 1 --grid_search --n_cpus 36 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --life_penalty 0.0 --use_lstm" \
---start --stop --cluster-name exp1 --tmux
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_LSTM --num_iters 400 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 100 \
+#--num_samples 1 --grid_search --n_cpus 36 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --life_penalty 0.0 --use_lstm" \
+#--start --stop --cluster-name exp1 --tmux
 
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_LSTM --num_iters 400 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 100 \
+"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_LSTM_A3C --num_iters 3000 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 100 \
 --num_samples 1 --grid_search --n_cpus 36 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --life_penalty 0.0 --use_lstm --algorithm A3C" \
 --start --stop --cluster-name exp2 --tmux
 
