@@ -81,6 +81,7 @@ if __name__ == '__main__':
     parser.add_argument('--horizon', type=int, default=2000)
     parser.add_argument('--opt_feedback_coef', type=int, help="feedback coef for a single sweep")
     parser.add_argument('--opt_n_crit', type=int, help="n_crit for a single sweep")
+    parser.add_argument('--opt_q_init', type=int, help="q_init for a single sweep")
     parser.add_argument('--lc_on', action='store_true')
     parser.add_argument('--multi_node', action='store_true')
     parser.add_argument('--clear_data', action='store_true', help='If true, clean the folder where the files are '
@@ -230,16 +231,20 @@ if __name__ == '__main__':
         # TODO(kp): add q_init here too
         if args.ramp_meter or args.penetration_rate:
             assert args.opt_feedback_coef, "feedback coef must be defined to run sweep"
-            assert args.opt_n_crit, "feedback coef must be defined to run sweep"
+            assert args.opt_n_crit, "n_crit must be defined to run sweep"
+            if args.penetration_rate:
+                assert args.opt_q_init, "q_init must be defined to run sweep w/ AVs"
+            else:
+                args.opt_q_init = 0 # set some default q_init even though there aren't AVs
         
-
         bottleneck_outputs = [run_bottleneck.remote(flow_rate=d, penetration_rate=args.penetration_rate,
                                                     num_trials=args.num_trials, num_steps=args.horizon,
                                                     render=args.render,
                                                     disable_ramp_meter=not args.ramp_meter,
                                                     lc_on=args.lc_on,
                                                     feedback_coef=args.opt_feedback_coef,
-                                                    n_crit=args.opt_n_crit)
+                                                    n_crit=args.opt_n_crit,
+                                                    q_init=args.opt_q_init)
                               for d in densities]
         for output in ray.get(bottleneck_outputs):
             outflow, velocity, bottleneckdensity, \
