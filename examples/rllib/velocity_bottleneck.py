@@ -213,11 +213,11 @@ def setup_exps(args):
         config = ppo.DEFAULT_CONFIG.copy()
         config['vf_clip_param'] = 100
         config['vf_share_layers'] = True
-        config['simple_optimizer'] = False
         if args.grid_search:
             config['num_sgd_iter'] = tune.grid_search([10, 30])
     elif alg_run == 'A3C':
         config = a3c.DEFAULT_CONFIG.copy()
+        config['entropy_coeff'] = 0.0
         if args.grid_search:
             config['sample_batch_size'] = tune.grid_search([10, 100])
     elif alg_run == 'DQN':
@@ -308,6 +308,7 @@ if __name__ == '__main__':
     parser.add_argument("--algorithm", type=str, default='PPO', help='Algorithm of choice. Current supported options are'
                                                                      'PPO and A3C')
     parser.add_argument("--use_gru", action='store_true', help='Whether to use a GRU as the model')
+    parser.add_argument("--local_mode", action='store_true', help='If true everything is forced onto 1 CPU')
 
     # arguments for flow
     parser.add_argument('--low_inflow', type=int, default=800, help='the lowest inflow to sample from')
@@ -338,8 +339,14 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     alg_run, env_name, config = setup_exps(args)
+
+    if args.multi_node and args.local_mode:
+        sys.exit("You can't have both local mode and multi node mode on.")
+
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
+    elif args.local_mode:
+        ray.init(local_mode=True)
     else:
         ray.init(num_cpus=args.n_cpus + 1)
 
@@ -351,6 +358,9 @@ if __name__ == '__main__':
     date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
     s3_string = "s3://eugene.experiments/trb_bottleneck_paper/" \
                 + date + '/' + args.exp_title
+
+    # if args.local_mode:
+    #     config['eager'] = True
 
     exp_dict = {
         args.exp_title: {
