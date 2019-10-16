@@ -224,20 +224,21 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
 
     }
 
-    vehicles.add(
-        veh_id="AV",
-        lane_change_controller=(SimLaneChangeController, {}),
-        routing_controller=(ContinuousRouter, {}),
-        # acceleration_controller=(CFMController, {"v_des": 10, "d_des": 30, "k_d": 30, "k_v": 15}),
-        # acceleration_controller=(HandTunedVelocityController, {"v_regions": v_regions}),
-        acceleration_controller=(DecentralizedALINEAController, {"stop_edge": "2", "stop_pos": 310, "additional_env_params": additional_env_params}),
-        car_following_params=SumoCarFollowingParams(
-            speed_mode=31,
-        ),
-        lane_change_params=SumoLaneChangeParams(
-            lane_change_mode=lc_mode
-        ),
-        num_vehicles=1)
+    if penetration_rate != 0.0:
+        vehicles.add(
+            veh_id="AV",
+            lane_change_controller=(SimLaneChangeController, {}),
+            routing_controller=(ContinuousRouter, {}),
+            # acceleration_controller=(CFMController, {"v_des": 10, "d_des": 30, "k_d": 30, "k_v": 15}),
+            # acceleration_controller=(HandTunedVelocityController, {"v_regions": v_regions}),
+            acceleration_controller=(DecentralizedALINEAController, {"stop_edge": "2", "stop_pos": 310, "additional_env_params": additional_env_params}),
+            car_following_params=SumoCarFollowingParams(
+                speed_mode=31,
+            ),
+            lane_change_params=SumoLaneChangeParams(
+                lane_change_mode=lc_mode
+            ),
+            num_vehicles=1)
 
     vehicles.add(
         veh_id="human",
@@ -320,9 +321,10 @@ if __name__ == '__main__':
     parser.add_argument('--q_init', type=int, default=400)
     parser.add_argument('--penetration_rate', type=float, default=0.4)
     parser.add_argument('--lc', action="store_true")
+    parser.add_argument('--feedback_coef', type=float, default=0.1)
     args = parser.parse_args()
     if args.render:
-        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter, lc_on=args.lc, render=True, q_init=args.q_init, penetration_rate=args.penetration_rate)
+        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter, lc_on=args.lc, render=True, q_init=args.q_init, penetration_rate=args.penetration_rate, feedback_coef=args.feedback_coef)
     else:
-        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter, lc_on=args.lc, render=False, q_init=args.q_init, penetration_rate=args.penetration_rate)
+        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter, lc_on=args.lc, render=False, q_init=args.q_init, penetration_rate=args.penetration_rate, feedback_coef=args.feedback_coef)
     exp.run(args.num_runs, args.horizon)
