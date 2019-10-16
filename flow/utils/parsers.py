@@ -44,6 +44,11 @@ def get_multiagent_bottleneck_parser():
                                                                      'time-step for remaining in the system.')
     parser.add_argument('--keep_past_actions', action='store_true', help='If true we append the agents past actions '
                                                                          'to its observations')
+    parser.add_argument('--num_sample_seconds', type=float, default=0.5,
+                        help='How many seconds back in time the outflow reward should sample over. It defaults to '
+                             'only looking at the current step')
+    parser.add_argument('--speed_reward', action='store_true', default=False,
+                        help='If true the reward is the mean AV speed. If not set the reward is outflow')
     
     # arguments for ray
     parser.add_argument('--use_lstm', action='store_true')

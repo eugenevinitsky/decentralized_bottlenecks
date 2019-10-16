@@ -120,7 +120,9 @@ def setup_flow_params(args):
         "congest_penalty_start": args.congest_penalty_start,
         "lc_mode": lc_mode,
         "life_penalty": args.life_penalty,
-        'keep_past_actions': args.keep_past_actions
+        'keep_past_actions': args.keep_past_actions,
+        "num_sample_seconds": args.num_sample_seconds,
+        "speed_reward": args.speed_reward
         }
 
     # percentage of flow coming out of each lane

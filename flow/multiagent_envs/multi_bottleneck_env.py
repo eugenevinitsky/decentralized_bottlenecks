@@ -41,7 +41,11 @@ ADDITIONAL_RL_ENV_PARAMS = {
     # Above this number, the congestion penalty starts to kick in
     "congest_penalty_start": 30,
     # What lane changing mode the human drivers should have
-    "lc_mode": 0
+    "lc_mode": 0,
+    # how many seconds the outflow reward should sample over
+    "num_sample_seconds": 20,
+    # whether the reward function should be over speed
+    "speed_reward": False
 }
 
 
@@ -249,12 +253,23 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             else:
                 return 0
 
-        reward = self.k.vehicle.get_outflow_rate(int(20 / self.sim_step)) / 2000.0 - self.env_params.additional_params["life_penalty"]
-        if self.env_params.additional_params["congest_penalty"]:
+        add_params = self.env_params.additional_params
+        # reward is the mean AV speed
+        if add_params["speed_reward"]:
+            rl_ids = self.k.vehicle.get_rl_ids()
+            mean_vel = np.mean(self.k.vehicle.get_speed(rl_ids)) / 60.0
+            reward = mean_vel
+        # reward is the outflow over "num_sample_seconds" seconds
+        else:
+            reward = self.k.vehicle.get_outflow_rate(
+                int(add_params["num_sample_seconds"] / self.sim_step)) / 2000.0 - \
+                     self.env_params.additional_params["life_penalty"]
+        if add_params["congest_penalty"]:
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
             if num_vehs > 30 * self.scaling:
                 penalty = (num_vehs - 30 * self.scaling) / 10.0
                 reward -= penalty
+
         reward_dict = {rl_id: reward for rl_id in self.k.vehicle.get_rl_ids()}
         # If a vehicle has left, just make sure to return a reward for it
         left_vehicles_dict = {veh_id: 0 for veh_id

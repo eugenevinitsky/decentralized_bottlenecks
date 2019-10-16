@@ -113,7 +113,8 @@ def setup_flow_params(args):
         "av_frac": args.av_frac,
         "lc_mode": lc_mode,
         "congest_penalty_start": args.congest_penalty_start,
-        "discrete": args.discrete
+        "num_sample_seconds": args.num_sample_seconds,
+        "speed_reward": args.speed_reward
     }
 
     # percentage of flow coming out of each lane
@@ -202,7 +203,6 @@ def setup_flow_params(args):
         tls=traffic_lights,
     )
     return flow_params
-
 
 
 def setup_exps(args):
@@ -300,13 +300,14 @@ if __name__ == '__main__':
     parser.add_argument('--use_s3', action='store_true', help='If true, upload results to s3')
     parser.add_argument('--n_cpus', type=int, default=1, help='Number of cpus to run experiment with')
     parser.add_argument('--multi_node', action='store_true', help='Set to true if this will '
-                                                                       'be run in cluster mode')
+                                                                  'be run in cluster mode')
     parser.add_argument("--num_iters", type=int, default=350)
     parser.add_argument("--checkpoint_freq", type=int, default=50)
     parser.add_argument("--num_samples", type=int, default=1)
     parser.add_argument("--grid_search", action='store_true')
-    parser.add_argument("--algorithm", type=str, default='PPO', help='Algorithm of choice. Current supported options are'
-                                                                     'PPO and A3C')
+    parser.add_argument("--algorithm", type=str, default='PPO',
+                        help='Algorithm of choice. Current supported options are'
+                             'PPO and A3C')
     parser.add_argument("--use_gru", action='store_true', help='Whether to use a GRU as the model')
     parser.add_argument("--local_mode", action='store_true', help='If true everything is forced onto 1 CPU')
 
@@ -323,17 +324,21 @@ if __name__ == '__main__':
                                                                '2 -> 8, etc.')
     parser.add_argument('--lc_on', action='store_true', help='If true, lane changing is enabled.')
     parser.add_argument('--congest_penalty', action='store_true', help='If true, an additional penalty is added '
-                                                                            'for vehicles queueing in the bottleneck')
+                                                                       'for vehicles queueing in the bottleneck')
     parser.add_argument('--life_penalty', type=float, default=3, help='How much to subtract in the reward at each '
-                                                                     'time-step for remaining in the system.')
+                                                                      'time-step for remaining in the system.')
     parser.add_argument('--congest_penalty_start', type=int, default=30, help='If congest_penalty is true, this '
                                                                               'sets the number of vehicles in edge 4'
                                                                               'at which the penalty sets in')
-    parser.add_argument('--discrete', action='store_true', help='If true the action space is discrete')
+    parser.add_argument('--num_sample_seconds', type=float, default=0.5,
+                        help='How many seconds back in time the outflow reward should sample over. It defaults to '
+                             'only looking at the current step')
+    parser.add_argument('--speed_reward', action='store_true', default=False,
+                        help='If true the reward is the mean AV speed. If not set the reward is outflow')
 
     # arguments for ray
     parser.add_argument('--rollout_scale_factor', type=float, default=1, help='the total number of rollouts is'
-                                                                            'args.n_cpus * rollout_scale_factor')
+                                                                              'args.n_cpus * rollout_scale_factor')
     parser.add_argument('--use_lstm', action='store_true')
 
     args = parser.parse_args()

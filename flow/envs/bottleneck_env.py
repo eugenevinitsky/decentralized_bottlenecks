@@ -86,8 +86,10 @@ ADDITIONAL_VSL_ENV_PARAMS = {
     "start_inflow": 1900,
     # the lane changing mode. 1621 for LC on for humans, 0 for it off.
     "lc_mode": 1621,
-    # whether the action space is discrete
-    "discrete": False
+    # how many seconds the outflow reward should sample over
+    "num_sample_seconds": 20,
+    # whether the reward function should be over speed
+    "speed_reward": False
 }
 
 START_RECORD_TIME = 0.0  # Time to start recording
@@ -883,8 +885,16 @@ class DesiredVelocityEnv(BottleneckEnv):
             else:
                 return 0
         else:
-            reward = self.k.vehicle.get_outflow_rate(int(20 / self.sim_step)) / 2000.0 - self.env_params.additional_params["life_penalty"]
             add_params = self.env_params.additional_params
+            # reward is the mean AV speed
+            if add_params["speed_reward"]:
+                rl_ids = self.k.vehicle.get_rl_ids()
+                mean_vel = np.mean(self.k.vehicle.get_speed(rl_ids)) / 60.0
+                reward = mean_vel
+            # reward is the outflow over "num_sample_seconds" seconds
+            else:
+                reward = self.k.vehicle.get_outflow_rate(int(add_params["num_sample_seconds"] / self.sim_step)) / 2000.0 - \
+                         self.env_params.additional_params["life_penalty"]
             if add_params["congest_penalty"]:
                 num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
                 if num_vehs > 30 * self.scaling:
