@@ -86,10 +86,10 @@ ADDITIONAL_VSL_ENV_PARAMS = {
     "start_inflow": 1900,
     # the lane changing mode. 1621 for LC on for humans, 0 for it off.
     "lc_mode": 1621,
-    # how many seconds the outflow reward should sample over
-    "num_sample_seconds": 20,
-    # whether the reward function should be over speed
-    "speed_reward": False
+    # # how many seconds the outflow reward should sample over
+    # "num_sample_seconds": 20,
+    # # whether the reward function should be over speed
+    # "speed_reward": False
 }
 
 START_RECORD_TIME = 0.0  # Time to start recording

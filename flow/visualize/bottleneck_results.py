@@ -32,6 +32,7 @@ from ray.rllib.evaluation.episode import _flatten_action
 from ray.rllib.policy.sample_batch import DEFAULT_POLICY_ID
 from ray.tune.registry import register_env
 from ray.rllib.models import ModelCatalog
+from flow.models.GRU import GRU
 from flow.agents.centralized_PPO import CentralizedCriticModel, CentralizedCriticModelRNN
 
 from flow.utils.registry import make_create_env
@@ -46,7 +47,7 @@ class DefaultMapping(collections.defaultdict):
         self[key] = value = self.default_factory(key)
         return value
 
-def default_policy_agent_mapping(self, unused_agent_id):
+def default_policy_agent_mapping(unused_agent_id):
     return DEFAULT_POLICY_ID
 
 @ray.remote
@@ -84,13 +85,15 @@ def run_bottleneck(args, inflow_rate, num_trials):
         sys.exit(1)
 
     # if using a custom model
-    if config['model']['custom_model']=="cc_model":
+    if config['model']['custom_model'] == "cc_model":
         if config['model']['use_lstm']:
             ModelCatalog.register_custom_model("cc_model", CentralizedCriticModelRNN)
         else:
             ModelCatalog.register_custom_model("cc_model", CentralizedCriticModel)
         from flow.agents.centralized_PPO import CCTrainer
         agent_cls = CCTrainer
+    elif config['model']['custom_model'] == "GRU":
+        ModelCatalog.register_custom_model("GRU", GRU)
 
     sim_params = flow_params['sim']
     sim_params.restart_instance = False

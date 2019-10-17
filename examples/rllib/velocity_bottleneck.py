@@ -213,11 +213,13 @@ def setup_exps(args):
         config = ppo.DEFAULT_CONFIG.copy()
         config['vf_clip_param'] = 100
         config['vf_share_layers'] = True
+        config['vf_loss_coeff'] = args.vf_loss_coeff
         if args.grid_search:
             config['num_sgd_iter'] = tune.grid_search([10, 30])
     elif alg_run == 'A3C':
         config = a3c.DEFAULT_CONFIG.copy()
         config['entropy_coeff'] = 0.0
+        config['vf_loss_coeff'] = args.vf_loss_coeff
         if args.grid_search:
             config['sample_batch_size'] = tune.grid_search([10, 100])
     elif alg_run == 'DQN':
@@ -246,7 +248,10 @@ def setup_exps(args):
 
     # Grid search things
     if args.grid_search and (alg_run == 'PPO' or alg_run == 'A3C'):
-        config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
+        if alg_run == 'PPO':
+            config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
+        if alg_run == 'A3C':
+            config['lr'] = tune.grid_search([5e-5, 5e-6])
 
     if args.use_lstm and args.use_gru:
         sys.exit("You should not specify both an LSTM and a GRU")
@@ -310,6 +315,7 @@ if __name__ == '__main__':
                              'PPO and A3C')
     parser.add_argument("--use_gru", action='store_true', help='Whether to use a GRU as the model')
     parser.add_argument("--local_mode", action='store_true', help='If true everything is forced onto 1 CPU')
+    parser.add_argument("--vf_loss_coeff", type=float, default=.0001, help='coeff of the vf loss')
 
     # arguments for flow
     parser.add_argument('--low_inflow', type=int, default=800, help='the lowest inflow to sample from')

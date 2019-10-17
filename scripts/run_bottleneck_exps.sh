@@ -365,36 +365,70 @@
 # 10/16/19 experiments with centralized controller over PPO, SAC, A3C w/ a GRU.
 
 ## 0.1 PEN
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p1_GRU_A3C --num_iters 3000 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 100 \
+#--num_samples 1 --grid_search --n_cpus 36 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 1200 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm A3C --checkpoint_freq 500" \
+#--start --stop --cluster-name ev_exp1 --tmux
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p1_GRU_PPO --num_iters 300 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 100 \
+#--num_samples 1 --grid_search --n_cpus 36 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 1200 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm PPO" \
+#--start --stop --cluster-name ev_exp2 --tmux
+#
+### 0.4 PEN
+##
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p4_GRU_A3C --num_iters 3000 --av_frac 0.4 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 100 \
+#--num_samples 1 --grid_search --n_cpus 36 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 1200 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm A3C --checkpoint_freq 500" \
+#--start --stop --cluster-name ev_exp4 --tmux
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p4_GRU_PPO --num_iters 300 --av_frac 0.4 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 100 \
+#--num_samples 1 --grid_search --n_cpus 36 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 1200 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm PPO" \
+#--start --stop --cluster-name ev_exp5 --tmux
+#
+### 1.0 PEN
+##
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_1p0_GRU_A3C --num_iters 3000 --av_frac 1.0 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 100 \
+#--num_samples 1 --grid_search --n_cpus 36 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 1200 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm A3C --checkpoint_freq 500" \
+#--start --stop --cluster-name ev_exp7 --tmux
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_1p0_GRU_PPO --num_iters 300 --av_frac 1.0 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 100 \
+#--num_samples 1 --grid_search --n_cpus 36 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 1200 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm PPO" \
+#--start --stop --cluster-name ev_exp8 --tmux
+
+## 0.1 PEN
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p1_GRU_A3C --num_iters 3000 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 100 \
---num_samples 1 --grid_search --n_cpus 36 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 1200 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm A3C" \
+"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p1_GRU_A3C_ns20 --num_iters 3000 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 40 --num_sample_seconds 20 \
+--num_samples 1 --grid_search --n_cpus 15 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 1200 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm A3C --checkpoint_freq 500 \
+--vf_loss_coeff .0001" \
 --start --stop --cluster-name ev_exp1 --tmux
 
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p1_GRU_PPO --num_iters 300 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 100 \
---num_samples 1 --grid_search --n_cpus 36 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 1200 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm PPO" \
+"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p1_GRU_PPO_ns20 --num_iters 300 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 40 --num_sample_seconds 20 \
+--num_samples 1 --grid_search --n_cpus 15 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 1200 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm PPO --vf_loss_coeff .0001" \
 --start --stop --cluster-name ev_exp2 --tmux
 
-## 0.4 PEN
-#
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p4_GRU_A3C --num_iters 3000 --av_frac 0.4 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 100 \
---num_samples 1 --grid_search --n_cpus 36 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 1200 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm A3C" \
+"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p1_GRU_A3C_ns0p5 --num_iters 3000 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 40 --num_sample_seconds 0.5 \
+--num_samples 1 --grid_search --n_cpus 15 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 1200 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm A3C --checkpoint_freq 500 \
+--vf_loss_coeff .0001" \
+--start --stop --cluster-name ev_exp3 --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p1_GRU_PPO_ns0p5 --num_iters 300 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 40 --num_sample_seconds 0.5 \
+--num_samples 1 --grid_search --n_cpus 15 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 1200 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm PPO --vf_loss_coeff .0001" \
 --start --stop --cluster-name ev_exp4 --tmux
 
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p4_GRU_PPO --num_iters 300 --av_frac 0.4 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 100 \
---num_samples 1 --grid_search --n_cpus 36 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 1200 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm PPO" \
+"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p1_GRU_A3C_sr --num_iters 3000 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 40 --speed_reward \
+--num_samples 1 --grid_search --n_cpus 15 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 1200 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm A3C --checkpoint_freq 500 \
+--vf_loss_coeff .0001" \
 --start --stop --cluster-name ev_exp5 --tmux
 
-## 1.0 PEN
-#
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_1p0_GRU_A3C --num_iters 3000 --av_frac 1.0 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 100 \
---num_samples 1 --grid_search --n_cpus 36 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 1200 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm A3C" \
---start --stop --cluster-name ev_exp7 --tmux
-
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_1p0_GRU_PPO --num_iters 300 --av_frac 1.0 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 100 \
---num_samples 1 --grid_search --n_cpus 36 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 1200 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm PPO" \
---start --stop --cluster-name ev_exp8 --tmux
+"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p1_GRU_PPO_sr --num_iters 300 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 40 --speed_reward \
+--num_samples 1 --grid_search --n_cpus 15 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 1200 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm PPO --vf_loss_coeff .0001" \
+--start --stop --cluster-name ev_exp6 --tmux
