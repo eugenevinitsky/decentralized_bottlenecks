@@ -123,8 +123,8 @@ if __name__ == '__main__':
 
     # list(range(args.ncrit_min, args.ncrit_max + args.ncrit_step_size, args.ncrit_step_size))
     # TODO(kp): make this work for both alinea and decentralized alinea
-    n_crit_range = [6, 9, 12]
-    feedback_coef_range = [1, 3, 5, 10]
+    n_crit_range = [9]
+    feedback_coef_range = [0.5, 1, 5, 10, 20]
     q_init_range = [200, 500, 1000, 1500, 2000]
     densities = list(range(args.inflow_min, args.inflow_max +
                            args.step_size, args.step_size))
