@@ -94,7 +94,11 @@ def setup_flow_params(args):
 
     controlled_segments = [('1', 1, False), ('2', 2, True), ('3', 2, True),
                            ('4', 2, True), ('5', 1, False)]
-    num_observed_segments = [('1', 1), ('2', 3), ('3', 3), ('4', 3), ('5', 1)]
+    num_observed_segments = [('1', 1 * args.state_space_scaling),
+                             ('2', 3 * args.state_space_scaling),
+                             ('3', 3 * args.state_space_scaling),
+                             ('4', 3 * args.state_space_scaling),
+                             ('5', 1 * args.state_space_scaling)]
     additional_env_params = {
         'target_velocity': 40,
         'disable_tb': True,
@@ -249,7 +253,7 @@ def setup_exps(args):
     # Grid search things
     if args.grid_search and (alg_run == 'PPO' or alg_run == 'A3C'):
         if alg_run == 'PPO':
-            config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
+            config['lr'] = tune.grid_search([5e-5, 5e-4])
         if alg_run == 'A3C':
             config['lr'] = tune.grid_search([5e-5, 5e-6])
 
@@ -341,6 +345,10 @@ if __name__ == '__main__':
                              'only looking at the current step')
     parser.add_argument('--speed_reward', action='store_true', default=False,
                         help='If true the reward is the mean AV speed. If not set the reward is outflow')
+    parser.add_argument('--state_space_scaling', type=int, default=1,
+                        help='This number multiplies the number of segments the bottleneck is cut into.'
+                             'This is useful if, for example, you have lots of AVs. If the number is too low'
+                             'the controller cant distinguish individual AVs')
 
     # arguments for ray
     parser.add_argument('--rollout_scale_factor', type=float, default=1, help='the total number of rollouts is'
