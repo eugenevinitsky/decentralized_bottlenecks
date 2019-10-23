@@ -87,9 +87,13 @@ ADDITIONAL_VSL_ENV_PARAMS = {
     # the lane changing mode. 1621 for LC on for humans, 0 for it off.
     "lc_mode": 1621,
     # # how many seconds the outflow reward should sample over
-    # "num_sample_seconds": 20,
-    # # whether the reward function should be over speed
-    # "speed_reward": False
+    "num_sample_seconds": 20,
+    # whether the reward function should be over speed
+    "speed_reward": False,
+    # whether the reward should be high when the exiting vehicles come from a uniform distribution over entering lanes
+    "fair_reward": False,
+    # how many seconds you should look back in tracking the history of which lane exiting vehicles are from
+    "exit_history_seconds": 60
 }
 
 START_RECORD_TIME = 0.0  # Time to start recording
@@ -752,6 +756,11 @@ class DesiredVelocityEnv(BottleneckEnv):
         # inflow to keep track of for observations
         self.inflow = add_env_params["start_inflow"]
 
+        # mapping from vehicle id to lane
+        self.exit_history_seconds = add_env_params["exit_history_seconds"]
+        self.id_to_lane_dict = {}
+        self.exit_counter = np.zeros((int(self.exit_history_seconds / self.sim_step), self.scaling * MAX_LANES))
+
     @property
     def observation_space(self):
         """See class definition."""
@@ -783,6 +792,21 @@ class DesiredVelocityEnv(BottleneckEnv):
 
     def get_state(self):
         """See class definition."""
+
+        # update the id to lane mapping
+        new_ids = self.k.vehicle.get_departed_ids()
+        self.id_to_lane_dict.update({veh_id: self.k.vehicle.get_lane(veh_id) for veh_id in new_ids})
+        exit_ids = self.k.vehicle.get_arrived_ids()
+
+        # track which vehicles from which lanes exited
+        exit_lanes = [self.id_to_lane_dict[exit_id] for exit_id in exit_ids if exit_id in self.id_to_lane_dict]
+        self.exit_counter = np.roll(self.exit_counter, 1, axis=0)
+        unique, unique_counts = np.unique(exit_lanes, return_counts=True)
+
+        # count up how many vehicles exited from a given lane
+        for lane, unique_count in zip(unique, unique_counts):
+            self.exit_counter[0, lane] = unique_count
+
         # state space is number of vehicles in each segment in each lane,
         # number of rl vehicles in each segment in each lane
         # mean speed in each segment, and mean rl speed in each
@@ -891,6 +915,21 @@ class DesiredVelocityEnv(BottleneckEnv):
                 rl_ids = self.k.vehicle.get_rl_ids()
                 mean_vel = np.mean(self.k.vehicle.get_speed(rl_ids)) / 60.0
                 reward = mean_vel
+            # reward is how close the entry lanes of the exiting vehicles are to a uniform distribution
+            elif add_params["fair_reward"]:
+                reward = 0
+                if len(self.k.vehicle.get_arrived_ids()) > 0:
+                    exit_ratios = np.sum(self.exit_counter, axis=0)
+                    # convert to probabilities
+                    exit_ratios = exit_ratios[exit_ratios > 0]
+                    exit_ratios = exit_ratios / np.sum(exit_ratios)
+                    # the entropy is just log(n) so if we have more than one exiting lane, we will always
+                    # get more reward than 0.5
+                    if len(exit_ratios) > 1:
+                        entropy = -np.sum(exit_ratios * np.log(exit_ratios))
+                        reward = entropy
+                    else:
+                        reward = 0.5
             # reward is the outflow over "num_sample_seconds" seconds
             else:
                 reward = self.k.vehicle.get_outflow_rate(int(add_params["num_sample_seconds"] / self.sim_step)) / 2000.0 - \
@@ -1021,6 +1060,13 @@ class DesiredVelocityEnv(BottleneckEnv):
                     # reset the timer to zero
                     self.time_counter = 0
 
+                    # update the vehicle to lane dict
+                    self.id_to_lane_dict = {}
+                    new_ids = self.k.vehicle.get_departed_ids()
+                    self.id_to_lane_dict.update({veh_id: self.k.vehicle.get_lane(veh_id) for veh_id in new_ids})
+                    self.id_to_lane_dict.update({veh_id: self.k.vehicle.get_lane(veh_id) for veh_id in
+                                                 self.k.vehicle.get_ids()})
+
                     return observation
 
                 except Exception as e:
@@ -1031,5 +1077,12 @@ class DesiredVelocityEnv(BottleneckEnv):
 
         # reset the timer to zero
         self.time_counter = 0
+
+        # update the vehicle to lane dict
+        self.id_to_lane_dict = {}
+        new_ids = self.k.vehicle.get_departed_ids()
+        self.id_to_lane_dict.update({veh_id: self.k.vehicle.get_lane(veh_id) for veh_id in new_ids})
+        self.id_to_lane_dict.update({veh_id: self.k.vehicle.get_lane(veh_id) for veh_id in
+                                     self.k.vehicle.get_ids()})
 
         return observation

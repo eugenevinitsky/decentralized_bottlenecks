@@ -118,7 +118,9 @@ def setup_flow_params(args):
         "lc_mode": lc_mode,
         "congest_penalty_start": args.congest_penalty_start,
         "num_sample_seconds": args.num_sample_seconds,
-        "speed_reward": args.speed_reward
+        "speed_reward": args.speed_reward,
+        "fair_reward": args.fair_reward,
+        "exit_history_seconds": args.exit_history_seconds
     }
 
     # percentage of flow coming out of each lane
@@ -218,8 +220,7 @@ def setup_exps(args):
         config['vf_clip_param'] = 100
         config['vf_share_layers'] = True
         config['vf_loss_coeff'] = args.vf_loss_coeff
-        if args.grid_search:
-            config['num_sgd_iter'] = tune.grid_search([10, 30])
+        config['lr'] = 5e-5
     elif alg_run == 'A3C':
         config = a3c.DEFAULT_CONFIG.copy()
         config['entropy_coeff'] = 0.0
@@ -253,7 +254,7 @@ def setup_exps(args):
     # Grid search things
     if args.grid_search and (alg_run == 'PPO' or alg_run == 'A3C'):
         if alg_run == 'PPO':
-            config['lr'] = tune.grid_search([5e-5, 5e-4])
+            config['num_sgd_iter'] = tune.grid_search([10, 30])
         if alg_run == 'A3C':
             config['lr'] = tune.grid_search([5e-5, 5e-6])
 
@@ -349,6 +350,12 @@ if __name__ == '__main__':
                         help='This number multiplies the number of segments the bottleneck is cut into.'
                              'This is useful if, for example, you have lots of AVs. If the number is too low'
                              'the controller cant distinguish individual AVs')
+    parser.add_argument("--fair_reward", action='store_true', default=False,
+                        help='If true we use an outflow reward that is maximized if the exiting vehicles come from'
+                             'a uniform distribution of entering lanes')
+    parser.add_argument("--exit_history_seconds", type=int, default=60,
+                        help='Over how many seconds back do we track the lanes of the exiting vehicles')
+
 
     # arguments for ray
     parser.add_argument('--rollout_scale_factor', type=float, default=1, help='the total number of rollouts is'
@@ -356,6 +363,9 @@ if __name__ == '__main__':
     parser.add_argument('--use_lstm', action='store_true')
 
     args = parser.parse_args()
+
+    if args.fair_reward and args.speed_reward:
+        sys.exit('You cannot have both fair reward and speed reward on at the same time')
 
     alg_run, env_name, config = setup_exps(args)
 
@@ -372,7 +382,6 @@ if __name__ == '__main__':
     # store custom metrics
     config["callbacks"] = {"on_episode_end": tune.function(on_episode_end)}
 
-    eastern = pytz.timezone('US/Eastern')
     date = datetime.now(tz=pytz.utc)
     date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
     s3_string = "s3://eugene.experiments/trb_bottleneck_paper/" \
