@@ -93,7 +93,9 @@ ADDITIONAL_VSL_ENV_PARAMS = {
     # whether the reward should be high when the exiting vehicles come from a uniform distribution over entering lanes
     "fair_reward": False,
     # how many seconds you should look back in tracking the history of which lane exiting vehicles are from
-    "exit_history_seconds": 60
+    "exit_history_seconds": 60,
+    # how much reward we get in the fair reward case when the history only contains vehicles from one lane
+    "base_fair_reward": 0.5
 }
 
 START_RECORD_TIME = 0.0  # Time to start recording
@@ -929,7 +931,7 @@ class DesiredVelocityEnv(BottleneckEnv):
                         entropy = -np.sum(exit_ratios * np.log(exit_ratios))
                         reward = entropy
                     else:
-                        reward = 0.5
+                        reward = add_params["base_fair_reward"]
             # reward is the outflow over "num_sample_seconds" seconds
             else:
                 reward = self.k.vehicle.get_outflow_rate(int(add_params["num_sample_seconds"] / self.sim_step)) / 2000.0 - \
