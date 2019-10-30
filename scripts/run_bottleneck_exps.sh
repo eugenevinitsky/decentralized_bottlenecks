@@ -508,26 +508,54 @@
 ####################################################################################################################################################
 # 10/29/19 experiments with the fair reward
 
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p1_GRU_PPO_ns0p5_FAIR_bp1_PEN20 --num_iters 300 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 40 --num_sample_seconds 0.5 \
+#--num_samples 1 --grid_search --n_cpus 14 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 2000 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm PPO --vf_loss_coeff .0001 \
+#--state_space_scaling 1 --fair_reward --exit_history_seconds 60 --base_fair_reward 0.1 --congest_penalty --congest_penalty_start 20" \
+#--start --stop --cluster-name evexp1 --tmux
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p4_GRU_PPO_ns0p5_FAIR_bp1_PEN30 --num_iters 400 --av_frac 0.4 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 40 --num_sample_seconds 0.5 \
+#--num_samples 1 --grid_search --n_cpus 14 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 2000 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm PPO --vf_loss_coeff .0001 \
+#--state_space_scaling 2 --fair_reward --exit_history_seconds 60 --base_fair_reward 0.1 --congest_penalty --congest_penalty_start 30" \
+#--start --stop --cluster-name evexp2 --tmux
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p1_GRU_PPO_ns0p5_FAIR_bp1_PEN20 --num_iters 300 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 40 --num_sample_seconds 0.5 \
+#--num_samples 1 --grid_search --n_cpus 14 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 2000 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm PPO --vf_loss_coeff .0001 \
+#--state_space_scaling 1 --fair_reward --exit_history_seconds 60 --base_fair_reward 0.1 --congest_penalty --congest_penalty_start 20" \
+#--start --stop --cluster-name evexp3 --tmux
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p4_GRU_PPO_ns0p5_FAIR_bp1_PEN30 --num_iters 400 --av_frac 0.4 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 40 --num_sample_seconds 0.5 \
+#--num_samples 1 --grid_search --n_cpus 14 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 2000 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm PPO --vf_loss_coeff .0001 \
+#--state_space_scaling 2 --fair_reward --exit_history_seconds 60 --base_fair_reward 0.1 --congest_penalty  --congest_penalty_start 20" \
+#--start --stop --cluster-name evexp4 --tmux
+
+####################################################################################################################################################
+####################################################################################################################################################
+# 10/30/19 experiments with the fair reward
+
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p1_GRU_PPO_ns0p5_FAIR_bp1_PEN20 --num_iters 300 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 40 --num_sample_seconds 0.5 \
+"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p1_GRU_PPO_ns0p5_FAIR_PEN20 --num_iters 300 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 40 --num_sample_seconds 0.5 \
 --num_samples 1 --grid_search --n_cpus 14 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 2000 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm PPO --vf_loss_coeff .0001 \
---state_space_scaling 1 --fair_reward --exit_history_seconds 60 --base_fair_reward 0.1 --congest_penalty --congest_penalty_start 20" \
+--state_space_scaling 1 --fair_reward --exit_history_seconds 60 --congest_penalty --congest_penalty_start 20" \
 --start --stop --cluster-name evexp1 --tmux
 
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p4_GRU_PPO_ns0p5_FAIR_bp1_PEN30 --num_iters 400 --av_frac 0.4 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 40 --num_sample_seconds 0.5 \
+"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p4_GRU_PPO_ns0p5_FAIR_PEN20 --num_iters 400 --av_frac 0.4 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 40 --num_sample_seconds 0.5 \
 --num_samples 1 --grid_search --n_cpus 14 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 2000 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm PPO --vf_loss_coeff .0001 \
---state_space_scaling 2 --fair_reward --exit_history_seconds 60 --base_fair_reward 0.1 --congest_penalty --congest_penalty_start 30" \
+--state_space_scaling 2 --fair_reward --exit_history_seconds 60 --congest_penalty --congest_penalty_start 20" \
 --start --stop --cluster-name evexp2 --tmux
 
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p1_GRU_PPO_ns0p5_FAIR_bp1_PEN20 --num_iters 300 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 40 --num_sample_seconds 0.5 \
+"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p1_GRU_PPO_ns0p5_FAIR_PEN30 --num_iters 300 --av_frac 0.1 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 40 --num_sample_seconds 0.5 \
 --num_samples 1 --grid_search --n_cpus 14 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 2000 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm PPO --vf_loss_coeff .0001 \
---state_space_scaling 1 --fair_reward --exit_history_seconds 60 --base_fair_reward 0.1 --congest_penalty --congest_penalty_start 20" \
+--state_space_scaling 1 --fair_reward --exit_history_seconds 60 --congest_penalty --congest_penalty_start 30" \
 --start --stop --cluster-name evexp3 --tmux
 
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p4_GRU_PPO_ns0p5_FAIR_bp1_PEN30 --num_iters 400 --av_frac 0.4 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 40 --num_sample_seconds 0.5 \
+"python flow/examples/rllib/velocity_bottleneck.py centralized_0pen_0p4_GRU_PPO_ns0p5_FAIR_PEN30 --num_iters 400 --av_frac 0.4 --multi_node --sims_per_step 2 --sim_step 0.5 --warmup_steps 40 --num_sample_seconds 0.5 \
 --num_samples 1 --grid_search --n_cpus 14 --use_s3 --rollout_scale_factor 2.0 --horizon 1000 --low_inflow 2000 --high_inflow 3000 --life_penalty 0.0 --use_gru --algorithm PPO --vf_loss_coeff .0001 \
---state_space_scaling 2 --fair_reward --exit_history_seconds 60 --base_fair_reward 0.1 --congest_penalty --congest_penalty_start 30" \
+--state_space_scaling 2 --fair_reward --exit_history_seconds 60 --congest_penalty  --congest_penalty_start 30" \
 --start --stop --cluster-name evexp4 --tmux

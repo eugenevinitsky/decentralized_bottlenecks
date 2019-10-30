@@ -84,6 +84,7 @@ setup_commands:
     # set up ray by pip installing and copying over rllib and tune folder
     - pip install --upgrade pyzmq notebook
     - pip install -r ~/flow/requirements.txt
+    - python ~/flow/scripts/replace_rnn_sequence.py
 
 # Custom commands that will be run on the head node after common setup.
 head_setup_commands: []
