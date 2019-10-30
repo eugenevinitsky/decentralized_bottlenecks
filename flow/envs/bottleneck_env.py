@@ -94,8 +94,6 @@ ADDITIONAL_VSL_ENV_PARAMS = {
     "fair_reward": False,
     # how many seconds you should look back in tracking the history of which lane exiting vehicles are from
     "exit_history_seconds": 60,
-    # how much reward we get in the fair reward case when the history only contains vehicles from one lane
-    "base_fair_reward": 0.5
 }
 
 START_RECORD_TIME = 0.0  # Time to start recording
@@ -895,13 +893,7 @@ class DesiredVelocityEnv(BottleneckEnv):
                         bucket = np.searchsorted(self.slices[edge], pos) - 1
                         action = rl_actions[bucket + self.action_index[edge]]
 
-                    max_speed_curr = self.k.vehicle.get_max_speed(rl_id)
-                    next_max = np.clip(max_speed_curr + action, 0.01, 23.0)
-                    self.k.vehicle.set_max_speed(rl_id, next_max)
-
-                else:
-                    # set the desired velocity of the controller to the default
-                    self.k.vehicle.set_max_speed(rl_id, 23.0)
+                    self.k.vehicle.apply_acceleration(rl_id, action)
 
     def compute_reward(self, rl_actions, **kwargs):
         """Outflow rate over last ten seconds normalized to max of 1."""
@@ -922,16 +914,15 @@ class DesiredVelocityEnv(BottleneckEnv):
                 reward = 0
                 if len(self.k.vehicle.get_arrived_ids()) > 0:
                     exit_ratios = np.sum(self.exit_counter, axis=0)
+
+                    # put a count of one in all the lanes with zero counts so far so the entropy doesn't blow up
+                    exit_ratios[exit_ratios == 0] = 1
+
                     # convert to probabilities
-                    exit_ratios = exit_ratios[exit_ratios > 0]
                     exit_ratios = exit_ratios / np.sum(exit_ratios)
-                    # the entropy is just log(n) so if we have more than one exiting lane, we will always
-                    # get more reward than 0.5
-                    if len(exit_ratios) > 1:
-                        entropy = -np.sum(exit_ratios * np.log(exit_ratios))
-                        reward = entropy
-                    else:
-                        reward = add_params["base_fair_reward"]
+                    # the reward is the entropy of the exiting distributions
+                    reward = -np.sum(exit_ratios * np.log(exit_ratios))
+
             # reward is the outflow over "num_sample_seconds" seconds
             else:
                 reward = self.k.vehicle.get_outflow_rate(int(add_params["num_sample_seconds"] / self.sim_step)) / 2000.0 - \

@@ -121,7 +121,6 @@ def setup_flow_params(args):
         "speed_reward": args.speed_reward,
         "fair_reward": args.fair_reward,
         "exit_history_seconds": args.exit_history_seconds,
-        "base_fair_reward": args.base_fair_reward,
     }
 
     # percentage of flow coming out of each lane
@@ -352,9 +351,6 @@ if __name__ == '__main__':
                              'This is useful if, for example, you have lots of AVs. If the number is too low'
                              'the controller cant distinguish individual AVs')
     parser.add_argument("--fair_reward", action='store_true', default=False,
-                        help='If true we use an outflow reward that is maximized if the exiting vehicles come from'
-                             'a uniform distribution of entering lanes')
-    parser.add_argument("--base_fair_reward", type=float, default=0.5,
                         help='If true we use an outflow reward that is maximized if the exiting vehicles come from'
                              'a uniform distribution of entering lanes')
     parser.add_argument("--exit_history_seconds", type=int, default=60,
