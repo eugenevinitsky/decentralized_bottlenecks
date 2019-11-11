@@ -770,6 +770,11 @@ class DesiredVelocityEnv(BottleneckEnv):
         for segment in self.obs_segments:
             num_obs += 4 * segment[1] * self.k.scenario.num_lanes(segment[0])
         num_obs += 2
+
+        # If we have a fair reward, we also return the current statistics
+        if self.env_params.additional_params["fair_reward"]:
+            num_obs += 4
+
         return Box(low=-3.0, high=3.0, shape=(num_obs, ), dtype=np.float32)
 
     @property
@@ -862,9 +867,19 @@ class DesiredVelocityEnv(BottleneckEnv):
         ]) / 50
         outflow = np.asarray(
             self.k.vehicle.get_outflow_rate(20 * self.sim_step) / 3000.0)
-        return np.concatenate((num_vehicles_list, num_rl_vehicles_list,
+        obs = np.concatenate((num_vehicles_list, num_rl_vehicles_list,
                                mean_speed_norm, mean_rl_speed, [outflow],
                                [self.inflow / 3000.0]))
+        if self.env_params.additional_params["fair_reward"]:
+            exit_ratios = np.sum(self.exit_counter, axis=0)
+
+            # put a count of one in all the lanes with zero counts so far so the entropy doesn't blow up
+            exit_ratios[exit_ratios == 0] = 1
+
+            # convert to probabilities
+            exit_ratios = exit_ratios / np.sum(exit_ratios)
+            obs = np.concatenate((obs, exit_ratios))
+        return obs
 
     def _apply_rl_actions(self, rl_actions):
         """
