@@ -870,6 +870,8 @@ class DesiredVelocityEnv(BottleneckEnv):
         obs = np.concatenate((num_vehicles_list, num_rl_vehicles_list,
                                mean_speed_norm, mean_rl_speed, [outflow],
                                [self.inflow / 3000.0]))
+
+        # Give the vehicles the relevant statistics on ratios of exited vehicles
         if self.env_params.additional_params["fair_reward"]:
             exit_ratios = np.sum(self.exit_counter, axis=0)
 
@@ -942,6 +944,7 @@ class DesiredVelocityEnv(BottleneckEnv):
             else:
                 reward = self.k.vehicle.get_outflow_rate(int(add_params["num_sample_seconds"] / self.sim_step)) / 2000.0 - \
                          self.env_params.additional_params["life_penalty"]
+
             if add_params["congest_penalty"]:
                 num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
                 if num_vehs > add_params["congest_penalty_start"] * self.scaling:

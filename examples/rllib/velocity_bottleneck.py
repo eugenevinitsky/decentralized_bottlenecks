@@ -92,7 +92,7 @@ def setup_flow_params(args):
     # flow rate
     flow_rate = 1900 * args.scaling
 
-    controlled_segments = [('1', 1, False), ('2', 2, False), ('3', 3, True),
+    controlled_segments = [('1', 1, False), ('2', 3, True), ('3', 3, False),
                            ('4', 2, False), ('5', 1, False)]
     num_observed_segments = [('1', 1 * args.state_space_scaling),
                              ('2', 3 * args.state_space_scaling),
