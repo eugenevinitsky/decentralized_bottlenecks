@@ -935,10 +935,16 @@ class DesiredVelocityEnv(BottleneckEnv):
                     # put a count of one in all the lanes with zero counts so far so the entropy doesn't blow up
                     exit_ratios[exit_ratios == 0] = 1
 
+                    # we care about lanes in pairs e.g. we want the entropy to be high between lanes 1&2 and lanes 3&4
+                    # so we compute the entropy between the pairs
+                    paired_exit_ratios = np.array([np.sum(exit_ratios[0:int((MAX_LANES * self.scaling)/2)]),
+                                                   np.sum(exit_ratios[int((MAX_LANES * self.scaling)/2):])])
+
                     # convert to probabilities
+                    paired_exit_ratios = paired_exit_ratios / np.sum(paired_exit_ratios)
                     exit_ratios = exit_ratios / np.sum(exit_ratios)
                     # the reward is the entropy of the exiting distributions
-                    reward = -np.sum(exit_ratios * np.log(exit_ratios))
+                    reward = -np.sum(paired_exit_ratios * np.log(paired_exit_ratios)) -np.sum(exit_ratios * np.log(exit_ratios))
 
             # reward is the outflow over "num_sample_seconds" seconds
             else:
