@@ -6,6 +6,8 @@ in a segment of space
 import argparse
 from datetime import datetime
 import json
+import os
+import subprocess
 import sys
 
 import numpy as np
@@ -263,12 +265,18 @@ def setup_exps(args):
     # Model setup things
     config['model']['use_lstm'] = args.use_lstm
     if args.use_lstm:
-        config['model']["max_seq_len"] = tune.grid_search([10, 20])
+        if args.grid_search:
+            config['model']["max_seq_len"] = tune.grid_search([10, 20])
+        else:
+            config['model']["max_seq_len"] = 20
         config['model'].update({'fcnet_hiddens': []})
         config['model']["lstm_cell_size"] = 64
     elif args.use_gru:
-        config['model']["max_seq_len"] = tune.grid_search([20, 40])
-        config['model'].update({'fcnet_hiddens': []})
+        if args.grid_search:
+            config['model']["max_seq_len"] = tune.grid_search([20, 40])
+        else:
+            config['model']["max_seq_len"] = 20
+            config['model'].update({'fcnet_hiddens': []})
         model_name = "GRU"
         ModelCatalog.register_custom_model(model_name, GRU)
         config['model']['custom_model'] = model_name
@@ -406,3 +414,12 @@ if __name__ == '__main__':
         exp_dict[args.exp_title]['upload_dir'] = s3_string
 
     run_experiments(exp_dict, queue_trials=True)
+
+    # Now we add code to loop through the results and create outflow plots
+    for (dirpath, dirnames, filenames) in os.walk("/home/ubuntu/ray_results"):
+        if "checkpoint_{}".format(args.num_iters) in dirpath:
+            # grab the experiment name
+            folder = os.path.dirname(dirpath)
+            tune_name = folder.split("/")[-1]
+            subprocess.Popen("/home/ubuntu/cdc_bottlenecks/scripts/create_outflow_on_cluster.sh {} {} {}"
+                             " {}".format(date, os.path.dirname(dirpath), args.num_iters, args.exp_title + '_' + tune_name))
