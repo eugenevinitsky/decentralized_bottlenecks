@@ -949,6 +949,11 @@ class DesiredVelocityEnv(BottleneckEnv):
                 if num_vehs > add_params["congest_penalty_start"] * self.scaling:
                     penalty = (num_vehs - add_params["congest_penalty_start"] * self.scaling) / 10.0
                     reward -= penalty
+
+                num_vehs = len(self.k.vehicle.get_ids_by_edge('3'))
+                if num_vehs > add_params["congest_penalty_start"] * self.scaling:
+                    penalty = (num_vehs - add_params["congest_penalty_start"] * self.scaling) / 10.0
+                    reward -= penalty
         return reward
 
     def reset(self, new_inflow_rate=None):

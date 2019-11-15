@@ -7,7 +7,7 @@ startdate=$1
 ray up ray_autoscale.yaml --cluster-name br_plot -y
 
 # arguments are result directory, checkpoint number, file name
-python flow/flow/visualize/bottleneck_results.py ~/$startdate/\ $2 $3 $4 --num_trials 1 --outflow_min 400 --outflow_max 500  --cluster_mode
+python flow/flow/visualize/bottleneck_results.py $2 $3 $4 --num_trials 20 --outflow_min 400 --outflow_max 3000  --cluster_mode
 
 # move this into the script
 if [ ! -d ~/flow/flow/visualize/trb_data/av_results/$startdate ]; then

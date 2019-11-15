@@ -421,5 +421,4 @@ if __name__ == '__main__':
             # grab the experiment name
             folder = os.path.dirname(dirpath)
             tune_name = folder.split("/")[-1]
-            subprocess.Popen("/home/ubuntu/cdc_bottlenecks/scripts/create_outflow_on_cluster.sh {} {} {}"
-                             " {}".format(date, os.path.dirname(dirpath), args.num_iters, args.exp_title + '_' + tune_name))
+            subprocess.Popen("/home/ubuntu/flow/scripts/create_outflow_on_cluster.sh {} {} {} {}".format(date, os.path.dirname(dirpath), args.num_iters, args.exp_title + '_' + tune_name).split(' '))
