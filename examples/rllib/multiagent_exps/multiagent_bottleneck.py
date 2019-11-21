@@ -271,6 +271,7 @@ def setup_exps(args):
             model_name = "ImitationGRU"
             ModelCatalog.register_custom_model(model_name, ImitationGRU)
             # TODO(@evinitsky) remove magic number
+            config['model']['custom_options'].update({"imitation_weight": 1})
             config['model']['custom_options'].update({"num_imitation_iters": 20})
         else:
             model_name = "GRU"
@@ -282,9 +283,13 @@ def setup_exps(args):
         if args.imitate:
             model_name = "ImitationFeedForward"
             ModelCatalog.register_custom_model(model_name, ImitationFeedForward)
+            config['model']['custom_options'].update({"imitation_weight": 1})
+            config['model']['custom_options'].update({"num_imitation_iters": 20})
         else:
             model_name = "FeedForward"
             ModelCatalog.register_custom_model(model_name, FeedForward)
+        config['model']['custom_model'] = model_name
+
 
 
     # save the flow params for replay

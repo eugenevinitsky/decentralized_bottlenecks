@@ -512,7 +512,9 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
         idm_vehicle = IDMController(veh_id="blah", car_following_params=SumoCarFollowingParams(speed_mode=31))
         for key, value in state_dict.items():
             idm_vehicle.veh_id = key
-            accel = idm_vehicle.get_accel(self)
-            state_dict[key] = {"obs": value, "expert_action": np.array([accel])}
+            if idm_vehicle.get_accel(self) > 50:
+                import ipdb; ipdb.set_trace()
+            accel = np.clip(idm_vehicle.get_accel(self), self.action_space.low, self.action_space.high)
+            state_dict[key] = {"obs": value, "expert_action": accel}
         return state_dict
 

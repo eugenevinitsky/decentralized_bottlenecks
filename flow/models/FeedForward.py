@@ -73,12 +73,6 @@ class FeedForward(TFModelV2):
         self.model.summary()
 
     @override(ModelV2)
-    def get_initial_state(self):
-        return [
-            np.zeros(self.cell_size, np.float32),
-        ]
-
-    @override(ModelV2)
     def value_function(self):
         return tf.reshape(self._value_out, [-1])
 
@@ -95,8 +89,8 @@ class FeedForward(TFModelV2):
             action = input_dict["prev_actions"]
             obs = tf.concat([obs, action], axis=-1)
 
-        model_out, self._value_out, h = self.rnn_model([obs])
-        return tf.reshape(model_out, [-1, self.num_outputs])
+        model_out, self._value_out = self.model([obs])
+        return model_out, state
 
 
 class ImitationFeedForward(FeedForward):
@@ -110,7 +104,9 @@ class ImitationFeedForward(FeedForward):
                  name,):
         super(ImitationFeedForward, self).__init__(obs_space, action_space, num_outputs,
                                          model_config, name)
+        self.iter_count = 0
         self.num_imitation_iters = model_config["custom_options"].get("num_imitation_iters")
+        self.imitation_weight = model_config["custom_options"].get("imitation_weight")
 
     def custom_loss(self, policy_loss, loss_inputs):
         # the loss input is the flattened observation dict. Fortunately, it's an ordered dict but WATCH OUT,
@@ -121,14 +117,15 @@ class ImitationFeedForward(FeedForward):
         expert_tensor, _ = tf.split(loss_inputs['obs'], [action_shape, obs_shape - action_shape], axis=-1)
         policy_actions = loss_inputs['actions']
         self.imitation_loss = tf.reduce_mean(tf.squared_difference(policy_actions, expert_tensor))
-        # TODO(@evinitsky) add a learning schedule here
-        import ipdb; ipdb.set_trace()
-        return 0 * policy_loss + 10 * self.imitation_loss
 
-    def custom_stats(self):
-        import ipdb; ipdb.set_trace()
+        self.iter_count += 1
+        if self.iter_count < self.num_imitation_iters:
+            return 0 * policy_loss + self.imitation_weight * self.imitation_loss
+        else:
+            return policy_loss
+
+    def metrics(self):
         return {
-            "policy_loss": self.policy_loss,
             "imitation_loss": self.imitation_loss,
         }
 

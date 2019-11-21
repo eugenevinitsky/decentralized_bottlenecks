@@ -129,6 +129,8 @@ class ImitationGRU(GRU):
         super(ImitationGRU, self).__init__(obs_space, action_space, num_outputs,
                                          model_config, name)
         self.num_imitation_iters = model_config["custom_options"].get("num_imitation_iters")
+        self.imitation_weight = model_config["custom_options"].get("imitation_weight")
+        self.iter_count = 0
 
     def custom_loss(self, policy_loss, loss_inputs):
         # the loss input is the flattened observation dict. Fortunately, it's an ordered dict but WATCH OUT,
@@ -140,14 +142,13 @@ class ImitationGRU(GRU):
         policy_actions = loss_inputs['actions']
         self.imitation_loss = tf.reduce_mean(tf.squared_difference(policy_actions, expert_tensor))
 
-        # TODO(@evinitsky) add a learning schedule here
-        return 0 * policy_loss + 10 * self.imitation_loss
+        self.iter_count += 1
+        if self.iter_count < self.num_imitation_iters:
+            return 0 * policy_loss + self.imitation_weight * self.imitation_loss
+        else:
+            return policy_loss
 
-    def custom_stats(self):
-        import ipdb; ipdb.set_trace()
+    def metrics(self):
         return {
-            "policy_loss": self.policy_loss,
             "imitation_loss": self.imitation_loss,
         }
-
-# TODO(@evinitsky) add feed-forwards imitator
