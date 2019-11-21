@@ -49,7 +49,11 @@ def get_multiagent_bottleneck_parser():
                              'only looking at the current step')
     parser.add_argument('--speed_reward', action='store_true', default=False,
                         help='If true the reward is the mean AV speed. If not set the reward is outflow')
+    parser.add_argument('--imitate', action='store_true', default=False,
+                        help='If true, the first 30 iterations are supervised learning on imitation of an IDM vehicle')
     
     # arguments for ray
     parser.add_argument('--use_lstm', action='store_true')
+    parser.add_argument('--use_gru', action='store_true')
+
     return parser

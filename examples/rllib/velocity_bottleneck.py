@@ -271,6 +271,7 @@ def setup_exps(args):
             config['model']["max_seq_len"] = 20
         config['model'].update({'fcnet_hiddens': []})
         config['model']["lstm_cell_size"] = 64
+        config['model']['lstm_use_prev_action_reward'] = True
     elif args.use_gru:
         if args.grid_search:
             config['model']["max_seq_len"] = tune.grid_search([20, 40])
@@ -280,7 +281,7 @@ def setup_exps(args):
         model_name = "GRU"
         ModelCatalog.register_custom_model(model_name, GRU)
         config['model']['custom_model'] = model_name
-        config['model']['custom_options'] = {"cell_size": 64}
+        config['model']['custom_options'] = {"cell_size": 64, 'use_prev_action': True}
     else:
         config['model'].update({'fcnet_hiddens': [256, 256]})
 

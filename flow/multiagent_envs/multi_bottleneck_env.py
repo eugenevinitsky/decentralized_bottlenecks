@@ -8,10 +8,12 @@ from collections import defaultdict
 from copy import deepcopy
 
 from gym.spaces.box import Box
+from gym.spaces.dict_space import Dict
 from gym.spaces.discrete import Discrete
 from gym.spaces.tuple_space import Tuple
 import numpy as np
 
+from flow.controllers.car_following_models import IDMController
 from flow.controllers.rlcontroller import RLController
 from flow.controllers.routing_controllers import ContinuousRouter
 from flow.controllers.lane_change_controllers import SimLaneChangeController
@@ -480,3 +482,32 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             return signals
         else:
             return [-1/4.0 for _ in range(8)]
+
+
+class MultiBottleneckImitationEnv(MultiBottleneckEnv):
+    """MultiBottleneckEnv but we return as our obs dict that also contains the actions of a queried expert"""
+
+    @property
+    def observation_space(self):
+        obs = super().observation_space
+        return Dict({"obs": obs, "expert_action": self.action_space})
+
+    def reset(self, new_inflow_rate=None):
+        state_dict = super().reset(new_inflow_rate)
+        idm_vehicle = IDMController(veh_id="blah")
+        for key, value in state_dict.items():
+            idm_vehicle.veh_id = key
+            accel = idm_vehicle.get_accel(self)
+            state_dict[key] = {"obs": value, "expert_action": accel}
+        return state_dict
+
+    def get_state(self, rl_actions=None):
+        state_dict = super().get_state(rl_actions)
+        # iterate through the RL vehicles and find what the other agent would have done
+        idm_vehicle = IDMController(veh_id="blah")
+        for key, value in state_dict.items():
+            idm_vehicle.veh_id = key
+            accel = idm_vehicle.get_accel(self)
+            state_dict[key] = {"obs": value, "expert_action": accel}
+        return state_dict
+

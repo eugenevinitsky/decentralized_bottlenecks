@@ -10,6 +10,7 @@ import argparse
 from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.models.tf.misc import normc_initializer, get_activation_fn
 from ray.rllib.models.tf.recurrent_tf_modelv2 import RecurrentTFModelV2
+from ray.rllib.policy.rnn_sequencing import add_time_dimension
 from ray.rllib.utils.annotations import override
 from ray.rllib.utils import try_import_tf
 
@@ -29,8 +30,19 @@ class GRU(RecurrentTFModelV2):
                                          model_config, name)
 
         # Define input layers
-        input_layer = tf.keras.layers.Input(
-            shape=(None, obs_space.shape[0]), name="inputs")
+        if 'original_space' in dir(obs_space):
+            curr_obs_space = obs_space.original_space.spaces["obs"]
+        else:
+            curr_obs_space = obs_space
+        self.use_prev_action = model_config["custom_options"].get("use_prev_action")
+        if self.use_prev_action:
+            obs_shape = curr_obs_space.shape[0]
+            action_shape = action_space.shape[0]
+            input_layer = tf.keras.layers.Input(
+                shape=(None, obs_shape + action_shape), name="inputs")
+        else:
+            input_layer = tf.keras.layers.Input(
+                shape=(None, curr_obs_space.shape[0]), name="inputs")
         # Preprocess observations with the appropriate number of hidden layers
         last_layer = input_layer
         i = 1
@@ -63,9 +75,11 @@ class GRU(RecurrentTFModelV2):
         values = tf.keras.layers.Dense(
             1, activation=None, name="values")(gru_out)
 
+        inputs = [input_layer, seq_in, state_in_h]
+
         # Create the RNN model
         self.rnn_model = tf.keras.Model(
-            inputs=[input_layer, seq_in, state_in_h],
+            inputs=inputs,
             outputs=[logits, values, state_h])
         self.register_variables(self.rnn_model.variables)
         self.rnn_model.summary()
@@ -85,3 +99,53 @@ class GRU(RecurrentTFModelV2):
     @override(ModelV2)
     def value_function(self):
         return tf.reshape(self._value_out, [-1])
+
+    @override(ModelV2)
+    def forward(self, input_dict, state, seq_lens):
+        """Adds time dimension to batch before sending inputs to forward_rnn()"""
+        # first we add the time dimension for each object
+        if isinstance(input_dict["obs"], dict):
+            padded_obs = add_time_dimension(input_dict["obs"]["obs"], seq_lens)
+        else:
+            padded_obs = add_time_dimension(input_dict["obs"], seq_lens)
+
+        if self.use_prev_action:
+            padded_action = add_time_dimension(input_dict["prev_actions"], seq_lens)
+            padded_obs = tf.concat([padded_obs, padded_action], axis=-1)
+
+        output, new_state = self.forward_rnn(padded_obs, state, seq_lens)
+        return tf.reshape(output, [-1, self.num_outputs]), new_state
+
+
+class ImitationGRU(GRU):
+    """Subclass of GRU that has a custom imitation loss"""
+
+    def custom_loss(self, policy_loss, loss_inputs):
+        # the loss input is the flattened observation dict. Fortunately, it's an ordered dict but WATCH OUT,
+        # if you change the key names, the order will change!
+        # TODO(@evinitsky) figure out a way to make this less likely to break
+        obs_shape = self.obs_space.shape[0]
+        action_shape = self.action_space.shape[0]
+        expert_tensor, _ = tf.split(loss_inputs['obs'], [action_shape, obs_shape - action_shape], axis=-1)
+        policy_actions = loss_inputs['actions']
+        self.imitation_loss = tf.reduce_mean(tf.squared_difference(policy_actions, expert_tensor))
+
+        # You can also add self-supervised losses easily by referencing tensors
+        # created during _build_layers_v2(). For example, an autoencoder-style
+        # loss can be added as follows:
+        # ae_loss = squared_diff(
+        #     loss_inputs["obs"], Decoder(self.fcnet.last_layer))
+        print("FYI: You can also use these tensors: {}, ".format(loss_inputs))
+
+        # # compute the IL loss
+        # action_dist = Categorical(logits, self.options)
+        # self.policy_loss = policy_loss
+        # self.imitation_loss = tf.reduce_mean(
+        #     -action_dist.logp(input_ops["actions"]))
+        return 0 * policy_loss + 10 * self.imitation_loss
+
+    def custom_stats(self):
+        return {
+            "policy_loss": self.policy_loss,
+            "imitation_loss": self.imitation_loss,
+        }

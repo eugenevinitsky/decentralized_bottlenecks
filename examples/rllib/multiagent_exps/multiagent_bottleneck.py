@@ -5,14 +5,17 @@ The agents all share a single model.
 """
 from datetime import datetime
 import json
+import sys
 
 import numpy as np
 import pytz
 import ray
 import ray.rllib.agents.ppo as ppo
 from ray import tune
+from ray.rllib.models import ModelCatalog
 from ray.tune import run
 from ray.tune.registry import register_env
+
 
 from flow.core.params import SumoParams, EnvParams, InitialConfig, NetParams, \
     InFlows, SumoLaneChangeParams, SumoCarFollowingParams
@@ -20,9 +23,11 @@ from flow.core.params import TrafficLightParams
 from flow.core.params import VehicleParams
 from flow.controllers import RLController, ContinuousRouter, \
     SimLaneChangeController
+from flow.models.GRU import GRU, ImitationGRU
 from flow.utils.parsers import get_multiagent_bottleneck_parser
 from flow.utils.registry import make_create_env
 from flow.utils.rllib import FlowParamsEncoder
+
 
 # TODO(@evinitsky) clean this up
 EXAMPLE_USAGE = """
@@ -122,7 +127,9 @@ def setup_flow_params(args):
         "life_penalty": args.life_penalty,
         'keep_past_actions': args.keep_past_actions,
         "num_sample_seconds": args.num_sample_seconds,
-        "speed_reward": args.speed_reward
+        "speed_reward": args.speed_reward,
+        'fair_reward': False,  # This doesn't do anything, remove
+        'exit_history_seconds': 0  # This doesn't do anything, remove
         }
 
     # percentage of flow coming out of each lane
@@ -156,12 +163,16 @@ def setup_flow_params(args):
 
     additional_net_params = {'scaling': args.scaling, "speed_limit": 23.0}
 
+    if args.imitate:
+        env_name = 'MultiBottleneckImitationEnv'
+    else:
+        env_name = 'MultiBottleneckEnv'
     flow_params = dict(
         # name of the experiment
         exp_tag=args.exp_title,
 
         # name of the flow environment the experiment is running on
-        env_name='MultiBottleneckEnv',
+        env_name=env_name,
 
         # name of the scenario class the experiment is running on
         scenario='BottleneckScenario',
@@ -232,7 +243,6 @@ def setup_exps(args):
     config['num_workers'] = rllib_params['n_cpus']
     config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
     config['gamma'] = 0.999  # discount rate
-    config['model'].update({'fcnet_hiddens': [256, 256]})
     config['horizon'] = args.horizon
 
     # Grid search things
@@ -240,10 +250,32 @@ def setup_exps(args):
         config['lr'] = tune.grid_search([5e-5, 5e-4])
 
     # LSTM Things
-    config['model']['use_lstm'] = args.use_lstm
+    if args.use_lstm and args.use_gru:
+        sys.exit("You should not specify both an LSTM and a GRU")
     if args.use_lstm:
-        config['model']["max_seq_len"] = tune.grid_search([5, 10])
-    config['model']["lstm_cell_size"] = 32
+        if args.grid_search:
+            config['model']["max_seq_len"] = tune.grid_search([10, 20])
+        else:
+            config['model']["max_seq_len"] = 20
+        config['model'].update({'fcnet_hiddens': []})
+        config['model']["lstm_cell_size"] = 64
+        config['model']['lstm_use_prev_action_reward'] = True
+    elif args.use_gru:
+        if args.grid_search:
+            config['model']["max_seq_len"] = tune.grid_search([20, 40])
+        else:
+            config['model']["max_seq_len"] = 20
+            config['model'].update({'fcnet_hiddens': []})
+        if args.imitate:
+            model_name = "ImitationGRU"
+            ModelCatalog.register_custom_model(model_name, ImitationGRU)
+        else:
+            model_name = "GRU"
+            ModelCatalog.register_custom_model(model_name, GRU)
+        config['model']['custom_model'] = model_name
+        config['model']['custom_options'] = {"cell_size": 64, 'use_prev_action': True}
+    else:
+        config['model'].update({'fcnet_hiddens': [256, 256]})
 
     # save the flow params for replay
     flow_json = json.dumps(
