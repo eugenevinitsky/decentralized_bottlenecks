@@ -23,6 +23,7 @@ from flow.core.params import TrafficLightParams
 from flow.core.params import VehicleParams
 from flow.controllers import RLController, ContinuousRouter, \
     SimLaneChangeController
+from flow.models.FeedForward import FeedForward, ImitationFeedForward
 from flow.models.GRU import GRU, ImitationGRU
 from flow.utils.parsers import get_multiagent_bottleneck_parser
 from flow.utils.registry import make_create_env
@@ -269,13 +270,22 @@ def setup_exps(args):
         if args.imitate:
             model_name = "ImitationGRU"
             ModelCatalog.register_custom_model(model_name, ImitationGRU)
+            # TODO(@evinitsky) remove magic number
+            config['model']['custom_options'].update({"num_imitation_iters": 20})
         else:
             model_name = "GRU"
             ModelCatalog.register_custom_model(model_name, GRU)
         config['model']['custom_model'] = model_name
-        config['model']['custom_options'] = {"cell_size": 64, 'use_prev_action': True}
+        config['model']['custom_options'].update({"cell_size": 64, 'use_prev_action': True})
     else:
         config['model'].update({'fcnet_hiddens': [256, 256]})
+        if args.imitate:
+            model_name = "ImitationFeedForward"
+            ModelCatalog.register_custom_model(model_name, ImitationFeedForward)
+        else:
+            model_name = "FeedForward"
+            ModelCatalog.register_custom_model(model_name, FeedForward)
+
 
     # save the flow params for replay
     flow_json = json.dumps(

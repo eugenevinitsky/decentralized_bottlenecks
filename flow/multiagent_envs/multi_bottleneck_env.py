@@ -164,8 +164,13 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                               in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
         veh_info.update(left_vehicles_dict)
 
-        veh_info = {key: np.clip(self.observation_space.low, self.observation_space.high, value) for
+        if isinstance(self.observation_space, Box):
+            veh_info = {key: np.clip(self.observation_space.low, self.observation_space.high, value) for
                     key, value in veh_info.items()}
+        elif isinstance(self.observation_space, Dict):
+            veh_info = {key: np.clip(self.observation_space.spaces['obs'].low,
+                                     self.observation_space.spaces['obs'].high, value) for
+                        key, value in veh_info.items()}
 
         return veh_info
 
@@ -494,20 +499,20 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
 
     def reset(self, new_inflow_rate=None):
         state_dict = super().reset(new_inflow_rate)
-        idm_vehicle = IDMController(veh_id="blah")
-        for key, value in state_dict.items():
-            idm_vehicle.veh_id = key
-            accel = idm_vehicle.get_accel(self)
-            state_dict[key] = {"obs": value, "expert_action": accel}
+        # idm_vehicle = IDMController(veh_id="blah", car_following_params=SumoCarFollowingParams(speed_mode=31))
+        # for key, value in state_dict.items():
+        #     idm_vehicle.veh_id = key
+        #     accel = idm_vehicle.get_accel(self)
+        #     state_dict[key] = {"obs": value, "expert_action": np.array([accel])}
         return state_dict
 
     def get_state(self, rl_actions=None):
         state_dict = super().get_state(rl_actions)
         # iterate through the RL vehicles and find what the other agent would have done
-        idm_vehicle = IDMController(veh_id="blah")
+        idm_vehicle = IDMController(veh_id="blah", car_following_params=SumoCarFollowingParams(speed_mode=31))
         for key, value in state_dict.items():
             idm_vehicle.veh_id = key
             accel = idm_vehicle.get_accel(self)
-            state_dict[key] = {"obs": value, "expert_action": accel}
+            state_dict[key] = {"obs": value, "expert_action": np.array([accel])}
         return state_dict
 
