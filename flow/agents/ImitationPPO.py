@@ -3,6 +3,7 @@ from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
 from ray.rllib.agents.ppo.ppo_policy import LearningRateSchedule, EntropyCoeffSchedule, KLCoeffMixin, ValueNetworkMixin
 from ray.rllib.utils.annotations import override, DeveloperAPI
 from ray.rllib.policy.policy import Policy
+from ray.rllib.models.model import restore_original_dimensions
 from ray.rllib.agents.ppo.ppo_policy import ppo_surrogate_loss, kl_and_loss_stats
 import tensorflow as tf
 
@@ -10,6 +11,7 @@ import tensorflow as tf
 def imitation_loss(policy, model, dist_class, train_batch):
     obs_shape = model.obs_space.shape[0]
     action_shape = model.action_space.shape[0]
+    # TODO(@evinitsky) use restore_original_dimensions to do the splitting
     expert_tensor, _ = tf.split(train_batch['obs'], [action_shape, obs_shape - action_shape], axis=-1)
     policy_actions = train_batch['actions']
     imitation_loss = tf.reduce_mean(tf.squared_difference(policy_actions, expert_tensor))
