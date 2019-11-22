@@ -248,10 +248,14 @@ class TimeDelayVelocityController(SimCarFollowingController):
             self.stop_set = False
         else:
             env.k.vehicle.set_stop_with_duration(self.veh_id, edgeid=self.stop_edge, pos=self.stop_pos, lane=lane_id, duration=duration)
+            self.duration = duration
             self.stop_set = True
 
     def get_accel(self, env):
-        env.k.vehicle.set_color(self.veh_id, (0, 255, 0))
+        if (env.k.vehicle.is_stopped(self.veh_id)):
+            env.k.vehicle.set_color(self.veh_id, (255, 255, 0))
+        else:
+            env.k.vehicle.set_color(self.veh_id, (0, 255, 0))
         cur_pos = env.k.vehicle.get_position(self.veh_id)
         cur_speed = env.k.vehicle.get_speed(self.veh_id)
         if int(env.k.vehicle.get_edge(self.veh_id)) > int(self.stop_edge):
@@ -287,7 +291,55 @@ class DecentralizedALINEAController(TimeDelayVelocityController):
                 self.n_crit - np.average(env.smoothed_num))
             self.q = min(max(self.q + q_update, self.q_min), self.q_max)
             # convert q to cycle time, we keep track of the previous cycle time to let the cycle coplete
-            self.duration = 3600 * env.scaling * 4 / self.q
-        return self.duration
+            duration = 3600 * env.scaling * 4 / self.q
+        return duration
+
+class StaggeringDecentralizedALINEAController(DecentralizedALINEAController):
+    def __init__(self, veh_id, stop_edge, stop_pos, additional_env_params, car_following_params):
+        super().__init__(veh_id, stop_edge, stop_pos, additional_env_params, car_following_params)
+        self.is_waiting_to_go = False
+        self.lane_leader = False
+        self.check_next = False
+
+    def get_accel(self, env):
+        if self.check_next or len(env.waiting_queue) > 4:
+            import ipdb; ipdb.set_trace()
+        env.k.vehicle.set_color(self.veh_id, (0, 255, 0))
+        cur_pos = env.k.vehicle.get_position(self.veh_id)
+        cur_speed = env.k.vehicle.get_speed(self.veh_id)
+        cur_lane = env.k.vehicle.get_lane(self.veh_id)
+        
+        if not self.lane_leader:
+            cars_in_lane = []
+            if self.stop_edge in env.edge_dict:
+                cars_in_lane = env.edge_dict[self.stop_edge][cur_lane]
+            if len(cars_in_lane) and max(cars_in_lane, key=lambda x: x[1])[0] == self.veh_id and self.stop_set:
+                self.lane_leader = True
+                env.waiting_queue.append(self.veh_id)
+
+        if int(env.k.vehicle.get_edge(self.veh_id)) > int(self.stop_edge):
+            if self.veh_id in env.waiting_queue:
+                env.waiting_queue.remove(self.veh_id)
+            return None
+        elif self.is_waiting_to_go:
+            if not env.k.vehicle.is_stopped(self.veh_id):
+                if (env.waiting_queue[0] == self.veh_id):
+                    if len(env.waiting_queue) == 4:
+                        # car can depart
+                        env.waiting_queue.pop(0)
+                        self.is_waiting_to_go = False
+                        return None
+            return 0.0
+        elif env.k.vehicle.is_stopped(self.veh_id):
+            self.is_waiting_to_go = True
+            return 0.0
+        elif not self.stop_set and int(env.k.vehicle.get_edge(self.veh_id)) == int(self.stop_edge) and \
+            0.5 * (cur_speed**2) / self.car_following_params.controller_params['decel'] + cur_pos > self.stop_pos - 4:
+            return None
+        else:
+            self.set_stop(env)
+
+        return None
+        
 
     

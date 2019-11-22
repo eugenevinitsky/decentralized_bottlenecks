@@ -146,6 +146,7 @@ class BottleneckEnv(Env):
 
         self.smoothed_num = np.zeros(10)  # averaged number of vehs in '4'
         self.outflow_index = 0
+        self.waiting_queue = []
 
     def additional_command(self):
         """Build a dict with vehicle information.
@@ -383,6 +384,7 @@ class BottleneckEnv(Env):
         return np.asarray([1])
 
     def reset(self):
+        self.waiting_queue = []
         self.q = self.q_max  # ramp meter feedback controller
         self.feedback_timer = 0.0
         self.cycle_time = 8
