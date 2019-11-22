@@ -23,8 +23,8 @@ from flow.core.params import TrafficLightParams
 from flow.core.params import VehicleParams
 from flow.controllers import RLController, ContinuousRouter, \
     SimLaneChangeController
-from flow.models.FeedForward import FeedForward, ImitationFeedForward
-from flow.models.GRU import GRU, ImitationGRU
+from flow.models.FeedForward import FeedForward
+from flow.models.GRU import GRU
 from flow.utils.parsers import get_multiagent_bottleneck_parser
 from flow.utils.registry import make_create_env
 from flow.utils.rllib import FlowParamsEncoder
@@ -267,29 +267,19 @@ def setup_exps(args):
         else:
             config['model']["max_seq_len"] = 20
             config['model'].update({'fcnet_hiddens': []})
-        if args.imitate:
-            model_name = "ImitationGRU"
-            ModelCatalog.register_custom_model(model_name, ImitationGRU)
-            # TODO(@evinitsky) remove magic number
-            config['model']['custom_options'].update({"imitation_weight": 1})
-            config['model']['custom_options'].update({"num_imitation_iters": 20})
-        else:
-            model_name = "GRU"
-            ModelCatalog.register_custom_model(model_name, GRU)
+        model_name = "GRU"
+        ModelCatalog.register_custom_model(model_name, GRU)
         config['model']['custom_model'] = model_name
         config['model']['custom_options'].update({"cell_size": 64, 'use_prev_action': True})
     else:
         config['model'].update({'fcnet_hiddens': [256, 256]})
-        if args.imitate:
-            model_name = "ImitationFeedForward"
-            ModelCatalog.register_custom_model(model_name, ImitationFeedForward)
-            config['model']['custom_options'].update({"imitation_weight": 1})
-            config['model']['custom_options'].update({"num_imitation_iters": 20})
-        else:
-            model_name = "FeedForward"
-            ModelCatalog.register_custom_model(model_name, FeedForward)
+        model_name = "FeedForward"
+        ModelCatalog.register_custom_model(model_name, FeedForward)
         config['model']['custom_model'] = model_name
 
+    if args.imitate:
+        config['model']['custom_options'].update({"imitation_weight": 1})
+        config['model']['custom_options'].update({"num_imitation_iters": 50})
 
 
     # save the flow params for replay
@@ -341,6 +331,10 @@ if __name__ == '__main__':
 
     # store custom metrics
     config["callbacks"] = {"on_episode_end": tune.function(on_episode_end)}
+
+    if args.imitate:
+        from flow.agents.ImitationPPO import ImitationTrainer
+        alg_run = ImitationTrainer
 
     exp_dict = {
             'name': args.exp_title,
