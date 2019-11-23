@@ -1009,7 +1009,10 @@ class TraCIVehicle(KernelVehicle):
 
     def set_stop_with_duration(self, veh_id, edgeid, pos, lane, duration):
         """Stop vehicle at ."""
-        self.kernel_api.vehicle.setStop(veh_id, edgeid, pos=pos, laneIndex=lane, duration=duration)
+        try:
+            self.kernel_api.vehicle.setStop(veh_id, edgeid, pos=pos, laneIndex=lane, duration=duration)
+        except TraCIException as ex:
+            print(ex)
 
     def cancel_stop(self, veh_id, edgeid, pos, lane):
         """Stop vehicle at ."""
