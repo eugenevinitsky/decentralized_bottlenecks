@@ -11,8 +11,9 @@ from flow.core.params import VehicleParams
 from flow.core.params import TrafficLightParams
 
 from flow.scenarios.bottleneck import BottleneckScenario
-from flow.controllers import SimLaneChangeController, ContinuousRouter
-from flow.envs.bottleneck_env import BottleneckEnv
+from flow.controllers import SimLaneChangeController, ContinuousRouter, HandTunedVelocityController, TimeDelayVelocityController, DecentralizedALINEAController, StaggeringDecentralizedALINEAController
+from flow.controllers.car_following_models import CFMController
+from flow.envs.bottleneck_env import DesiredVelocityEnv
 from flow.core.experiment import Experiment
 
 
@@ -44,7 +45,7 @@ class BottleneckDensityExperiment(Experiment):
         mean_outflows = []
         lane_4_vels = []
         for i in range(num_runs):
-            vel = np.zeros(num_steps)
+            vel = np.ones(num_steps) * -1
             logging.info('Iter #' + str(i))
             ret = 0
             ret_list = []
@@ -53,11 +54,11 @@ class BottleneckDensityExperiment(Experiment):
             state = self.env.reset()
             for j in range(num_steps):
                 state, reward, done, _ = self.env.step(rl_actions(state))
-                vel[j] = np.mean(self.env.k.vehicle.get_speed(
-                    self.env.k.vehicle.get_ids()))
                 if j >= num_steps - end_len:
                     vehicles = self.env.k.vehicle
                     vehs_on_four = vehicles.get_ids_by_edge('4')
+                    if len(vehs_on_four):
+                        vel[j] = np.mean(self.env.k.vehicle.get_speed(vehs_on_four))
                     lanes = vehicles.get_lane(vehs_on_four)
                     lane_dict = {veh_id: lane for veh_id, lane in
                                  zip(vehs_on_four, lanes)}
@@ -98,7 +99,7 @@ class BottleneckDensityExperiment(Experiment):
             ret_lists.append(ret_list)
             mean_vels.append(np.mean(vel))
             std_vels.append(np.std(vel))
-            print('Round {0}, return: {1}'.format(i, ret))
+            print('Round {0}, outflow: {1}'.format(i, outflow))
 
         info_dict['returns'] = rets
         info_dict['velocities'] = vels
@@ -123,7 +124,8 @@ class BottleneckDensityExperiment(Experiment):
 
 def bottleneck_example(flow_rate, horizon, restart_instance=False,
                        render=False, scaling=1, disable_ramp_meter=True, disable_tb=True,
-                       lc_on=False, n_crit=8.0, q_max=3000, q_min=900, feedback_coef=20):
+                       lc_on=False, n_crit=8.0, q_max=None, q_min=None, feedback_coef=1, q_init=2300, 
+                       penetration_rate=0.4):
     """
     Perform a simulation of vehicles on a bottleneck.
 
@@ -174,17 +176,28 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
         lc_mode = 1621
     else:
         lc_mode = 0
-    vehicles.add(
-        veh_id="human",
-        lane_change_controller=(SimLaneChangeController, {}),
-        routing_controller=(ContinuousRouter, {}),
-        car_following_params=SumoCarFollowingParams(
-            speed_mode=31,
-        ),
-        lane_change_params=SumoLaneChangeParams(
-            lane_change_mode=lc_mode
-        ),
-        num_vehicles=1)
+
+    controlled_segments = [("1", 1, True), ("2", 8, True), ("3", 3, True),
+                        ("4", 1, True), ("5", 3, True)] # 12 controllable segments
+    num_observed_segments = [('1', 1), ('2', 3), ('3', 3), ('4', 3), ('5', 1)]
+    v_regions = [23,
+                 23, 23, 10, 5, 5, 23, 23, 23,
+                 23, 23, 23,
+                 23,
+                 23, 23, 23]
+
+    ## set default q_max, q_min values
+    if not q_max:
+        if disable_ramp_meter:
+            q_max = 14401
+        else:
+            q_max = 3000
+    
+    if not q_min:
+        if disable_ramp_meter:
+            q_min = 200
+        else:
+            q_min = 900
 
     additional_env_params = {
         "target_velocity": 40,
@@ -197,18 +210,73 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
         "n_crit": n_crit,
         "q_max": q_max,
         "q_min": q_min,
-        "feedback_coeff": feedback_coef
+        "q_init": q_init,
+        "feedback_coeff": feedback_coef,
+        "controlled_segments": controlled_segments,
+        "inflow_range": [2200, 2200],
+        "reset_inflow": False,
+        "symmetric": True,
+        "observed_segments": num_observed_segments,
+        "congest_penalty": 1e10,
+        "lc_mode": lc_mode,
+        'start_inflow': flow_rate,
+        'life_penalty': 0.00,
+
     }
+
+    if penetration_rate != 0.0:
+        vehicles.add(
+            veh_id="AV",
+            lane_change_controller=(SimLaneChangeController, {}),
+            routing_controller=(ContinuousRouter, {}),
+            # acceleration_controller=(CFMController, {"v_des": 10, "d_des": 30, "k_d": 30, "k_v": 15}),
+            # acceleration_controller=(HandTunedVelocityController, {"v_regions": v_regions}),
+            # acceleration_controller=(DecentralizedALINEAController, {"stop_edge": "2", "stop_pos": 310, "additional_env_params": additional_env_params}),
+            acceleration_controller=(StaggeringDecentralizedALINEAController, {"stop_edge": "2", "stop_pos": 310, "additional_env_params": additional_env_params}),
+            car_following_params=SumoCarFollowingParams(
+                speed_mode=31,
+            ),
+            lane_change_params=SumoLaneChangeParams(
+                lane_change_mode=lc_mode
+            ),
+            num_vehicles=1)
+
+    vehicles.add(
+        veh_id="human",
+        lane_change_controller=(SimLaneChangeController, {}),
+        routing_controller=(ContinuousRouter, {}),
+        car_following_params=SumoCarFollowingParams(
+            speed_mode=31,
+        ),
+        lane_change_params=SumoLaneChangeParams(
+            lane_change_mode=lc_mode
+        ),
+        num_vehicles=1)
+
     env_params = EnvParams(
         horizon=horizon, additional_params=additional_env_params)
 
     inflow = InFlows()
+
+    if penetration_rate != 0.0:
+        av_veh_per_hour = flow_rate * (penetration_rate)
+        human_veh_per_hour = flow_rate * (1 - penetration_rate)
+
+        inflow.add(
+            veh_type="AV",
+            edge="1",
+            vehsPerHour=av_veh_per_hour,
+            departLane="random",
+            departSpeed=23)
+    else: 
+        human_veh_per_hour = flow_rate
+
     inflow.add(
         veh_type="human",
         edge="1",
-        vehsPerHour=flow_rate,
+        vehsPerHour=human_veh_per_hour,
         departLane="random",
-        departSpeed=10)
+        departSpeed=23)
 
     traffic_lights = TrafficLightParams()
     if not disable_tb:
@@ -216,7 +284,7 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
     if not disable_ramp_meter:
         traffic_lights.add(node_id="3")
 
-    additional_net_params = {"scaling": scaling, "speed_limit": 23}
+    additional_net_params = {"scaling": scaling, "speed_limit": 60}
     net_params = NetParams(
         inflows=inflow,
         no_internal_links=False,
@@ -235,7 +303,7 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
         initial_config=initial_config,
         traffic_lights=traffic_lights)
 
-    env = BottleneckEnv(env_params, sim_params, scenario)
+    env = DesiredVelocityEnv(env_params, sim_params, scenario)
 
     return BottleneckDensityExperiment(env, int(flow_rate))
 
@@ -250,9 +318,14 @@ if __name__ == '__main__':
     parser.add_argument('--ramp_meter', action='store_true', help='If set, ALINEA is active in this scenario')
     parser.add_argument('--render', type=int, default=1)
     parser.add_argument('--num_runs', type=int, default=5)
+    parser.add_argument('--horizon', type=int, default=2000)
+    parser.add_argument('--q_init', type=int, default=400)
+    parser.add_argument('--penetration_rate', type=float, default=0.4)
+    parser.add_argument('--lc', action="store_true")
+    parser.add_argument('--feedback_coef', type=float, default=0.1)
     args = parser.parse_args()
     if args.render:
-        exp = bottleneck_example(args.inflow, 1000, disable_ramp_meter=not args.ramp_meter, render=True)
+        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter, lc_on=args.lc, render=True, q_init=args.q_init, penetration_rate=args.penetration_rate, feedback_coef=args.feedback_coef)
     else:
-        exp = bottleneck_example(args.inflow, 1000, disable_ramp_meter=not args.ramp_meter, render=False)
-    exp.run(args.num_runs, 1000)
+        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter, lc_on=args.lc, render=False, q_init=args.q_init, penetration_rate=args.penetration_rate, feedback_coef=args.feedback_coef)
+    exp.run(args.num_runs, args.horizon)

@@ -1006,3 +1006,24 @@ class TraCIVehicle(KernelVehicle):
     def set_max_speed(self, veh_id, max_speed):
         """See parent class."""
         self.kernel_api.vehicle.setMaxSpeed(veh_id, max_speed)
+
+    def set_stop_with_duration(self, veh_id, edgeid, pos, lane, duration):
+        """Stop vehicle at ."""
+        try:
+            self.kernel_api.vehicle.setStop(veh_id, edgeid, pos=pos, laneIndex=lane, duration=duration)
+        except TraCIException as ex:
+            import ipdb; ipdb.set_trace()
+
+    def cancel_stop(self, veh_id, edgeid, pos, lane):
+        """Stop vehicle at ."""
+        try:
+            self.kernel_api.vehicle.setStop(veh_id, edgeid, pos=pos, laneIndex=lane, duration=0)
+        except TraCIException as ex:
+            import ipdb; ipdb.set_trace()
+
+    def is_stopped(self, veh_id):
+        """Stop vehicle at ."""
+        try:
+            return self.kernel_api.vehicle.getStopState(veh_id)
+        except TraCIException as ex:
+            import ipdb; ipdb.set_trace()

@@ -136,10 +136,10 @@ class BottleneckEnv(Env):
         self.next_period = START_RECORD_TIME / self.sim_step
 
         # values for the ALINEA ramp meter algorithm
-        self.n_crit = env_add_params.get("n_crit", 8)
-        self.q_max = env_add_params.get("q_max", 3000)
-        self.q_min = env_add_params.get("q_min", 900)
-        self.feedback_coeff = env_add_params.get("feedback_coeff", 20)
+        self.n_crit = env_add_params.get("n_crit")
+        self.q_max = env_add_params.get("q_max")
+        self.q_min = env_add_params.get("q_min")
+        self.feedback_coeff = env_add_params.get("feedback_coeff")
         self.q = self.q_max  # ramp meter feedback controller
         self.feedback_update_time = env_add_params.get("feedback_update", 30)
         self.feedback_timer = 0.0
@@ -154,6 +154,7 @@ class BottleneckEnv(Env):
 
         self.smoothed_num = np.zeros(10)  # averaged number of vehs in '4'
         self.outflow_index = 0
+        self.waiting_queue = []
 
     def additional_command(self):
         """Build a dict with vehicle information.
@@ -391,6 +392,7 @@ class BottleneckEnv(Env):
         return np.asarray([1])
 
     def reset(self):
+        self.waiting_queue = []
         self.q = self.q_max  # ramp meter feedback controller
         self.feedback_timer = 0.0
         self.cycle_time = 8
@@ -665,8 +667,6 @@ class DesiredVelocityEnv(BottleneckEnv):
         # default (edge, segment, controlled) status
         add_env_params = self.env_params.additional_params
         default = [(str(i), 1, True) for i in range(1, 6)]
-        super(DesiredVelocityEnv, self).__init__(env_params, sim_params,
-                                                 scenario)
         self.segments = add_env_params.get("controlled_segments", default)
 
         # number of segments for each edge
@@ -742,11 +742,11 @@ class DesiredVelocityEnv(BottleneckEnv):
         for (edge, num_segments, controlled) in self.segments:
             if controlled:
                 if self.symmetric:
-                    self.action_index[edge] = [action_list[index]]
-                    action_list += [action_list[index] + controlled]
+                    self.action_index[edge] = action_list[index]
+                    action_list += [action_list[index] + num_segments * controlled]
                 else:
                     num_lanes = self.k.scenario.num_lanes(edge)
-                    self.action_index[edge] = [action_list[index]]
+                    self.action_index[edge] = action_list[index]
                     action_list += [
                         action_list[index] +
                         num_segments * controlled * num_lanes
