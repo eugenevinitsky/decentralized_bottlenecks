@@ -9,10 +9,8 @@ import tensorflow as tf
 
 
 def imitation_loss(policy, model, dist_class, train_batch):
-    obs_shape = model.obs_space.shape[0]
-    action_shape = model.action_space.shape[0]
-    # TODO(@evinitsky) use restore_original_dimensions to do the splitting
-    expert_tensor, _ = tf.split(train_batch['obs'], [action_shape, obs_shape - action_shape], axis=-1)
+    original_space = restore_original_dimensions(train_batch['obs'], model.obs_space)
+    expert_tensor = original_space['expert_action']
     policy_actions = train_batch['actions']
     imitation_loss = tf.reduce_mean(tf.squared_difference(policy_actions, expert_tensor))
     return imitation_loss
