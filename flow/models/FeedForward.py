@@ -39,10 +39,10 @@ class FeedForward(TFModelV2):
             obs_shape = curr_obs_space.shape[0]
             action_shape = action_space.shape[0]
             input_layer = tf.keras.layers.Input(
-                shape=(None, obs_shape + action_shape), name="inputs")
+                shape=(obs_shape + action_shape), name="inputs")
         else:
             input_layer = tf.keras.layers.Input(
-                shape=(None, curr_obs_space.shape[0]), name="inputs")
+                shape=(curr_obs_space.shape[0]), name="inputs")
         # Preprocess observations with the appropriate number of hidden layers
         last_layer = input_layer
         i = 1

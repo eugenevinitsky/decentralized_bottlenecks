@@ -130,8 +130,15 @@ def setup_flow_params(args):
         "num_sample_seconds": args.num_sample_seconds,
         "speed_reward": args.speed_reward,
         'fair_reward': False,  # This doesn't do anything, remove
-        'exit_history_seconds': 0  # This doesn't do anything, remove
-        }
+        'exit_history_seconds': 0,  # This doesn't do anything, remove
+
+        # parameters for the staggering controller that we imitate
+        "n_crit": 8,
+        "q_max": 3000,
+        "q_min": 900,
+        "q_init": 2300, # TODO(@evinitsky) pretty sure this is not the right value
+        "feedback_coeff": 0.1, # TODO(@evinitsky) pretty sure this is not the right value
+    }
 
     # percentage of flow coming out of each lane
     inflow = InFlows()

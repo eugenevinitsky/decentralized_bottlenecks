@@ -13,7 +13,7 @@ from gym.spaces.discrete import Discrete
 from gym.spaces.tuple_space import Tuple
 import numpy as np
 
-from flow.controllers.car_following_models import IDMController
+from flow.controllers.velocity_controllers import StaggeringDecentralizedALINEAController, IDMController
 from flow.controllers.rlcontroller import RLController
 from flow.controllers.routing_controllers import ContinuousRouter
 from flow.controllers.lane_change_controllers import SimLaneChangeController
@@ -107,6 +107,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         return Box(low=-3.0, high=3.0,
                    shape=(num_obs,),
                    dtype=np.float32)
+
     @property
     def action_space(self):
         """See class definition."""
@@ -144,7 +145,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             if self.env_params.additional_params.get('aggregate_info'):
                 agg_statistics = self.aggregate_statistics()
                 veh_info = {rl_id: np.concatenate((val, agg_statistics))
-                                     for rl_id, val in veh_info.items()}
+                            for rl_id, val in veh_info.items()}
 
         if self.env_params.additional_params.get('keep_past_actions', False):
             # update the actions history with the most recent actions
@@ -166,7 +167,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
         if isinstance(self.observation_space, Box):
             veh_info = {key: np.clip(self.observation_space.low, self.observation_space.high, value) for
-                    key, value in veh_info.items()}
+                        key, value in veh_info.items()}
         elif isinstance(self.observation_space, Dict):
             veh_info = {key: np.clip(self.observation_space.spaces['obs'].low,
                                      self.observation_space.spaces['obs'].high, value) for
@@ -216,9 +217,9 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             rl_speeds_list += rl_vehicle_speeds.flatten().tolist()
 
         unnorm_veh_list = np.asarray(num_vehicles_list) * \
-            NUM_VEHICLE_NORM
+                          NUM_VEHICLE_NORM
         unnorm_rl_list = np.asarray(num_rl_vehicles_list) * \
-            NUM_VEHICLE_NORM
+                         NUM_VEHICLE_NORM
         # compute the mean speed if the speed isn't zero
         num_rl = len(num_rl_vehicles_list)
         num_veh = len(num_vehicles_list)
@@ -366,7 +367,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     additional_net_params = {
                         "scaling": self.scaling,
                         "speed_limit": self.scenario.net_params.
-                        additional_params['speed_limit']
+                            additional_params['speed_limit']
                     }
                     net_params = NetParams(
                         inflows=inflow,
@@ -405,18 +406,18 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
     def veh_statistics(self, rl_id):
         '''Returns speed and edge information about the vehicle itself'''
-        speed = self.k.vehicle.get_speed(rl_id)/100.0
+        speed = self.k.vehicle.get_speed(rl_id) / 100.0
         edge = self.k.vehicle.get_edge(rl_id)
-        lane = (self.k.vehicle.get_lane(rl_id)+1)/10.0
+        lane = (self.k.vehicle.get_lane(rl_id) + 1) / 10.0
         headway = self.k.vehicle.get_headway(rl_id) / 2000.0
         position = self.k.vehicle.get_position(rl_id) / 1000.0
         if edge:
             if edge[0] != ':':
-                edge_id = int(self.k.vehicle.get_edge(rl_id))/10.0
+                edge_id = int(self.k.vehicle.get_edge(rl_id)) / 10.0
             else:
                 edge_id = - 1 / 10.0
         else:
-            edge_id = - 1/10.0
+            edge_id = - 1 / 10.0
         return np.array([speed, edge_id, lane, headway, position])
 
     def state_util(self, rl_id):
@@ -436,19 +437,19 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         rl_ids = self.k.vehicle.get_rl_ids()
         is_leader_rl = [1 if l_id in rl_ids else 0 for l_id in leader_ids]
         is_follow_rl = [1 if f_id in rl_ids else 0 for f_id in follower_ids]
-        diff = self.scaling*MAX_LANES - len(is_leader_rl)
+        diff = self.scaling * MAX_LANES - len(is_leader_rl)
         if diff > 0:
             # the minus 1 disambiguates missing cars from missing lanes
-            lane_headways += diff*[-1]
-            lane_tailways += diff*[-1]
-            lane_leader_speed += diff*[-1]
-            lane_follower_speed += diff*[-1]
-            is_leader_rl += diff*[-1]
-            is_follow_rl += diff*[-1]
-        lane_headways = np.asarray(lane_headways)/1000
-        lane_tailways = np.asarray(lane_tailways)/1000
-        lane_leader_speed = np.asarray(lane_leader_speed)/100
-        lane_follower_speed = np.asarray(lane_follower_speed)/100
+            lane_headways += diff * [-1]
+            lane_tailways += diff * [-1]
+            lane_leader_speed += diff * [-1]
+            lane_follower_speed += diff * [-1]
+            is_leader_rl += diff * [-1]
+            is_follow_rl += diff * [-1]
+        lane_headways = np.asarray(lane_headways) / 1000
+        lane_tailways = np.asarray(lane_tailways) / 1000
+        lane_leader_speed = np.asarray(lane_leader_speed) / 100
+        lane_follower_speed = np.asarray(lane_follower_speed) / 100
         return np.concatenate((lane_headways, lane_tailways, lane_leader_speed,
                                lane_follower_speed, is_leader_rl,
                                is_follow_rl))
@@ -458,16 +459,16 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             number of vehicles in the congested area
             and average velocity of segments 3,4,5,6
         '''
-        time_step = self.time_counter/self.env_params.horizon
-        outflow = self.k.vehicle.get_outflow_rate(10)/3600
+        time_step = self.time_counter / self.env_params.horizon
+        outflow = self.k.vehicle.get_outflow_rate(10) / 3600
         valid_edges = ['3', '4', '5']
-        congest_number = len(self.k.vehicle.get_ids_by_edge('4'))/50
+        congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
         avg_speeds = np.zeros(len(valid_edges))
         for i, edge in enumerate(valid_edges):
             edge_veh = self.k.vehicle.get_ids_by_edge(edge)
             if len(edge_veh) > 0:
                 veh = self.k.vehicle
-                avg_speeds[i] = np.mean(veh.get_speed(edge_veh))/100.0
+                avg_speeds[i] = np.mean(veh.get_speed(edge_veh)) / 100.0
         return np.concatenate(([time_step], [outflow],
                                [congest_number], avg_speeds))
 
@@ -479,18 +480,27 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         follow_ids = self.k.vehicle.get_lane_followers(rl_id)
         comm_ids = lead_ids + follow_ids
         if rl_actions:
-            signals = [rl_actions[av_id][1]/4.0 if av_id in
-                       rl_actions.keys() else -1/4.0 for av_id in comm_ids]
+            signals = [rl_actions[av_id][1] / 4.0 if av_id in
+                                                     rl_actions.keys() else -1 / 4.0 for av_id in comm_ids]
             if len(signals) < 8:
                 # the -2 disambiguates missing cars from missing lanes
-                signals += (8-len(signals)) * [-2/4.0]
+                signals += (8 - len(signals)) * [-2 / 4.0]
             return signals
         else:
-            return [-1/4.0 for _ in range(8)]
+            return [-1 / 4.0 for _ in range(8)]
 
 
 class MultiBottleneckImitationEnv(MultiBottleneckEnv):
     """MultiBottleneckEnv but we return as our obs dict that also contains the actions of a queried expert"""
+
+    def init_decentral_controller(self, rl_id):
+        return StaggeringDecentralizedALINEAController(rl_id, stop_edge="2", stop_pos=310,
+                                                       additional_env_params=self.env_params.additional_params,
+                                                       car_following_params=SumoCarFollowingParams())
+
+    def update_curr_rl_vehicles(self):
+        self.curr_rl_vehicles.update({rl_id: self.init_decentral_controller(rl_id) for rl_id in self.k.vehicle.get_rl_ids()
+                                      if rl_id not in self.curr_rl_vehicles.keys()})
 
     @property
     def observation_space(self):
@@ -498,23 +508,35 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
         return Dict({"obs": obs, "expert_action": self.action_space})
 
     def reset(self, new_inflow_rate=None):
+
+        self.curr_rl_vehicles = {rl_id: self.init_decentral_controller(rl_id) for rl_id in self.k.vehicle.get_rl_ids()}
+
         state_dict = super().reset(new_inflow_rate)
-        # idm_vehicle = IDMController(veh_id="blah", car_following_params=SumoCarFollowingParams(speed_mode=31))
-        # for key, value in state_dict.items():
-        #     idm_vehicle.veh_id = key
-        #     accel = idm_vehicle.get_accel(self)
-        #     state_dict[key] = {"obs": value, "expert_action": np.array([accel])}
         return state_dict
 
     def get_state(self, rl_actions=None):
         state_dict = super().get_state(rl_actions)
         # iterate through the RL vehicles and find what the other agent would have done
-        idm_vehicle = IDMController(veh_id="blah", car_following_params=SumoCarFollowingParams(speed_mode=31))
+        self.update_curr_rl_vehicles()
+
+        # IDM Controller we use to query accelerations
+        self.idm_controller = IDMController(veh_id=self.k.vehicle.get_ids()[0],
+                                            car_following_params=SumoCarFollowingParams())
+
         for key, value in state_dict.items():
-            idm_vehicle.veh_id = key
-            if idm_vehicle.get_accel(self) > 50:
-                import ipdb; ipdb.set_trace()
-            accel = np.clip(idm_vehicle.get_accel(self), self.action_space.low, self.action_space.high)
+            if self.k.vehicle.get_edge(key)[0] is not ':':
+                _ = self.curr_rl_vehicles[key].get_accel(self)
+                # if we are stopped we don't actually return an accel
+                if self.curr_rl_vehicles[key].stop_set:
+                    accel = 0
+                else:
+                    self.idm_controller.veh_id = key
+                    accel = self.idm_controller.get_accel(self)
+                accel = np.clip(accel, self.action_space.low, self.action_space.high)
+            else:
+                accel = self.idm_controller.get_accel(self)
+                accel = np.clip(accel, self.action_space.low, self.action_space.high)
+            if not isinstance(accel, np.ndarray):
+                accel = np.array(accel)
             state_dict[key] = {"obs": value, "expert_action": accel}
         return state_dict
-
