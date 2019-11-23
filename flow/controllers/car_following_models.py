@@ -453,7 +453,7 @@ class IDMController(BaseController):
         h = env.k.vehicle.get_headway(self.veh_id)
 
         # in order to deal with ZeroDivisionError
-        if abs(h) < 1e-3:
+        if abs(h) < 0:
             h = 1e-3
 
         if lead_id is None or lead_id == '':  # no car ahead
@@ -464,8 +464,6 @@ class IDMController(BaseController):
                 0, v * self.T + v * (v - lead_vel) /
                 (2 * np.sqrt(self.a * self.b)))
 
-        if self.a * (1 - (v / self.v0)**self.delta - (s_star / h)**2) > 50 or self.a * (1 - (v / self.v0)**self.delta - (s_star / h)**2) < -50:
-            import ipdb; ipdb.set_trace()
         return self.a * (1 - (v / self.v0)**self.delta - (s_star / h)**2)
 
 
