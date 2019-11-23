@@ -302,8 +302,6 @@ class StaggeringDecentralizedALINEAController(DecentralizedALINEAController):
         self.check_next = False
 
     def get_accel(self, env):
-        if self.check_next or len(env.waiting_queue) > 4:
-            import ipdb; ipdb.set_trace()
         env.k.vehicle.set_color(self.veh_id, (0, 255, 0))
         cur_pos = env.k.vehicle.get_position(self.veh_id)
         cur_speed = env.k.vehicle.get_speed(self.veh_id)
