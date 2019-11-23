@@ -130,7 +130,8 @@ def setup_flow_params(args):
         "num_sample_seconds": args.num_sample_seconds,
         "speed_reward": args.speed_reward,
         'fair_reward': False,  # This doesn't do anything, remove
-        'exit_history_seconds': 0  # This doesn't do anything, remove
+        'exit_history_seconds': 0, # This doesn't do anything, remove
+        "action_discretization": 30
         }
 
     # percentage of flow coming out of each lane

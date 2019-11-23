@@ -47,7 +47,9 @@ ADDITIONAL_RL_ENV_PARAMS = {
     # how many seconds the outflow reward should sample over
     "num_sample_seconds": 20,
     # whether the reward function should be over speed
-    "speed_reward": False
+    "speed_reward": False,
+    # whether the reward function should be over speed
+    "action_discretization": 0
 }
 
 
@@ -65,6 +67,15 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
            The reward is a dict consisting of the normalized
            outflow of the bottleneck
     """
+
+    def __init__(self, env_params, sim_params, scenario, simulator='traci'):
+        """Initialize DesiredVelocityEnv."""
+        super().__init__(env_params, sim_params, scenario, simulator)
+
+        self.num_actions = self.env_params.additional_params['action_discretization']
+
+        if self.num_actions:
+            self.action_values = np.linspace(-3, 3, self.num_actions)
 
     @property
     def observation_space(self):
@@ -115,6 +126,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 low=-3.0, high=3.0, shape=(1,), dtype=np.float32)
             communicate = Discrete(2)
             return Tuple((accel, communicate))
+        if self.num_actions:
+            return Discrete(self.num_actions)
         else:
             return Box(
                 low=-3.0, high=3.0, shape=(1,), dtype=np.float32)
@@ -246,6 +259,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             actions = list(rl_actions.values())
             if self.env_params.additional_params.get('communicate', False):
                 accel = np.concatenate([action[0] for action in actions])
+            elif self.env_params.additional_params['action_discretization']:
+                accel = self.action_values[actions]
             else:
                 accel = actions
             self.k.vehicle.apply_acceleration(rl_ids, accel)
