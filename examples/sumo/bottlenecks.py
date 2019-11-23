@@ -208,19 +208,24 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
         "disable_tb": disable_tb,
         "disable_ramp_metering": disable_ramp_meter,
         "n_crit": n_crit,
-        "q_max": q_max,
-        "q_min": q_min,
-        "q_init": q_init,
-        "feedback_coeff": feedback_coef,
+        "q_max": 15000,
+        "q_min": 200,
+        "q_init": 600,
+        "feedback_coeff": 10,
         "controlled_segments": controlled_segments,
         "inflow_range": [2200, 2200],
         "reset_inflow": False,
         "symmetric": True,
         "observed_segments": num_observed_segments,
-        "congest_penalty": 1e10,
+        "congest_penalty": False,
         "lc_mode": lc_mode,
         'start_inflow': flow_rate,
         'life_penalty': 0.00,
+        'keep_past_actions': False,
+        "num_sample_seconds": 0.5,
+        "speed_reward": False,
+        'fair_reward': False,  # This doesn't do anything, remove
+        'exit_history_seconds': 10,  # This doesn't do anything, remove
 
     }
 
@@ -322,7 +327,7 @@ if __name__ == '__main__':
     parser.add_argument('--q_init', type=int, default=400)
     parser.add_argument('--penetration_rate', type=float, default=0.4)
     parser.add_argument('--lc', action="store_true")
-    parser.add_argument('--feedback_coef', type=float, default=0.1)
+    parser.add_argument('--feedback_coef', type=float, default=1.0)
     args = parser.parse_args()
     if args.render:
         exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter, lc_on=args.lc, render=True, q_init=args.q_init, penetration_rate=args.penetration_rate, feedback_coef=args.feedback_coef)

@@ -134,10 +134,10 @@ def setup_flow_params(args):
 
         # parameters for the staggering controller that we imitate
         "n_crit": 8,
-        "q_max": 3000,
-        "q_min": 900,
-        "q_init": 2300, # TODO(@evinitsky) pretty sure this is not the right value
-        "feedback_coeff": 0.1, # TODO(@evinitsky) pretty sure this is not the right value
+        "q_max": 15000,
+        "q_min": 200,
+        "q_init": 600, # TODO(@evinitsky) pretty sure this is not the right value
+        "feedback_coeff": 10, # TODO(@evinitsky) pretty sure this is not the right value
     }
 
     # percentage of flow coming out of each lane

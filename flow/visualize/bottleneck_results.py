@@ -32,6 +32,7 @@ from ray.rllib.evaluation.episode import _flatten_action
 from ray.rllib.policy.sample_batch import DEFAULT_POLICY_ID
 from ray.tune.registry import register_env
 from ray.rllib.models import ModelCatalog
+from flow.models.FeedForward import FeedForward
 from flow.models.GRU import GRU
 from flow.agents.centralized_PPO import CentralizedCriticModel, CentralizedCriticModelRNN
 
@@ -94,6 +95,13 @@ def run_bottleneck(args, inflow_rate, num_trials):
         agent_cls = CCTrainer
     elif config['model']['custom_model'] == "GRU":
         ModelCatalog.register_custom_model("GRU", GRU)
+    elif config['model']['custom_model'] == "FeedForward":
+        ModelCatalog.register_custom_model("FeedForward", FeedForward)
+
+    # If we trained by imitating
+    if "imitation_weight" in config['model']['custom_options'].keys():
+        from flow.agents.ImitationPPO import ImitationTrainer
+        agent_cls = ImitationTrainer
 
     sim_params = flow_params['sim']
     sim_params.restart_instance = False

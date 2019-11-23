@@ -532,10 +532,9 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
                 else:
                     self.idm_controller.veh_id = key
                     accel = self.idm_controller.get_accel(self)
-                accel = np.clip(accel, self.action_space.low, self.action_space.high)
             else:
                 accel = self.idm_controller.get_accel(self)
-                accel = np.clip(accel, self.action_space.low, self.action_space.high)
+            accel = np.clip(accel, self.action_space.low, self.action_space.high)
             if not isinstance(accel, np.ndarray):
                 accel = np.array(accel)
             state_dict[key] = {"obs": value, "expert_action": accel}

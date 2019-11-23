@@ -810,7 +810,10 @@ class DesiredVelocityEnv(BottleneckEnv):
 
         # count up how many vehicles exited from a given lane
         for lane, unique_count in zip(unique, unique_counts):
-            self.exit_counter[0, lane] = unique_count
+            try:
+                self.exit_counter[0, lane] = unique_count
+            except:
+                import ipdb; ipdb.set_trace()
 
         # state space is number of vehicles in each segment in each lane,
         # number of rl vehicles in each segment in each lane

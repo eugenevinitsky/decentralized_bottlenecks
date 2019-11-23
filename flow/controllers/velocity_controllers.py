@@ -306,7 +306,7 @@ class StaggeringDecentralizedALINEAController(DecentralizedALINEAController):
         cur_pos = env.k.vehicle.get_position(self.veh_id)
         cur_speed = env.k.vehicle.get_speed(self.veh_id)
         cur_lane = env.k.vehicle.get_lane(self.veh_id)
-        
+
         if not self.lane_leader:
             cars_in_lane = []
             if self.stop_edge in env.edge_dict:
@@ -314,3 +314,28 @@ class StaggeringDecentralizedALINEAController(DecentralizedALINEAController):
             if len(cars_in_lane) and max(cars_in_lane, key=lambda x: x[1])[0] == self.veh_id and self.stop_set:
                 self.lane_leader = True
                 env.waiting_queue.append(self.veh_id)
+
+        if int(env.k.vehicle.get_edge(self.veh_id)) > int(self.stop_edge):
+            if self.veh_id in env.waiting_queue:
+                env.waiting_queue.remove(self.veh_id)
+            return None
+        elif self.is_waiting_to_go:
+            if not env.k.vehicle.is_stopped(self.veh_id):
+                if (env.waiting_queue[0] == self.veh_id):
+                    if len(env.waiting_queue) == 4:
+                        # car can depart
+                        env.waiting_queue.pop(0)
+                        self.is_waiting_to_go = False
+                        return None
+            return 0.0
+        elif env.k.vehicle.is_stopped(self.veh_id):
+            self.is_waiting_to_go = True
+            return 0.0
+        elif not self.stop_set and int(env.k.vehicle.get_edge(self.veh_id)) == int(self.stop_edge) and \
+                0.5 * (cur_speed ** 2) / self.car_following_params.controller_params[
+            'decel'] + cur_pos > self.stop_pos - 4:
+            return None
+        else:
+            self.set_stop(env)
+
+        return None
