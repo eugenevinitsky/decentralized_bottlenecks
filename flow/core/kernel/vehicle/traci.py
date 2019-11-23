@@ -1012,18 +1012,12 @@ class TraCIVehicle(KernelVehicle):
         try:
             self.kernel_api.vehicle.setStop(veh_id, edgeid, pos=pos, laneIndex=lane, duration=duration)
         except TraCIException as ex:
-            import ipdb; ipdb.set_trace()
+            print(ex)
 
     def cancel_stop(self, veh_id, edgeid, pos, lane):
         """Stop vehicle at ."""
-        try:
-            self.kernel_api.vehicle.setStop(veh_id, edgeid, pos=pos, laneIndex=lane, duration=0)
-        except TraCIException as ex:
-            import ipdb; ipdb.set_trace()
+        self.kernel_api.vehicle.setStop(veh_id, edgeid, pos=pos, laneIndex=lane, duration=0)
 
     def is_stopped(self, veh_id):
         """Stop vehicle at ."""
-        try:
-            return self.kernel_api.vehicle.getStopState(veh_id)
-        except TraCIException as ex:
-            import ipdb; ipdb.set_trace()
+        return self.kernel_api.vehicle.getStopState(veh_id)

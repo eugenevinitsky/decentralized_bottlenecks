@@ -123,9 +123,9 @@ if __name__ == '__main__':
 
     # list(range(args.ncrit_min, args.ncrit_max + args.ncrit_step_size, args.ncrit_step_size))
     # TODO(kp): make this work for both alinea and decentralized alinea
-    n_crit_range = [9]
-    feedback_coef_range = [2, 3, 4, 5, 6, 7, 8, 9]
-    q_init_range = [2000, 2500, 3000]
+    n_crit_range = [6, 8, 10]
+    feedback_coef_range = [1, 5, 10, 20, 50]
+    q_init_range = [200, 600, 1000, 5000, 10000]
     densities = list(range(args.inflow_min, args.inflow_max +
                            args.step_size, args.step_size))
     if args.test_run:
