@@ -11,10 +11,12 @@ import numpy as np
 import pytz
 import ray
 import ray.rllib.agents.ppo as ppo
+import ray.rllib.agents.qmix as qmix
 from ray import tune
 from ray.rllib.models import ModelCatalog
 from ray.tune import run
 from ray.tune.registry import register_env
+from gym.spaces import Tuple
 
 
 from flow.core.params import SumoParams, EnvParams, InitialConfig, NetParams, \
@@ -131,7 +133,9 @@ def setup_flow_params(args):
         "speed_reward": args.speed_reward,
         'fair_reward': False,  # This doesn't do anything, remove
         'exit_history_seconds': 0, # This doesn't do anything, remove
-        "action_discretization": 30
+        "action_discretization": 30,
+        "qmix": args.qmix,
+        "num_qmix_agents": args.max_num_agents_qmix
         }
 
     # percentage of flow coming out of each lane
@@ -240,43 +244,48 @@ def on_episode_end(info):
 def setup_exps(args):
     rllib_params = setup_rllib_params(args)
     flow_params = setup_flow_params(args)
-    alg_run = 'PPO'
-    config = ppo.DEFAULT_CONFIG.copy()
-    config['num_workers'] = rllib_params['n_cpus']
-    config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
-    config['gamma'] = 0.999  # discount rate
-    config['horizon'] = args.horizon
+    if args.qmix:
+        alg_run = 'QMIX'
+        config = qmix.DEFAULT_CONFIG.copy()
+
+    else:
+        alg_run = 'PPO'
+        config = ppo.DEFAULT_CONFIG.copy()
+        config['num_workers'] = rllib_params['n_cpus']
+        config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
+        config['gamma'] = 0.999  # discount rate
+        config['horizon'] = args.horizon
+
+        # LSTM Things
+        if args.use_lstm and args.use_gru:
+            sys.exit("You should not specify both an LSTM and a GRU")
+        if args.use_lstm:
+            if args.grid_search:
+                config['model']["max_seq_len"] = tune.grid_search([10, 20])
+            else:
+                config['model']["max_seq_len"] = 20
+            config['model'].update({'fcnet_hiddens': []})
+            config['model']["lstm_cell_size"] = 64
+            config['model']['lstm_use_prev_action_reward'] = True
+        elif args.use_gru:
+            if args.grid_search:
+                config['model']["max_seq_len"] = tune.grid_search([20, 40])
+            else:
+                config['model']["max_seq_len"] = 20
+                config['model'].update({'fcnet_hiddens': []})
+            model_name = "GRU"
+            ModelCatalog.register_custom_model(model_name, GRU)
+            config['model']['custom_model'] = model_name
+            config['model']['custom_options'].update({"cell_size": 64, 'use_prev_action': True})
+        else:
+            config['model'].update({'fcnet_hiddens': [256, 256]})
+            model_name = "FeedForward"
+            ModelCatalog.register_custom_model(model_name, FeedForward)
+            config['model']['custom_model'] = model_name
 
     # Grid search things
     if args.grid_search:
         config['lr'] = tune.grid_search([5e-5, 5e-4])
-
-    # LSTM Things
-    if args.use_lstm and args.use_gru:
-        sys.exit("You should not specify both an LSTM and a GRU")
-    if args.use_lstm:
-        if args.grid_search:
-            config['model']["max_seq_len"] = tune.grid_search([10, 20])
-        else:
-            config['model']["max_seq_len"] = 20
-        config['model'].update({'fcnet_hiddens': []})
-        config['model']["lstm_cell_size"] = 64
-        config['model']['lstm_use_prev_action_reward'] = True
-    elif args.use_gru:
-        if args.grid_search:
-            config['model']["max_seq_len"] = tune.grid_search([20, 40])
-        else:
-            config['model']["max_seq_len"] = 20
-            config['model'].update({'fcnet_hiddens': []})
-        model_name = "GRU"
-        ModelCatalog.register_custom_model(model_name, GRU)
-        config['model']['custom_model'] = model_name
-        config['model']['custom_options'].update({"cell_size": 64, 'use_prev_action': True})
-    else:
-        config['model'].update({'fcnet_hiddens': [256, 256]})
-        model_name = "FeedForward"
-        ModelCatalog.register_custom_model(model_name, FeedForward)
-        config['model']['custom_model'] = model_name
 
     if args.imitate:
         config['model']['custom_options'].update({"imitation_weight": 1})
@@ -291,26 +300,33 @@ def setup_exps(args):
 
     create_env, env_name = make_create_env(params=flow_params, version=0)
 
-    # Register as rllib env
-    register_env(env_name, create_env)
-
     test_env = create_env()
     obs_space = test_env.observation_space
     act_space = test_env.action_space
 
-    # Setup PG with an ensemble of `num_policies` different policy graphs
-    policy_graphs = {'av': (None, obs_space, act_space, {})}
+    # Register as rllib env
+    if args.qmix:
+        grouping = {"AVs": list(np.arange(args.max_num_agents_qmix))}
+        obs_space = Tuple([obs_space] * args.max_num_agents_qmix)
+        act_space = Tuple([act_space] * args.max_num_agents_qmix)
+        register_env(env_name, lambda config: create_env(config).with_agent_groups(
+            grouping, obs_space=obs_space, act_space=act_space))
+    else:
+        register_env(env_name, create_env)
 
-    def policy_mapping_fn(_):
-        return 'av'
+        # Setup PG with an ensemble of `num_policies` different policy graphs
+        policy_graphs = {'av': (None, obs_space, act_space, {})}
 
-    config.update({
-        'multiagent': {
-            'policies': policy_graphs,
-            'policy_mapping_fn': tune.function(policy_mapping_fn),
-            "policies_to_train": ["av"]
-        }
-    })
+        def policy_mapping_fn(_):
+            return 'av'
+
+        config.update({
+            'multiagent': {
+                'policies': policy_graphs,
+                'policy_mapping_fn': tune.function(policy_mapping_fn),
+                "policies_to_train": ["av"]
+            }
+        })
     return alg_run, env_name, config
 
 

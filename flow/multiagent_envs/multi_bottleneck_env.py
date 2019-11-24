@@ -48,8 +48,10 @@ ADDITIONAL_RL_ENV_PARAMS = {
     "num_sample_seconds": 20,
     # whether the reward function should be over speed
     "speed_reward": False,
-    # whether the reward function should be over speed
-    "action_discretization": 0
+    # number of discrete actions
+    "action_discretization": 0,
+    # qmix
+    "qmix": False,
 }
 
 
@@ -76,6 +78,9 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
         if self.num_actions:
             self.action_values = np.linspace(-3, 3, self.num_actions)
+
+        self.qmix = self.env_params.additional_params['qmix']
+        self.num_qmix_agents = self.env_params.additional_params['num_qmix_agents']
 
     @property
     def observation_space(self):
@@ -150,6 +155,14 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                                                    )
                                                   )
                             for rl_id in self.k.vehicle.get_rl_ids()}
+            elif self.qmix:
+                assert self.num_actions != 0 
+                assert len(self.k.vehicle.get_rl_ids()) < self.num_qmix_agents
+                veh_info = {idx : np.zeros(self.observation_space.shape[0]) for idx in range(self.num_qmix_agents)}
+                veh_info.update({rl_id_idx: np.concatenate((self.state_util(rl_id),
+                                                   self.veh_statistics(rl_id)))
+                            for rl_id_idx, rl_id in enumerate(self.k.vehicle.get_rl_ids())})
+
             else:
                 veh_info = {rl_id: np.concatenate((self.state_util(rl_id),
                                                    self.veh_statistics(rl_id)))
@@ -173,16 +186,17 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                         rl_id in self.k.vehicle.get_rl_ids()}
 
         # Go through the human drivers and add zeros if the vehicles have left as a final observation
-        left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
-                              in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
-        veh_info.update(left_vehicles_dict)
+        if not self.qmix:
+            left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
+                                in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
+            veh_info.update(left_vehicles_dict)
 
         if isinstance(self.observation_space, Box):
-            veh_info = {key: np.clip(self.observation_space.low, self.observation_space.high, value) for
+            veh_info = {key: np.clip(value, self.observation_space.low, self.observation_space.high) for
                     key, value in veh_info.items()}
         elif isinstance(self.observation_space, Dict):
-            veh_info = {key: np.clip(self.observation_space.spaces['obs'].low,
-                                     self.observation_space.spaces['obs'].high, value) for
+            veh_info = {key: np.clip(value, self.observation_space.spaces['obs'].low,
+                                     self.observation_space.spaces['obs'].high) for
                         key, value in veh_info.items()}
 
         return veh_info
@@ -527,8 +541,6 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
         idm_vehicle = IDMController(veh_id="blah", car_following_params=SumoCarFollowingParams(speed_mode=31))
         for key, value in state_dict.items():
             idm_vehicle.veh_id = key
-            if idm_vehicle.get_accel(self) > 50:
-                import ipdb; ipdb.set_trace()
             accel = np.clip(idm_vehicle.get_accel(self), self.action_space.low, self.action_space.high)
             state_dict[key] = {"obs": value, "expert_action": accel}
         return state_dict

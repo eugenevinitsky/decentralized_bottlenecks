@@ -51,6 +51,10 @@ def get_multiagent_bottleneck_parser():
                         help='If true the reward is the mean AV speed. If not set the reward is outflow')
     parser.add_argument('--imitate', action='store_true', default=False,
                         help='If true, the first 30 iterations are supervised learning on imitation of an IDM vehicle')
+    parser.add_argument('--qmix', action='store_true', default=False,
+                        help='If true, use rllib QMIX instead of PPO')
+    parser.add_argument('--max_num_agents_qmix', type=int, default=100,
+                        help='set the max num agents with qmix')
     
     # arguments for ray
     parser.add_argument('--use_lstm', action='store_true')
