@@ -117,10 +117,7 @@ def run_bottleneck(args, inflow_rate, num_trials):
         sim_params.render = 'drgb'
         sim_params.pxpm = 4
     elif args.render_mode == 'sumo_gui':
-        sim_params.render = True
-        print('NOTE: With render mode {}, an extra instance of the SUMO GUI '
-              'will display before the GUI for visualizing the result. Click '
-              'the green Play arrow to continue.'.format(args.render_mode))
+        sim_params.render = False
     elif args.render_mode == 'no_render':
         sim_params.render = False
     if args.save_render:
@@ -171,6 +168,9 @@ def run_bottleneck(args, inflow_rate, num_trials):
         env = gym.make(env_name)
         multiagent = False
         use_lstm = {DEFAULT_POLICY_ID: False}
+
+    if args.render_mode == 'sumo_gui':
+        env.sim_params.render = True  # set to True after initializing agent and env
 
     # Simulate and collect metrics
     outflow_arr = []

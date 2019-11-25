@@ -15,8 +15,19 @@ def imitation_loss(policy, model, dist_class, train_batch):
     expert_tensor = original_space['expert_action']
     logits, state = model.from_batch(train_batch)
     action_dist = dist_class(logits, model)
-    policy_actions = action_dist.sample()
-    imitation_loss = tf.reduce_mean(tf.squared_difference(policy_actions, expert_tensor))
+
+    if state:
+        max_seq_len = tf.reduce_max(train_batch["seq_lens"])
+        mask = tf.sequence_mask(train_batch["seq_lens"], max_seq_len)
+        mask = tf.reshape(mask, [-1])
+    else:
+        mask = tf.ones_like(
+            train_batch[Postprocessing.ADVANTAGES], dtype=tf.bool)
+
+    def reduce_mean_valid(t): return tf.reduce_mean(tf.boolean_mask(t, mask))
+
+    # Since we are doing gradient descent, we flip the sign so that we are minimizing the negative log prob
+    imitation_loss = -reduce_mean_valid(action_dist.logp(expert_tensor))
     return imitation_loss
 
 
@@ -56,7 +67,7 @@ class ImitationLearningRateSchedule(object):
 
 def loss_state(policy, train_batch):
     stats = kl_and_loss_stats(policy, train_batch)
-    stats.update({'imitation_loss': policy.imitation_loss, 'policy_weight': policy.policy_weight,
+    stats.update({'imitation_logprob': -policy.imitation_loss, 'policy_weight': policy.policy_weight,
                   'imitation_weight': policy.imitation_weight})
     return stats
 
