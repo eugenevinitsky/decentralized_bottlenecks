@@ -19,7 +19,7 @@ def imitation_loss(policy, model, dist_class, train_batch):
 # def new_ppo_surrogate_loss(policy, batch_tensors):
 def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     policy.imitation_loss = imitation_loss(policy, model, dist_class, train_batch)
-    return policy.imitation_weight * ppo_surrogate_loss(policy, model, dist_class, train_batch) \
+    return policy.policy_weight * ppo_surrogate_loss(policy, model, dist_class, train_batch) \
                + policy.imitation_weight * policy.imitation_loss
 
 

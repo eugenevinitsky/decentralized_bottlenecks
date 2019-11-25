@@ -551,7 +551,7 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
             if self.curr_rl_vehicles[key]['is_stopped'] and not self.curr_rl_vehicles[key]['controller'].is_waiting_to_go:
                 self.curr_rl_vehicles[key]['is_stopped'] = False
 
-            accel = np.clip(accel, self.action_space.low, self.action_space.high)
+            accel = np.clip(accel, a_min=self.action_space.low, a_max=self.action_space.high)
             if not isinstance(accel, np.ndarray):
                 accel = np.array(accel)
             curr_vehicle = self.curr_rl_vehicles[key]['controller']
