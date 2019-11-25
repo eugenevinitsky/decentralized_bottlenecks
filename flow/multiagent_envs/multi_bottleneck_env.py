@@ -166,11 +166,12 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         veh_info.update(left_vehicles_dict)
 
         if isinstance(self.observation_space, Box):
-            veh_info = {key: np.clip(self.observation_space.low, self.observation_space.high, value) for
+            veh_info = {key: np.clip(value, a_min=self.observation_space.low, a_max=self.observation_space.high) for
                         key, value in veh_info.items()}
         elif isinstance(self.observation_space, Dict):
-            veh_info = {key: np.clip(self.observation_space.spaces['obs'].low,
-                                     self.observation_space.spaces['obs'].high, value) for
+            # TODO(@evinitsky) this is bad subclassing and will break if the obs space isn't uniform
+            veh_info = {key: np.clip(value, a_min=[self.observation_space.spaces['obs'].low[0]] * value.shape[0],
+                                     a_max=[self.observation_space.spaces['obs'].high[0]] * value.shape[0]) for
                         key, value in veh_info.items()}
 
         return veh_info
@@ -499,23 +500,31 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
                                                        car_following_params=SumoCarFollowingParams())
 
     def update_curr_rl_vehicles(self):
-        self.curr_rl_vehicles.update({rl_id: self.init_decentral_controller(rl_id) for rl_id in self.k.vehicle.get_rl_ids()
+        self.curr_rl_vehicles.update({rl_id: {'controller': self.init_decentral_controller(rl_id),
+                                              'stop_time': 0.0,
+                                              'is_stopped': False}
+                                              for rl_id in self.k.vehicle.get_rl_ids()
                                       if rl_id not in self.curr_rl_vehicles.keys()})
 
     @property
     def observation_space(self):
         obs = super().observation_space
-        return Dict({"obs": obs, "expert_action": self.action_space})
+        # Extra keys are the current q value, whether the vehicle is stopped at the edge, and the
+        # time since when we stopped
+        new_obs = Box(low=-3.0, high=3.0, shape=(obs.shape[0] + 3,), dtype=np.float32)
+        return Dict({"obs": new_obs, "expert_action": self.action_space})
 
     def reset(self, new_inflow_rate=None):
 
-        self.curr_rl_vehicles = {rl_id: self.init_decentral_controller(rl_id) for rl_id in self.k.vehicle.get_rl_ids()}
+        self.curr_rl_vehicles = {}
+        self.update_curr_rl_vehicles()
 
         state_dict = super().reset(new_inflow_rate)
         return state_dict
 
     def get_state(self, rl_actions=None):
         state_dict = super().get_state(rl_actions)
+
         # iterate through the RL vehicles and find what the other agent would have done
         self.update_curr_rl_vehicles()
 
@@ -525,17 +534,30 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
 
         for key, value in state_dict.items():
             if self.k.vehicle.get_edge(key)[0] is not ':':
-                _ = self.curr_rl_vehicles[key].get_accel(self)
+                _ = self.curr_rl_vehicles[key]['controller'].get_accel(self)
                 # if we are stopped we don't actually return an accel
-                if self.curr_rl_vehicles[key].stop_set:
+                if self.curr_rl_vehicles[key]['controller'].stop_set:
                     accel = 0
                 else:
                     self.idm_controller.veh_id = key
                     accel = self.idm_controller.get_accel(self)
             else:
                 accel = self.idm_controller.get_accel(self)
+            # check if we have come up to the front edge and stopped
+            if not self.curr_rl_vehicles[key]['is_stopped'] and self.curr_rl_vehicles[key]['controller'].is_waiting_to_go:
+                self.curr_rl_vehicles[key]['is_stopped'] = True
+                self.curr_rl_vehicles[key]['stop_time'] = self.time_counter
+            # we have exited the edge so update this
+            if self.curr_rl_vehicles[key]['is_stopped'] and not self.curr_rl_vehicles[key]['controller'].is_waiting_to_go:
+                self.curr_rl_vehicles[key]['is_stopped'] = False
+
             accel = np.clip(accel, self.action_space.low, self.action_space.high)
             if not isinstance(accel, np.ndarray):
                 accel = np.array(accel)
-            state_dict[key] = {"obs": value, "expert_action": accel}
+            curr_vehicle = self.curr_rl_vehicles[key]['controller']
+            state_dict[key] = {"obs": np.concatenate((value, [curr_vehicle.q / curr_vehicle.q_max,
+                                                              self.curr_rl_vehicles[key]['is_stopped'],
+                                                              (self.time_counter -
+                                                               self.curr_rl_vehicles[key]['stop_time'])/self.env_params.horizon])),
+                               "expert_action": accel}
         return state_dict

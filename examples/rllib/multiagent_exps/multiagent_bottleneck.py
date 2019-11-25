@@ -198,7 +198,7 @@ def setup_flow_params(args):
 
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
-            warmup_steps=int(200  / args.sim_step),
+            warmup_steps=int(200 / args.sim_step),
             sims_per_step=2,
             horizon=args.horizon,
             clip_actions=False,
@@ -283,6 +283,7 @@ def setup_exps(args):
         model_name = "FeedForward"
         ModelCatalog.register_custom_model(model_name, FeedForward)
         config['model']['custom_model'] = model_name
+        config['model']['custom_options'].update({'use_prev_action': True})
 
     if args.imitate:
         config['model']['custom_options'].update({"imitation_weight": 1})
