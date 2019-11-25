@@ -286,7 +286,7 @@ def setup_exps(args):
         config['model']['custom_options'].update({'use_prev_action': True})
 
     if args.imitate:
-        config['model']['custom_options'].update({"imitation_weight": 5e-7})
+        config['model']['custom_options'].update({"imitation_weight": 1})
         config['model']['custom_options'].update({"num_imitation_iters": 100})
 
 
