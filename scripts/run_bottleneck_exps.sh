@@ -697,13 +697,13 @@
 # 11/26/19 we run both the imitation and the basic decentralized exps
 
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py high_in_NCN_AGG_NLSTM_Past_0pen_04frac_im --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
---num_samples 2 --grid_search --n_cpus 14 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py high_in_NCN_AGG_NLSTM_Past_0pen_04frac --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
+--num_samples 2 --grid_search --n_cpus 7 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info \
 --keep_past_actions --multi_node --vf_loss_coeff .0001 --life_penalty 0.0 --sim_step 0.5" \
---start --stop --cluster-name exp1 --tmux
+--start --stop --cluster-name ev_exp1 --tmux
 
 ray exec ray_autoscale.yaml \
 "python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py high_in_NCN_AGG_NLSTM_Past_0pen_04frac_im --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
---num_samples 2 --grid_search --n_cpus 14 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info --keep_past_actions \
+--num_samples 2 --grid_search --n_cpus 7 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info --keep_past_actions \
 --imitate --multi_node --vf_loss_coeff .0001 --life_penalty 0.0 --sim_step 0.5" \
 --start --stop --cluster-name ev_exp2 --tmux
