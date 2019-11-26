@@ -419,6 +419,7 @@ class Env(*classdef):
             the initial observation of the space. The initial reward is assumed
             to be zero.
         """
+        print("Resetting Env")
         # reset the time counter
         self.time_counter = 0
 

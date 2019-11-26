@@ -31,6 +31,8 @@ from flow.utils.parsers import get_multiagent_bottleneck_parser
 from flow.utils.registry import make_create_env
 from flow.utils.rllib import FlowParamsEncoder
 
+from flow.models.Qmix import QMixTrainer
+
 
 # TODO(@evinitsky) clean this up
 EXAMPLE_USAGE = """
@@ -245,7 +247,7 @@ def setup_exps(args):
     rllib_params = setup_rllib_params(args)
     flow_params = setup_flow_params(args)
     if args.qmix:
-        alg_run = 'QMIX'
+        alg_run = QMixTrainer
         config = qmix.DEFAULT_CONFIG.copy()
 
     else:

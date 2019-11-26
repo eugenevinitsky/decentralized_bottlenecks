@@ -8,7 +8,7 @@ from collections import defaultdict
 from copy import deepcopy
 
 from gym.spaces.box import Box
-from gym.spaces.dict_space import Dict
+from gym.spaces import Dict
 from gym.spaces.discrete import Discrete
 from gym.spaces.tuple_space import Tuple
 import numpy as np
@@ -120,9 +120,15 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if self.env_params.additional_params.get('keep_past_actions', False):
             self.num_past_actions = 100
             num_obs += self.num_past_actions
-        return Box(low=-3.0, high=3.0,
-                   shape=(num_obs,),
-                   dtype=np.float32)
+
+        obs_space = Box(low=-3.0, high=3.0, shape=(num_obs,), dtype=np.float32)
+
+        # if using qmix, we'll have a Dict as an observation space
+        if self.qmix:
+            obs_space = Dict({'obs': obs_space, 'valid_agent': Discrete(1)})
+
+        return obs_space
+
     @property
     def action_space(self):
         """See class definition."""
@@ -141,63 +147,67 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         """See class definition."""
         # action space is speed and velocity of leading and following
         # vehicles for all of the avs
+        print("Getting state")
         add_params = self.env_params.additional_params
-        if add_params['centralized_obs']:
-            rl_ids = self.k.vehicle.get_rl_ids()
-            state = self.get_centralized_state()
-            veh_info = {rl_id: np.concatenate((state, self.veh_statistics(rl_id))) for rl_id in rl_ids}
+        if self.qmix:
+            assert self.num_actions != 0 
+            assert len(self.k.vehicle.get_rl_ids()) < self.num_qmix_agents
+            veh_info = {idx: {"obs": np.zeros(self.observation_space['obs'].shape[0]), "valid_agent": 0} for idx in range(self.num_qmix_agents)}
+            veh_info.update({rl_id_idx: {"obs": np.clip(
+                                                    np.concatenate((self.state_util(rl_id),
+                                                                    self.veh_statistics(rl_id))),
+                                                    self.observation_space.spaces['obs'].low,
+                                                    self.observation_space.spaces['obs'].high),
+                                        "valid_agent": 1} for rl_id_idx, rl_id in enumerate(self.k.vehicle.get_rl_ids())})
         else:
-            if self.env_params.additional_params.get('communicate', False):
-                veh_info = {rl_id: np.concatenate((self.state_util(rl_id),
-                                                   self.veh_statistics(rl_id),
-                                                   self.get_signal(rl_id,
-                                                                   rl_actions)
-                                                   )
-                                                  )
-                            for rl_id in self.k.vehicle.get_rl_ids()}
-            elif self.qmix:
-                assert self.num_actions != 0 
-                assert len(self.k.vehicle.get_rl_ids()) < self.num_qmix_agents
-                veh_info = {idx : np.zeros(self.observation_space.shape[0]) for idx in range(self.num_qmix_agents)}
-                veh_info.update({rl_id_idx: np.concatenate((self.state_util(rl_id),
-                                                   self.veh_statistics(rl_id)))
-                            for rl_id_idx, rl_id in enumerate(self.k.vehicle.get_rl_ids())})
-
+            if add_params['centralized_obs']:
+                rl_ids = self.k.vehicle.get_rl_ids()
+                state = self.get_centralized_state()
+                veh_info = {rl_id: np.concatenate((state, self.veh_statistics(rl_id))) for rl_id in rl_ids}
             else:
-                veh_info = {rl_id: np.concatenate((self.state_util(rl_id),
-                                                   self.veh_statistics(rl_id)))
-                            for rl_id in self.k.vehicle.get_rl_ids()}
-            if self.env_params.additional_params.get('aggregate_info'):
-                agg_statistics = self.aggregate_statistics()
-                veh_info = {rl_id: np.concatenate((val, agg_statistics))
-                                     for rl_id, val in veh_info.items()}
+                if self.env_params.additional_params.get('communicate', False):
+                    veh_info = {rl_id: np.concatenate((self.state_util(rl_id),
+                                                    self.veh_statistics(rl_id),
+                                                    self.get_signal(rl_id,
+                                                                    rl_actions)
+                                                    )
+                                                    )
+                                for rl_id in self.k.vehicle.get_rl_ids()}
+                else:
+                    veh_info = {rl_id: np.concatenate((self.state_util(rl_id),
+                                                    self.veh_statistics(rl_id)))
+                                for rl_id in self.k.vehicle.get_rl_ids()}
+                if self.env_params.additional_params.get('aggregate_info'):
+                    agg_statistics = self.aggregate_statistics()
+                    veh_info = {rl_id: np.concatenate((val, agg_statistics))
+                                        for rl_id, val in veh_info.items()}
 
-        if self.env_params.additional_params.get('keep_past_actions', False):
-            # update the actions history with the most recent actions
-            for rl_id in self.k.vehicle.get_rl_ids():
-                agent_past_dict, num_steps = self.past_actions_dict[rl_id]
-                if rl_actions and rl_id in rl_actions.keys():
-                    agent_past_dict[num_steps] = rl_actions[rl_id] / self.action_space.high
-                num_steps += 1
-                num_steps %= self.num_past_actions
-                self.past_actions_dict[rl_id] = [agent_past_dict, num_steps]
-            actions_history = {rl_id: self.past_actions_dict[rl_id][0] for rl_id in self.k.vehicle.get_rl_ids()}
-            veh_info = {rl_id: np.concatenate((actions_history[rl_id], veh_info[rl_id])) for
-                        rl_id in self.k.vehicle.get_rl_ids()}
+            if self.env_params.additional_params.get('keep_past_actions', False):
+                # update the actions history with the most recent actions
+                for rl_id in self.k.vehicle.get_rl_ids():
+                    agent_past_dict, num_steps = self.past_actions_dict[rl_id]
+                    if rl_actions and rl_id in rl_actions.keys():
+                        agent_past_dict[num_steps] = rl_actions[rl_id] / self.action_space.high
+                    num_steps += 1
+                    num_steps %= self.num_past_actions
+                    self.past_actions_dict[rl_id] = [agent_past_dict, num_steps]
+                actions_history = {rl_id: self.past_actions_dict[rl_id][0] for rl_id in self.k.vehicle.get_rl_ids()}
+                veh_info = {rl_id: np.concatenate((actions_history[rl_id], veh_info[rl_id])) for
+                            rl_id in self.k.vehicle.get_rl_ids()}
 
-        # Go through the human drivers and add zeros if the vehicles have left as a final observation
-        if not self.qmix:
-            left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
-                                in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
-            veh_info.update(left_vehicles_dict)
+            # Go through the human drivers and add zeros if the vehicles have left as a final observation
+            if not self.qmix:
+                left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
+                                    in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
+                veh_info.update(left_vehicles_dict)
 
-        if isinstance(self.observation_space, Box):
-            veh_info = {key: np.clip(value, self.observation_space.low, self.observation_space.high) for
-                    key, value in veh_info.items()}
-        elif isinstance(self.observation_space, Dict):
-            veh_info = {key: np.clip(value, self.observation_space.spaces['obs'].low,
-                                     self.observation_space.spaces['obs'].high) for
+            if isinstance(self.observation_space, Box):
+                veh_info = {key: np.clip(value, self.observation_space.low, self.observation_space.high) for
                         key, value in veh_info.items()}
+            elif isinstance(self.observation_space, Dict):
+                veh_info = {key: np.clip(value, self.observation_space.spaces['obs'].low,
+                                        self.observation_space.spaces['obs'].high) for
+                            key, value in veh_info.items()}
 
         return veh_info
 
@@ -330,99 +340,95 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             self.inflow = flow_rate
             print('THE FLOW RATE IS: ', flow_rate)
             for _ in range(100):
-                try:
-                    vehicles = VehicleParams()
-                    if not np.isclose(add_params.get("av_frac"), 1):
-                        vehicles.add(
-                            veh_id="human",
-                            lane_change_controller=(SimLaneChangeController, {}),
-                            routing_controller=(ContinuousRouter, {}),
-                            car_following_params=SumoCarFollowingParams(
-                                speed_mode=31,
-                            ),
-                            lane_change_params=SumoLaneChangeParams(
-                                lane_change_mode=add_params.get("lc_mode"),
-                            ),
-                            num_vehicles=1)
-                        vehicles.add(
-                            veh_id="av",
-                            acceleration_controller=(RLController, {}),
-                            lane_change_controller=(SimLaneChangeController, {}),
-                            routing_controller=(ContinuousRouter, {}),
-                            car_following_params=SumoCarFollowingParams(
-                                speed_mode=31,
-                            ),
-                            lane_change_params=SumoLaneChangeParams(
-                                lane_change_mode=0,
-                            ),
-                            num_vehicles=1)
-                    else:
-                        vehicles.add(
-                            veh_id="av",
-                            acceleration_controller=(RLController, {}),
-                            lane_change_controller=(SimLaneChangeController, {}),
-                            routing_controller=(ContinuousRouter, {}),
-                            car_following_params=SumoCarFollowingParams(
-                                speed_mode=31,
-                            ),
-                            lane_change_params=SumoLaneChangeParams(
-                                lane_change_mode=add_params.get("lc_mode"),
-                            ),
-                            num_vehicles=1)
+                vehicles = VehicleParams()
+                if not np.isclose(add_params.get("av_frac"), 1):
+                    vehicles.add(
+                        veh_id="human",
+                        lane_change_controller=(SimLaneChangeController, {}),
+                        routing_controller=(ContinuousRouter, {}),
+                        car_following_params=SumoCarFollowingParams(
+                            speed_mode=31,
+                        ),
+                        lane_change_params=SumoLaneChangeParams(
+                            lane_change_mode=add_params.get("lc_mode"),
+                        ),
+                        num_vehicles=1)
+                    vehicles.add(
+                        veh_id="av",
+                        acceleration_controller=(RLController, {}),
+                        lane_change_controller=(SimLaneChangeController, {}),
+                        routing_controller=(ContinuousRouter, {}),
+                        car_following_params=SumoCarFollowingParams(
+                            speed_mode=31,
+                        ),
+                        lane_change_params=SumoLaneChangeParams(
+                            lane_change_mode=0,
+                        ),
+                        num_vehicles=1)
+                else:
+                    vehicles.add(
+                        veh_id="av",
+                        acceleration_controller=(RLController, {}),
+                        lane_change_controller=(SimLaneChangeController, {}),
+                        routing_controller=(ContinuousRouter, {}),
+                        car_following_params=SumoCarFollowingParams(
+                            speed_mode=31,
+                        ),
+                        lane_change_params=SumoLaneChangeParams(
+                            lane_change_mode=add_params.get("lc_mode"),
+                        ),
+                        num_vehicles=1)
 
-                    inflow = InFlows()
-                    if not np.isclose(add_params.get("av_frac"), 1.0):
-                        inflow.add(
-                            veh_type="av",
-                            edge="1",
-                            vehs_per_hour=flow_rate * add_params.get("av_frac"),
-                            departLane="random",
-                            departSpeed=10.0)
-                        inflow.add(
-                            veh_type="human",
-                            edge="1",
-                            vehs_per_hour=flow_rate * (1 - add_params.get("av_frac")),
-                            departLane="random",
-                            departSpeed=10.0)
-                    else:
-                        inflow.add(
-                            veh_type="av",
-                            edge="1",
-                            vehs_per_hour=flow_rate,
-                            departLane="random",
-                            departSpeed=10.0)
+                inflow = InFlows()
+                if not np.isclose(add_params.get("av_frac"), 1.0):
+                    inflow.add(
+                        veh_type="av",
+                        edge="1",
+                        vehs_per_hour=flow_rate * add_params.get("av_frac"),
+                        departLane="random",
+                        departSpeed=10.0)
+                    inflow.add(
+                        veh_type="human",
+                        edge="1",
+                        vehs_per_hour=flow_rate * (1 - add_params.get("av_frac")),
+                        departLane="random",
+                        departSpeed=10.0)
+                else:
+                    inflow.add(
+                        veh_type="av",
+                        edge="1",
+                        vehs_per_hour=flow_rate,
+                        departLane="random",
+                        departSpeed=10.0)
 
-                    additional_net_params = {
-                        "scaling": self.scaling,
-                        "speed_limit": self.scenario.net_params.
-                        additional_params['speed_limit']
-                    }
-                    net_params = NetParams(
-                        inflows=inflow,
-                        no_internal_links=False,
-                        additional_params=additional_net_params)
+                additional_net_params = {
+                    "scaling": self.scaling,
+                    "speed_limit": self.scenario.net_params.
+                    additional_params['speed_limit']
+                }
+                net_params = NetParams(
+                    inflows=inflow,
+                    no_internal_links=False,
+                    additional_params=additional_net_params)
 
-                    self.scenario = self.scenario.__class__(
-                        self.scenario.orig_name, vehicles,
-                        net_params, self.scenario.initial_config)
-                    self.k.vehicle = deepcopy(self.initial_vehicles)
-                    self.k.vehicle.kernel_api = self.k.kernel_api
-                    self.k.vehicle.master_kernel = self.k
+                self.scenario = self.scenario.__class__(
+                    self.scenario.orig_name, vehicles,
+                    net_params, self.scenario.initial_config)
+                self.k.vehicle = deepcopy(self.initial_vehicles)
+                self.k.vehicle.kernel_api = self.k.kernel_api
+                self.k.vehicle.master_kernel = self.k
 
-                    # restart the sumo instance
-                    self.restart_simulation(
-                        sim_params=self.sim_params,
-                        render=self.sim_params.render)
+                # restart the sumo instance
+                self.restart_simulation(
+                    sim_params=self.sim_params,
+                    render=self.sim_params.render)
 
-                    observation = super().reset()
+                observation = super().reset()
 
-                    # reset the timer to zero
-                    self.time_counter = 0
+                # reset the timer to zero
+                self.time_counter = 0
 
-                    return observation
-
-                except Exception as e:
-                    print('error on reset ', e)
+                return observation
 
         # perform the generic reset function
         observation = super().reset()
