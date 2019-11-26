@@ -273,7 +273,7 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
             vehsPerHour=av_veh_per_hour,
             departLane="random",
             departSpeed=23)
-    else: 
+    else:
         human_veh_per_hour = flow_rate
 
     inflow.add(

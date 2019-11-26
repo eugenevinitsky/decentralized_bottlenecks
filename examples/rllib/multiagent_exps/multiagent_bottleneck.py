@@ -250,6 +250,7 @@ def setup_exps(args):
     config = ppo.DEFAULT_CONFIG.copy()
     config['num_workers'] = rllib_params['n_cpus']
     config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
+    config['vf_loss_coeff'] = args.vf_loss_coeff
     config['gamma'] = 0.999  # discount rate
     config['horizon'] = args.horizon
 
@@ -286,8 +287,8 @@ def setup_exps(args):
         config['model']['custom_options'].update({'use_prev_action': True})
 
     if args.imitate:
-        config['model']['custom_options'].update({"imitation_weight": 1e-2})
-        config['model']['custom_options'].update({"num_imitation_iters": 100})
+        config['model']['custom_options'].update({"imitation_weight": 1e0})
+        config['model']['custom_options'].update({"num_imitation_iters": 150})
 
 
     # save the flow params for replay

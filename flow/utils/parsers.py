@@ -17,6 +17,7 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument("--grid_search", action='store_true')
     parser.add_argument('--rollout_scale_factor', type=float, default=1.0, help='the total number of rollouts is'
                                                                                 'args.n_cpus * rollout_scale_factor')
+    parser.add_argument("--vf_loss_coeff", type=float, default=.0001, help='coeff of the vf loss')
     
     # arguments for flow
     parser.add_argument('--render', action='store_true', help='Show sumo-gui of results')
