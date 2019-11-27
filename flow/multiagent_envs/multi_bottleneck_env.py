@@ -147,7 +147,6 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         """See class definition."""
         # action space is speed and velocity of leading and following
         # vehicles for all of the avs
-        print("Getting state")
         add_params = self.env_params.additional_params
         if self.qmix:
             assert self.num_actions != 0 
@@ -159,7 +158,6 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                                                     self.observation_space.spaces['obs'].low,
                                                     self.observation_space.spaces['obs'].high),
                                         "valid_agent": 1} for rl_id_idx, rl_id in enumerate(self.k.vehicle.get_rl_ids())})
-            print(veh_info)
         else:
             if add_params['centralized_obs']:
                 rl_ids = self.k.vehicle.get_rl_ids()
