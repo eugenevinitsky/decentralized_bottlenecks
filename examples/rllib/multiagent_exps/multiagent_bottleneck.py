@@ -32,8 +32,6 @@ from flow.utils.registry import make_create_env
 from flow.utils.rllib import FlowParamsEncoder
 
 from flow.models.Qmix import QMixTrainer
-
-
 # TODO(@evinitsky) clean this up
 EXAMPLE_USAGE = """
 example usage:

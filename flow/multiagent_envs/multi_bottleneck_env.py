@@ -125,7 +125,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
         # if using qmix, we'll have a Dict as an observation space
         if self.qmix:
-            obs_space = Dict({'obs': obs_space, 'valid_agent': Discrete(1)})
+            obs_space = Dict({'obs': obs_space, 'valid_agent': Discrete(2)})
 
         return obs_space
 
@@ -159,6 +159,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                                                     self.observation_space.spaces['obs'].low,
                                                     self.observation_space.spaces['obs'].high),
                                         "valid_agent": 1} for rl_id_idx, rl_id in enumerate(self.k.vehicle.get_rl_ids())})
+            print(veh_info)
         else:
             if add_params['centralized_obs']:
                 rl_ids = self.k.vehicle.get_rl_ids()
