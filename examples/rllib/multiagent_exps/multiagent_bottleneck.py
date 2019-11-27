@@ -282,7 +282,7 @@ def setup_exps(args):
         config['model']['custom_model'] = model_name
         config['model']['custom_options'].update({"cell_size": 64, 'use_prev_action': True})
     else:
-        config['model'].update({'fcnet_hiddens': [256, 256]})
+        config['model'].update({'fcnet_hiddens': [64, 64]})
         model_name = "FeedForward"
         ModelCatalog.register_custom_model(model_name, FeedForward)
         config['model']['custom_model'] = model_name
