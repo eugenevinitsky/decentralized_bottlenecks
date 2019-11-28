@@ -217,6 +217,7 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
         obs = np.concatenate(
             [o["obs"] for o in unpacked],
             axis=1).reshape([len(obs_batch), self.n_agents, self.obs_size])
+        import ipdb; ipdb.set_trace()
         valid_agents = np.concatenate(
             [o["valid_agent"] for o in unpacked],
             axis=1).reshape([len(obs_batch), self.n_agents, 2])  # process valid agents obs
@@ -293,8 +294,8 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
             [B, T, self.n_agents, self.obs_size]).float()
         next_action_mask = to_batches(next_action_mask)
 
-        # valid_agents = to_batches(valid_agents)
-        # next_valid_agents = to_batches(next_valid_agents)
+        valid_agents = to_batches(valid_agents)
+        next_valid_agents = to_batches(next_valid_agents)
 
         # TODO(ekl) this treats group termination as individual termination
         terminated = to_batches(dones.astype(np.float32)).unsqueeze(2).expand(
