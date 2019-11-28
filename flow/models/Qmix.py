@@ -28,6 +28,7 @@ from ray.rllib.utils.annotations import override
 import torch as th
 from torch.optim import RMSprop
 from torch.distributions import Categorical
+import torch.nn.functional as F
 
 
 class VariableQMixLoss(QMixLoss):
@@ -256,7 +257,6 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
 
     @override(Policy)
     def learn_on_batch(self, samples):
-        import ipdb; ipdb.set_trace()
         obs_batch, action_mask, valid_agents = self._unpack_observation(
             samples[SampleBatch.CUR_OBS]) # get valid agents
         next_obs_batch, next_action_mask, next_valid_agents = self._unpack_observation(
@@ -341,7 +341,6 @@ class VariableQMixer(QMixer):
             agent_qs: Tensor of shape [B, T, n_agents, n_actions]
             states: Tensor of shape [B, T, state_dim]
         """
-        import ipdb; ipdb.set_trace()
         bs = agent_qs.size(0)
         states = states.reshape(-1, self.state_dim)
         agent_qs = agent_qs.view(-1, 1, self.n_agents)
