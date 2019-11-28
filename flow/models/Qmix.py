@@ -351,6 +351,7 @@ class VariableQMixer(QMixer):
         b1 = self.hyper_b_1(states)
         w1 = w1.view(-1, self.n_agents, self.embed_dim)
         b1 = b1.view(-1, 1, self.embed_dim)
+        import ipdb; ipdb.set_trace()
         hidden = F.elu(th.bmm(agent_qs, w1) + b1)
         # Second layer
         w_final = th.abs(self.hyper_w_final(states))
