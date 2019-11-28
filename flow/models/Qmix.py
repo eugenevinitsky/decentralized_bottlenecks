@@ -104,9 +104,8 @@ class VariableQMixLoss(QMixLoss):
         if self.mixer is not None:
             # TODO(ekl) add support for handling global state? This is just
             # treating the stacked agent obs as the state.
-            import ipdb; ipdb.set_trace()
-            valid_agent_qvals = th.mul(chosen_action_qvals, valid_agents.double())
-            next_valid_agent_qvals = th.mul(target_max_qvals, next_valid_agents.double())
+            valid_agent_qvals = th.mul(chosen_action_qvals, valid_agents).float()
+            next_valid_agent_qvals = th.mul(target_max_qvals, next_valid_agents).float()
             chosen_action_qvals = self.mixer(valid_agent_qvals, obs) # pass valid agents to mixer
             target_max_qvals = self.target_mixer(next_valid_agent_qvals, next_obs) # pass next valid agents to mixer
 
@@ -181,9 +180,9 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
             self.mixer = None
             self.target_mixer = None
         elif config["mixer"] == "qmix":
-            self.mixer = VariableQMixer(self.n_agents, self.state_shape,
+            self.mixer = QMixer(self.n_agents, self.state_shape,
                                 config["mixing_embed_dim"]) # use custom VariableQMixer
-            self.target_mixer = VariableQMixer(self.n_agents, self.state_shape,
+            self.target_mixer = QMixer(self.n_agents, self.state_shape,
                                        config["mixing_embed_dim"]) # use custom VariableQMixer
         elif config["mixer"] == "vdn":
             self.mixer = VDNMixer()
