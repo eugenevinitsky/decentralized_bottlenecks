@@ -194,7 +194,7 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
         self.params = list(self.model.parameters())
         if self.mixer:
             self.params += list(self.mixer.parameters())
-        self.loss = QMixLoss(self.model, self.target_model, self.mixer,
+        self.loss = VariableQMixLoss(self.model, self.target_model, self.mixer,
                              self.target_mixer, self.n_agents, self.n_actions,
                              self.config["double_q"], self.config["gamma"])
         self.optimiser = RMSprop(
@@ -262,7 +262,6 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
         next_obs_batch, next_action_mask, next_valid_agents = self._unpack_observation(
             samples[SampleBatch.NEXT_OBS]) # get next valid agents
         group_rewards = self._get_group_rewards(samples[SampleBatch.INFOS])
-        import ipdb; ipdb.set_trace()
         # These will be padded to shape [B * T, ...]
         [rew, action_mask, next_action_mask, act, dones, obs, next_obs, valid_agents, next_valid_agents], \
             initial_states, seq_lens = \
