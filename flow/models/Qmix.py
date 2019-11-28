@@ -104,8 +104,10 @@ class VariableQMixLoss(QMixLoss):
         if self.mixer is not None:
             # TODO(ekl) add support for handling global state? This is just
             # treating the stacked agent obs as the state.
-            chosen_action_qvals = self.mixer(chosen_action_qvals, obs, valid_agents) # pass valid agents to mixer
-            target_max_qvals = self.target_mixer(target_max_qvals, next_obs, next_valid_agents) # pass next valid agents to mixer
+            valid_agent_qvals = th.mul(chosen_action_qvals, valid_agents)
+            next_valid_agent_qvals = th.mul(target_max_qvals, next_valid_agents)
+            chosen_action_qvals = self.mixer(valid_agent_qvals, obs) # pass valid agents to mixer
+            target_max_qvals = self.target_mixer(next_valid_agent_qvals, next_obs) # pass next valid agents to mixer
 
         # Calculate 1-step Q-Learning targets
         targets = rewards + self.gamma * (1 - terminated) * target_max_qvals
@@ -219,7 +221,7 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
             [o["obs"] for o in unpacked],
             axis=1).reshape([len(obs_batch), self.n_agents, self.obs_size])
         # process valid agents obs: note, we're using the second column, because we're passing a boolean as a discrete (second column is val = 1)
-        valid_agents = np.array([o["valid_agent"][:,1] for o in unpacked]).reshape([len(obs_batch), self.n_agents, 1])  # process valid agents obs
+        valid_agents = np.array([o["valid_agent"][1] for o in unpacked]).reshape([len(obs_batch), self.n_agents, 1])  # process valid agents obs
         action_mask = np.ones(
                 [len(obs_batch), self.n_agents, self.n_actions]) # dummy action mask, so we don't have to re-write things
 
