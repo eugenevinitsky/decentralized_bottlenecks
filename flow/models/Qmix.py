@@ -217,10 +217,8 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
         obs = np.concatenate(
             [o["obs"] for o in unpacked],
             axis=1).reshape([len(obs_batch), self.n_agents, self.obs_size])
-        import ipdb; ipdb.set_trace()
-        valid_agents = np.concatenate(
-            [o["valid_agent"] for o in unpacked],
-            axis=1).reshape([len(obs_batch), self.n_agents, 2])  # process valid agents obs
+        # process valid agents obs: note, we're using the second column, because we're passing a boolean as a discrete (second column is val = 1)
+        valid_agents = np.array([o["valid_agent"][:,1] for o in unpacked]).reshape([len(obs_batch), self.n_agents, 1])  # process valid agents obs
         action_mask = np.ones(
                 [len(obs_batch), self.n_agents, self.n_actions]) # dummy action mask, so we don't have to re-write things
 
