@@ -104,8 +104,9 @@ class VariableQMixLoss(QMixLoss):
         if self.mixer is not None:
             # TODO(ekl) add support for handling global state? This is just
             # treating the stacked agent obs as the state.
-            valid_agent_qvals = th.mul(chosen_action_qvals, valid_agents).double()
-            next_valid_agent_qvals = th.mul(target_max_qvals, next_valid_agents).double()
+            import ipdb; ipdb.set_trace()
+            valid_agent_qvals = th.mul(chosen_action_qvals, valid_agents.double())
+            next_valid_agent_qvals = th.mul(target_max_qvals, next_valid_agents.double())
             chosen_action_qvals = self.mixer(valid_agent_qvals, obs) # pass valid agents to mixer
             target_max_qvals = self.target_mixer(next_valid_agent_qvals, next_obs) # pass next valid agents to mixer
 
