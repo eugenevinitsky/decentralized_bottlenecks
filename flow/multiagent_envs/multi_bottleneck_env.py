@@ -315,11 +315,14 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 penalty = (num_vehs - 30 * self.scaling) / 10.0
                 reward -= penalty
 
-        reward_dict = {rl_id: reward for rl_id in self.k.vehicle.get_rl_ids()}
-        # If a vehicle has left, just make sure to return a reward for it
-        left_vehicles_dict = {veh_id: 0 for veh_id
-                              in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
-        reward_dict.update(left_vehicles_dict)
+        if self.qmix:
+            reward_dict = {rl_idx: reward if rl_idx < len(self.k.vehicle.get_rl_ids()) else 0 for rl_idx in range(self.num_qmix_agents)}
+        else:
+            reward_dict = {rl_id: reward for rl_id in self.k.vehicle.get_rl_ids()}
+            # If a vehicle has left, just make sure to return a reward for it
+            left_vehicles_dict = {veh_id: 0 for veh_id
+                                in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
+            reward_dict.update(left_vehicles_dict)
         return reward_dict
 
     def reset(self, new_inflow_rate=None):

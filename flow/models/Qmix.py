@@ -12,7 +12,7 @@ import argparse
 
 import ray
 from ray.rllib.agents.dqn.dqn import GenericOffPolicyTrainer
-from ray.rllib.agents.qmix.qmix_policy import QMixLoss, QMixTorchPolicy, _validate
+from ray.rllib.agents.qmix.qmix_policy import QMixLoss, QMixTorchPolicy, _validate, _mac, _unroll_mac
 from ray.rllib.agents.qmix.mixers import VDNMixer, QMixer
 from ray.rllib.agents.qmix.model import RNNModel, _get_size
 from ray.rllib.agents.qmix.qmix import make_sync_batch_optimizer, DEFAULT_CONFIG
@@ -25,7 +25,9 @@ from ray.rllib.models.model import _unpack_obs
 from ray.rllib.env.constants import GROUP_REWARDS
 from ray.rllib.utils.annotations import override
 
+import torch as th
 from torch.optim import RMSprop
+from torch.distributions import Categorical
 
 
 class VariableQMixLoss(QMixLoss):
