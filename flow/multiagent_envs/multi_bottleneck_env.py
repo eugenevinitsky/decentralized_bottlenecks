@@ -151,7 +151,6 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if self.qmix:
             assert self.num_actions != 0 
             assert len(self.k.vehicle.get_rl_ids()) < self.num_qmix_agents
-            import ipdb; ipdb.set_trace()
             veh_info = {idx: {"obs": np.zeros(self.observation_space.spaces['obs'].shape[0]), "valid_agent": 0} for idx in range(self.num_qmix_agents)}
             veh_info.update({rl_id_idx: {"obs": np.clip(
                                                     np.concatenate((self.state_util(rl_id),
