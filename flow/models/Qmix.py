@@ -180,9 +180,9 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
             self.mixer = None
             self.target_mixer = None
         elif config["mixer"] == "qmix":
-            self.mixer = QMixer(self.n_agents, self.state_shape,
+            self.mixer = VariableQMixer(self.n_agents, self.state_shape,
                                 config["mixing_embed_dim"]) # use custom VariableQMixer
-            self.target_mixer = QMixer(self.n_agents, self.state_shape,
+            self.target_mixer = VariableQMixer(self.n_agents, self.state_shape,
                                        config["mixing_embed_dim"]) # use custom VariableQMixer
         elif config["mixer"] == "vdn":
             self.mixer = VDNMixer()
@@ -336,7 +336,7 @@ class VariableQMixer(QMixer):
         super(VariableQMixer, self).__init__(n_agents, state_shape, mixing_embed_dim)
 
 
-    def forward(self, agent_qs, states, valid_agents):
+    def forward(self, agent_qs, states):
         """Forward pass for the mixer.
 
         Arguments:
