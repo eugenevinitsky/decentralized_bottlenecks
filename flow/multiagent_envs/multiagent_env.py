@@ -130,6 +130,9 @@ class MultiEnv(MultiAgentEnv, Env):
             done['__all__'] = False
         else:
             done['__all__'] = False
+
+        if self.time_counter > self.env_params.horizon:
+            done['__all__'] = True
         infos = {key: {} for key in states.keys()}
 
         # compute the reward

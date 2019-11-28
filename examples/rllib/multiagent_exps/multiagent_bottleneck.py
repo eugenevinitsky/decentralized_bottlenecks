@@ -133,7 +133,7 @@ def setup_flow_params(args):
         "speed_reward": args.speed_reward,
         'fair_reward': False,  # This doesn't do anything, remove
         'exit_history_seconds': 0, # This doesn't do anything, remove
-        "action_discretization": 30,
+        "action_discretization": 5,
         "qmix": args.qmix,
         "num_qmix_agents": args.max_num_agents_qmix
         }
@@ -232,7 +232,7 @@ def setup_flow_params(args):
 
 
 def on_episode_end(info):
-    env = info['env'].get_unwrapped()[0]
+    env = info['env'].get_unwrapped()[0].env
     outflow_over_last_500 = env.k.vehicle.get_outflow_rate(int(500 / env.sim_step))
     inflow = env.inflow
     # round it to 100
