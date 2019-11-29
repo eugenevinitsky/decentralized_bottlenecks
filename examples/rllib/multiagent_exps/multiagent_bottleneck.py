@@ -362,6 +362,7 @@ if __name__ == '__main__':
             },
             'config': config,
             'num_samples': args.num_samples,
+            "max_failures": 1
         }
     if args.use_s3:
         exp_dict['upload_dir'] = s3_string
