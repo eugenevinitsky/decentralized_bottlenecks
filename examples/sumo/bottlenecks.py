@@ -11,7 +11,7 @@ from flow.core.params import VehicleParams
 from flow.core.params import TrafficLightParams
 
 from flow.scenarios.bottleneck import BottleneckScenario
-from flow.controllers import SimLaneChangeController, ContinuousRouter, HandTunedVelocityController, TimeDelayVelocityController, DecentralizedALINEAController, StaggeringDecentralizedALINEAController
+from flow.controllers import SimLaneChangeController, ContinuousRouter, HandTunedVelocityController, TimeDelayVelocityController, DecentralizedALINEAController, FakeStaggeringDecentralizedALINEAController
 from flow.controllers.car_following_models import CFMController
 from flow.envs.bottleneck_env import DesiredVelocityEnv
 from flow.core.experiment import Experiment
@@ -237,7 +237,7 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
             # acceleration_controller=(CFMController, {"v_des": 10, "d_des": 30, "k_d": 30, "k_v": 15}),
             # acceleration_controller=(HandTunedVelocityController, {"v_regions": v_regions}),
             # acceleration_controller=(DecentralizedALINEAController, {"stop_edge": "2", "stop_pos": 310, "additional_env_params": additional_env_params}),
-            acceleration_controller=(StaggeringDecentralizedALINEAController, {"stop_edge": "2", "stop_pos": 310, "additional_env_params": additional_env_params}),
+            acceleration_controller=(FakeStaggeringDecentralizedALINEAController, {"stop_edge": "2", "stop_pos": 310, "additional_env_params": additional_env_params}),
             car_following_params=SumoCarFollowingParams(
                 speed_mode=31,
             ),

@@ -344,6 +344,11 @@ class StaggeringDecentralizedALINEAController(DecentralizedALINEAController):
 class FakeStaggeringDecentralizedALINEAController(StaggeringDecentralizedALINEAController):
     """Same as the controller above but never actually calls set_stop"""
 
+    def __init__(self, veh_id, stop_edge, stop_pos, additional_env_params, car_following_params):
+        super().__init__(veh_id, stop_edge, stop_pos, additional_env_params, car_following_params)
+        self.idm_controller = IDMController(veh_id, car_following_params=car_following_params)       
+        self.stop_time = 0.0 
+
     def get_accel(self, env):
         env.k.vehicle.set_color(self.veh_id, (0, 255, 0))
         cur_pos = env.k.vehicle.get_position(self.veh_id)
@@ -358,32 +363,56 @@ class FakeStaggeringDecentralizedALINEAController(StaggeringDecentralizedALINEAC
                 self.lane_leader = True
                 env.waiting_queue.append(self.veh_id)
 
+        # past lane:
+            # reset waiting, return idm
+        # lane leader:
+            # if you're too close to the stopping point and you stop:
+                # slow down and stop
+            # if you're stopped:
+                # stop until go conditions are met
+            # else: update_feedback_coefs
+        # else: update_feedback_coefs
+            
+
+
         if int(env.k.vehicle.get_edge(self.veh_id)) > int(self.stop_edge):
             if self.veh_id in env.waiting_queue:
                 env.waiting_queue.remove(self.veh_id)
-            return None
-        elif self.is_waiting_to_go:
-            if not env.k.vehicle.is_stopped(self.veh_id):
-                if (env.waiting_queue[0] == self.veh_id):
-                    if len(env.waiting_queue) == 4:
-                        # car can depart
-                        env.waiting_queue.pop(0)
-                        self.is_waiting_to_go = False
-                        return None
-            return 0.0
-        elif env.k.vehicle.is_stopped(self.veh_id):
-            self.is_waiting_to_go = True
-            return 0.0
-        elif not self.stop_set and int(env.k.vehicle.get_edge(self.veh_id)) == int(self.stop_edge) and \
-                0.5 * (cur_speed ** 2) / self.car_following_params.controller_params[
-            'decel'] + cur_pos > self.stop_pos - 4:
-            return None
-        else:
-            duration = self.get_duration(env)
-
-            if duration < 1.0:
-                self.stop_set = False
+            self.is_waiting_to_go = False
+            return self.idm_controller.get_accel(env)
+        elif self.lane_leader:
+            if self.is_waiting_to_go:
+                # stop until conditions are met
+                if env.sim_step * env.time_counter + 1 > self.stop_time + self.duration:
+                    if (env.waiting_queue[0] == self.veh_id):
+                        if len(env.waiting_queue) == 4:
+                            self.stop_set = False
+                            return self.idm_controller.get_accel(env)
+            elif self.stop_set:
+                if self.stop_pos - cur_pos < 4.2:
+                    self.is_waiting_to_go = True
+                else:
+                    safe_velocity = 2 * (self.stop_pos - cur_pos - 4) / env.sim_step - cur_speed - cur_speed * (2 * self.delay)
+                    idm_accel = self.idm_controller.get_accel(env)
+                    if cur_speed + idm_accel * env.sim_step > safe_velocity:
+                        if safe_velocity > 0:
+                            return (safe_velocity - cur_speed) / env.sim_step
+                        else:
+                            return -1 * self.max_deaccel  # return max deaccel
+                    else:
+                        return idm_accel
             else:
-                self.duration = duration
-                self.stop_set = True
-            return None
+                self.set_stop(env)
+                return self.idm_controller.get_accel(env)
+        else:
+            self.set_stop(env)
+            return self.idm_controller.get_accel(env)
+
+    def set_stop(self, env):
+        duration = self.get_duration(env)
+        if duration < 1.0:                
+            self.stop_set = False
+        else:
+            self.stop_time = env.sim_step * env.time_counter
+            self.duration = duration
+            self.stop_set = True
