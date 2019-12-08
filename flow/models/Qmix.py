@@ -134,6 +134,7 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
     def __init__(self, obs_space, action_space, config):
         _validate(obs_space, action_space)
         config = dict(ray.rllib.agents.qmix.qmix.DEFAULT_CONFIG, **config)
+        config["model"] = ray.rllib.models.catalog.MODEL_DEFAULTS
         self.config = config
         self.observation_space = obs_space
         self.action_space = action_space

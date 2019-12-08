@@ -5,6 +5,7 @@ from __future__ import print_function
 import logging
 import numpy as np
 import torch.nn as nn
+import torch.nn.functional as F
 
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.rllib.models.torch.misc import normc_initializer, SlimFC, \
@@ -24,7 +25,7 @@ class FeedForward(TorchModelV2, nn.Module):
         nn.Module.__init__(self)
 
         hiddens = model_config.get("fcnet_hiddens")
-        activation = _get_activation_fn(model_config.get("fcnet_activation"))
+        activation = nn.ReLU
         logger.debug("Constructing fcnet {} {}".format(hiddens, activation))
         layers = []
         last_layer_size = np.product(obs_space.shape)
