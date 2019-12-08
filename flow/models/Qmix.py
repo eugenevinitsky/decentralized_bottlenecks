@@ -30,6 +30,8 @@ from torch.optim import RMSprop
 from torch.distributions import Categorical
 import torch.nn.functional as F
 
+from flow.models.TorchFeedForward import FeedForward
+
 
 class VariableQMixLoss(QMixLoss):
     def __init__(self,
@@ -162,7 +164,7 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
             config["model"],
             framework="torch",
             name="model",
-            default_model=RNNModel)
+            default_model=FeedForward)
 
         self.target_model = ModelCatalog.get_model_v2(
             agent_obs_space,
@@ -171,7 +173,7 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
             config["model"],
             framework="torch",
             name="target_model",
-            default_model=RNNModel)
+            default_model=FeedForward)
 
         # Setup the mixer network.
         # The global state is just the stacked agent observations for now.
