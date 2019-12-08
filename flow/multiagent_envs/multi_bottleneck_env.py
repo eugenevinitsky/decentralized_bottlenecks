@@ -158,6 +158,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                                                     self.observation_space.spaces['obs'].low,
                                                     self.observation_space.spaces['obs'].high),
                                         "valid_agent": 1} for rl_id_idx, rl_id in enumerate(self.k.vehicle.get_rl_ids())})
+
         else:
             if add_params['centralized_obs']:
                 rl_ids = self.k.vehicle.get_rl_ids()

@@ -49,8 +49,8 @@ class MultiEnv(MultiAgentEnv, Env):
             contains other diagnostic information from the previous action
         """
         self.step_counter += 1
+        self.time_counter += 1
         for _ in range(self.env_params.sims_per_step):
-            self.time_counter += 1
 
             # perform acceleration actions for controlled human-driven vehicles
             if len(self.k.vehicle.get_controlled_ids()) > 0:
@@ -114,8 +114,7 @@ class MultiEnv(MultiAgentEnv, Env):
             self.render()
 
         states = self.get_state(rl_actions)
-        done = {key: key in self.k.vehicle.get_arrived_ids()
-                for key in states.keys()}
+        done = {key: False for key in states.keys()}
         if crash:
             print(
                 "**********************************************************\n"

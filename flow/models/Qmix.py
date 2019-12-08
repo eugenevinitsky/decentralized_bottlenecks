@@ -107,7 +107,9 @@ class VariableQMixLoss(QMixLoss):
             # TODO(ekl) add support for handling global state? This is just
             # treating the stacked agent obs as the state.
             valid_agent_qvals = th.mul(chosen_action_qvals, valid_agents).float()
+            # this is our done condition being executed here
             next_valid_agent_qvals = th.mul(target_max_qvals, next_valid_agents).float()
+
             chosen_action_qvals = self.mixer(valid_agent_qvals, obs) # pass valid agents to mixer
             target_max_qvals = self.target_mixer(next_valid_agent_qvals, next_obs) # pass next valid agents to mixer
 
@@ -123,7 +125,7 @@ class VariableQMixLoss(QMixLoss):
         masked_td_error = td_error * mask
 
         # Normal L2 loss, take mean over actual data
-        loss = (masked_td_error**2).sum() / mask.sum()
+        loss = ((masked_td_error)**2).sum() / mask.sum()
         return loss, mask, masked_td_error, chosen_action_qvals, targets
 
 class VariableQMixTorchPolicy(QMixTorchPolicy):
@@ -165,7 +167,7 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
             config["model"],
             framework="torch",
             name="model",
-            default_model=FeedForward)
+            default_model=RNNModel)
 
         self.target_model = ModelCatalog.get_model_v2(
             agent_obs_space,
@@ -174,7 +176,7 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
             config["model"],
             framework="torch",
             name="target_model",
-            default_model=FeedForward)
+            default_model=RNNModel)
 
         # Setup the mixer network.
         # The global state is just the stacked agent observations for now.
@@ -224,7 +226,7 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
             [o["obs"] for o in unpacked],
             axis=1).reshape([len(obs_batch), self.n_agents, self.obs_size])
         # process valid agents obs: note, we're using the second column, because we're passing a boolean as a discrete (second column is val = 1)
-        valid_agents = np.array([o["valid_agent"][:,1] for o in unpacked]).reshape([len(obs_batch), self.n_agents])  # process valid agents obs
+        valid_agents = np.array([o["valid_agent"][:, 1] for o in unpacked]).T  # process valid agents obs
         action_mask = np.ones(
                 [len(obs_batch), self.n_agents, self.n_actions]) # dummy action mask, so we don't have to re-write things
 
@@ -262,6 +264,7 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
 
     @override(Policy)
     def learn_on_batch(self, samples):
+        # TODO undo the chopping into sequences if we are not using an LSTM
         obs_batch, action_mask, valid_agents = self._unpack_observation(
             samples[SampleBatch.CUR_OBS]) # get valid agents
         next_obs_batch, next_action_mask, next_valid_agents = self._unpack_observation(
@@ -279,7 +282,8 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
                     obs_batch, next_obs_batch, valid_agents, next_valid_agents],
                 [samples["state_in_{}".format(k)]
                  for k in range(len(self.get_initial_state()))],
-                max_seq_len=self.config["model"]["max_seq_len"],
+                # TODO put this back if we are using an LSTM
+                max_seq_len=1, #self.config["model"]["max_seq_len"],
                 dynamic_max=True) # also chop valid agents, next valid agents into sequences
         B, T = len(seq_lens), max(seq_lens)
 
@@ -313,13 +317,17 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
             self.loss(rewards, actions, terminated, mask, obs,
                       next_obs, action_mask, next_action_mask,
                       valid_agents, next_valid_agents)
-
         # Optimise
+        loss_out.register_hook(lambda grad: print(grad))
+        chosen_action_qvals.register_hook(lambda grad: print(grad))
+
         self.optimiser.zero_grad()
         loss_out.backward()
         grad_norm = th.nn.utils.clip_grad_norm_(
             self.params, self.config["grad_norm_clipping"])
         self.optimiser.step()
+
+        import ipdb; ipdb.set_trace()
 
         mask_elems = mask.sum().item()
         stats = {
