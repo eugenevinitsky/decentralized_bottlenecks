@@ -409,13 +409,14 @@ class FakeStaggeringDecentralizedALINEAController(StaggeringDecentralizedALINEAC
 
             if self.stop_pos - cur_pos < 4:
                 self.is_waiting_to_go = True
-                return -1 * self.max_deaccel
+                self.stop_time = env.sim_step * env.time_counter
+                return None
             else:
                 if cur_speed + idm_accel * env.sim_step > safe_velocity:
                     if safe_velocity > 0:
                         return (safe_velocity - cur_speed) / env.sim_step
                     else:
-                        return -1 * self.max_deaccel  # return max deaccel
+                        return None # return max deaccel
                 else:
                     return idm_accel
         else:
@@ -427,7 +428,5 @@ class FakeStaggeringDecentralizedALINEAController(StaggeringDecentralizedALINEAC
         if duration < 1.0:                
             self.stop_set = False
         else:
-            self.stop_time = env.sim_step * env.time_counter
             self.duration = duration
-            print("stop set for ", self.veh_id)
             self.stop_set = True
