@@ -250,7 +250,7 @@ def setup_exps(args):
     config = ppo.DEFAULT_CONFIG.copy()
     config['num_workers'] = rllib_params['n_cpus']
     config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
-    config['sgd_minibatch_size'] = min(2000, config['train_batch_size'])
+    config['sgd_minibatch_size'] = 6000
     config['sample_batch_size'] = 20
     config['vf_loss_coeff'] = args.vf_loss_coeff
     config['gamma'] = 0.999  # discount rate

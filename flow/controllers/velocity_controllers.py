@@ -355,74 +355,56 @@ class FakeStaggeringDecentralizedALINEAController(StaggeringDecentralizedALINEAC
         cur_speed = env.k.vehicle.get_speed(self.veh_id)
         cur_lane = env.k.vehicle.get_lane(self.veh_id)
 
-        if not self.lane_leader:
-            cars_in_lane = []
-            if self.stop_edge in env.edge_dict:
-                cars_in_lane = env.edge_dict[self.stop_edge][cur_lane]
-            if len(cars_in_lane) and max(cars_in_lane, key=lambda x: x[1])[0] == self.veh_id and self.stop_set:
-                self.lane_leader = True
-                env.waiting_queue.append(self.veh_id)
+        if env.k.vehicle.get_edge(self.veh_id)[0] != ':':
+            if not self.lane_leader:
+                cars_in_lane = []
+                if self.stop_edge in env.edge_dict:
+                    cars_in_lane = env.edge_dict[self.stop_edge][cur_lane]
+                if len(cars_in_lane) and max(cars_in_lane, key=lambda x: x[1])[0] == self.veh_id and self.stop_set:
+                    self.lane_leader = True
+                    env.waiting_queue.append(self.veh_id)
 
-        # past lane:
-            # reset waiting, return idm
-        # lane leader:
-            # if you're too close to the stopping point and you stop:
-                # slow down and stop
-            # if you're stopped:
-                # stop until go conditions are met
-            # else: update_feedback_coefs
-        # else: update_feedback_coefs
-            
-                # 
-                    # self.is_waiting_to_go = True
-                #     return -1 * self.max_deaccel
-                # else:
-                #     # safe_velocity = 2 * (self.stop_pos - cur_pos - 4) / env.sim_step - cur_speed - cur_speed * (2 * self.delay)
-                #     idm_accel = self.idm_controller.get_accel(env)
-                #     if self.stop_pos - cur_pos < 15:
-                #         print(-1 * self.max_deaccel)
-                #         return -1 * self.max_deaccel  # return max deaccel
-                #     else:
-                #         return idm_accel
-
-
-
-        if int(env.k.vehicle.get_edge(self.veh_id)) > int(self.stop_edge):
-            if self.veh_id in env.waiting_queue:
-                env.waiting_queue.remove(self.veh_id)
-            self.is_waiting_to_go = False
-            return self.idm_controller.get_accel(env)
-        elif self.is_waiting_to_go:
-            # stop until conditions are met
-            if env.sim_step * (env.time_counter + 1) > self.stop_time + self.duration:
-                if (env.waiting_queue[0] == self.veh_id):
-                    if len(env.waiting_queue) == 4:
-                        self.stop_set = False
-                        return self.idm_controller.get_accel(env)
-            return -1 * self.max_deaccel
-        elif self.stop_set:
-            self.set_stop(env)
-            b = self.max_deaccel
-            dt = env.sim_step
-            h = self.stop_pos - cur_pos - 4
-            safe_velocity = - b * dt + np.sqrt((b ** 2) * (dt ** 2) + 2 * b * h)
-            idm_accel = self.idm_controller.get_accel(env)
-
-            if self.stop_pos - cur_pos < 4:
-                self.stop_time = env.sim_step * env.time_counter
-                self.is_waiting_to_go = True
-                self.stop_time = env.sim_step * env.time_counter
-                return None
-            else:
-                if cur_speed + idm_accel * env.sim_step > safe_velocity:
-                    if safe_velocity > 0:
-                        return (safe_velocity - cur_speed) / env.sim_step
-                    else:
-                        return None # return max deaccel
+            if int(env.k.vehicle.get_edge(self.veh_id)) > int(self.stop_edge):
+                if self.veh_id in env.waiting_queue:
+                    env.waiting_queue.remove(self.veh_id)
+                self.is_waiting_to_go = False
+                return self.idm_controller.get_accel(env)
+            elif self.is_waiting_to_go:
+                # stop until conditions are met
+                if env.sim_step * (env.time_counter + 1) > self.stop_time + self.duration:
+                    if (env.waiting_queue[0] == self.veh_id):
+                        if len(env.waiting_queue) == 4:
+                            self.stop_set = False
+                            return self.idm_controller.get_accel(env)
+                return -1 * self.max_deaccel
+            elif self.stop_set:
+                self.set_stop(env)
+                b = self.max_deaccel
+                dt = env.sim_step
+                h = self.stop_pos - cur_pos - 4
+                if (b ** 2) * (dt ** 2) + 2 * b * h > 0:
+                    safe_velocity = - b * dt + np.sqrt((b ** 2) * (dt ** 2) + 2 * b * h)
                 else:
-                    return idm_accel
+                    safe_velocity = 0.0
+                idm_accel = self.idm_controller.get_accel(env)
+
+                if self.stop_pos - cur_pos < 4:
+                    self.stop_time = env.sim_step * env.time_counter
+                    self.is_waiting_to_go = True
+                    self.stop_time = env.sim_step * env.time_counter
+                    return None
+                else:
+                    if cur_speed + idm_accel * env.sim_step > safe_velocity:
+                        if safe_velocity > 0:
+                            return (safe_velocity - cur_speed) / env.sim_step
+                        else:
+                            return None # return max deaccel
+                    else:
+                        return idm_accel
+            else:
+                self.set_stop(env)
+                return self.idm_controller.get_accel(env)
         else:
-            self.set_stop(env)
             return self.idm_controller.get_accel(env)
 
     def set_stop(self, env):

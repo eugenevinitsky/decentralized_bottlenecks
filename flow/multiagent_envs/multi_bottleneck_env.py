@@ -540,15 +540,19 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
                 accel = self.action_space.low[0]
 
             veh_stop_time = controller.stop_time
-            if self.is_waiting_to_go:
+            if controller.is_waiting_to_go:
                 time_since_stop = self.time_counter - veh_stop_time
             else:
                 time_since_stop = 0.0
             duration = controller.duration
-            first_in_queue = 1 if self.waiting_queue[0] == key else 0
+            if len(self.waiting_queue) > 0:
+                first_in_queue = 1 if self.waiting_queue[0] == key else 0
+            else:
+                first_in_queue = 0
 
             state_dict[key] = {"obs": np.concatenate((value, [time_since_stop / self.env_params.horizon,
                                                               duration / 100.0,
                                                               first_in_queue])),
-                               "expert_action": accel}
+                               "expert_action": np.array([np.clip(accel, a_min=self.action_space.low[0],
+                                                                  a_max=self.action_space.high[0])])}
         return state_dict
