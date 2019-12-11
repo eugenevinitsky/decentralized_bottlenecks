@@ -309,6 +309,7 @@ def setup_exps(args):
 
     # Register as rllib env
     if args.qmix:
+        config['env_config']['max_num_agents'] = args.max_num_agents_qmix
         grouping = {"AVs": list(np.arange(args.max_num_agents_qmix))}
         obs_space = Tuple([obs_space] * args.max_num_agents_qmix)
         act_space = Tuple([act_space] * args.max_num_agents_qmix)

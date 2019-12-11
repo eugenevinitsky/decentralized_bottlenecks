@@ -9,12 +9,12 @@ min_workers: 0 #<NUM WORKERS IN CLUSTER>
 
 # The maximum number of workers nodes to launch in addition to the head
 # node. This takes precedence over min_workers.
-max_workers: 10
+max_workers: 0
 
 # The initial number of worker nodes to launch in addition to the head
 # node. When the cluster is first brought up (or when it is refreshed with a
 # subsequent `ray up`) this number of nodes will be started.
-initial_workers: 6
+initial_workers: 4
 
 # The autoscaler will scale up the cluster to this target fraction of resource
 # usage. For example, if a cluster of 10 nodes is 100% busy and
@@ -37,7 +37,7 @@ auth:
 # By default Ray creates a new private keypair, but you can also use your own.
 # If you do so, make sure to also set "KeyName" in the head and worker node
 # configurations below.
-#    ssh_private_key: /path/to/your/key.pem
+    ssh_private_key: /Users/eugenevinitsky/.ssh/MyKeyPair.pem
 
 # Provider-specific config for the head node, e.g. instance type. By default
 # Ray will auto-configure unspecified fields such as SubnetId and KeyName.
@@ -46,6 +46,7 @@ auth:
 head_node:
     InstanceType: c4.8xlarge # c4.4xlarge
     ImageId: ami-0c047f3ddd3939b30  # Flow AMI (Ubuntu)
+    KeyName: MyKeyPair
     InstanceMarketOptions:
         MarketType: spot
          #Additional options can be found in the boto docs, e.g.
@@ -66,7 +67,7 @@ head_node:
 worker_nodes:
     InstanceType: c4.8xlarge
     ImageId: ami-0c047f3ddd3939b30 # Flow AMI (Ubuntu)
-
+    KeyName: MyKeyPair
     #Run workers on spot by default. Comment this out to use on-demand.
     InstanceMarketOptions:
         MarketType: spot
@@ -83,8 +84,8 @@ setup_commands:
     # set up ray by pip installing and copying over rllib and tune folder
     - pip install --upgrade pyzmq notebook
     - pip install -r ~/flow/requirements.txt
-    - pip install torch
-    - pip install -U ray
+    - pip install torch==1.3.1
+    - pip install ray==0.7.6
     - python ~/flow/scripts/replace_rnn_sequence.py
 
 # Custom commands that will be run on the head node after common setup.

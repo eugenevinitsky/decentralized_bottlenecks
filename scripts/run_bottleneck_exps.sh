@@ -696,5 +696,12 @@
 ####################################################################################################################################################
 # 12/10/19 multi-agent experiments w a fixed inflow and qmix
 
-ray exec ray_autoscale.yaml "python multiagent_bottleneck.py new_ma_qmix_test --qmix --max_num_agents_qmix 120 " \
-"--av_frac 0.1 --low_inflow 2300 --high_inflow 2300 --horizon 1000 --use_s3 --grid_search --num_samples 4"
+#ray exec ray_autoscale.yaml "python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py ma_qmix_test --qmix --max_num_agents_qmix 120 --av_frac 0.1 --checkpoint_freq 50 --num_iters 500 --low_inflow 2300 --high_inflow 2300 --horizon 1000 --use_s3 --grid_search --num_samples 4" --start --stop --tmux --cluster-name==ev_exp1
+
+ray exec ray_autoscale.yaml "python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py ma_qmix_0p1_lp0 \
+--qmix --max_num_agents_qmix 120 --av_frac 0.1 --checkpoint_freq 50 --num_iters 500 --low_inflow 2300 --high_inflow 2300 \
+--horizon 1000 --use_s3 --grid_search --num_samples 4 --life_penalty 0.0" --start --stop --tmux --cluster-name==ev_exp1
+
+ray exec ray_autoscale.yaml "python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py ma_qmix_0p1_lp1  \
+--qmix --max_num_agents_qmix 120 --av_frac 0.1 --checkpoint_freq 50 --num_iters 500 --low_inflow 2300 --high_inflow 2300 \
+--horizon 1000 --use_s3 --grid_search --num_samples 4 --life_penalty 1.0" --start --stop --tmux --cluster-name==ev_exp2

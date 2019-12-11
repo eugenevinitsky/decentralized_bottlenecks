@@ -33,6 +33,7 @@ from ray.rllib.policy.sample_batch import DEFAULT_POLICY_ID
 from ray.tune.registry import register_env
 from ray.rllib.models import ModelCatalog
 from flow.models.GRU import GRU
+from flow.models.Qmix import QMixTrainer
 from flow.agents.centralized_PPO import CentralizedCriticModel, CentralizedCriticModelRNN
 
 from flow.utils.registry import make_create_env
@@ -73,9 +74,15 @@ def run_bottleneck(args, inflow_rate, num_trials):
                   + '\'{}\''.format(config_run))
             sys.exit(1)
     if args.run:
-        agent_cls = get_agent_class(args.run)
+        if args.qmix:
+            agent_cls = QMixTrainer
+        else :
+            agent_cls = get_agent_class(args.run)
     elif config_run:
-        agent_cls = get_agent_class(config_run)
+        if args.qmix:
+            agent_cls = QMixTrainer
+        else:
+            agent_cls = get_agent_class(config_run)
     else:
         print('visualizer_rllib.py: error: could not find flow parameter '
               '\'run\' in params.json, '
@@ -85,6 +92,9 @@ def run_bottleneck(args, inflow_rate, num_trials):
         sys.exit(1)
 
     # if using a custom model
+    if 'custom_model' not in config['model'].keys():
+        config['model'].update({'custom_model': 'blah'})
+
     if config['model']['custom_model'] == "cc_model":
         if config['model']['use_lstm']:
             ModelCatalog.register_custom_model("cc_model", CentralizedCriticModelRNN)
@@ -136,7 +146,19 @@ def run_bottleneck(args, inflow_rate, num_trials):
 
     # Create and register a gym+rllib env
     create_env, env_name = make_create_env(params=flow_params, version=0)
-    register_env(env_name, create_env)
+    if args.qmix:
+        from gym.spaces import Tuple
+        temp_env = create_env(config['env_config'])
+        if 'max_num_agents' not in config['env_config']:
+            config['env_config'].update({'max_num_agents': 120})
+        max_num_agents = config['env_config']['max_num_agents']
+        grouping = {"AVs": list(np.arange(max_num_agents))}
+        obs_space = Tuple([temp_env.observation_space] * max_num_agents)
+        act_space = Tuple([temp_env.action_space] * max_num_agents)
+        register_env(env_name, lambda config: create_env(config).with_agent_groups(
+            grouping, obs_space=obs_space, act_space=act_space))
+    else:
+        register_env(env_name, create_env)
 
     # create the agent that will be used to compute the actions
     agent = agent_cls(env=env_name, config=config)
@@ -187,6 +209,8 @@ def run_bottleneck(args, inflow_rate, num_trials):
         prev_rewards = collections.defaultdict(lambda: 0.0)
         done = False
         reward_total = 0.0
+        if args.qmix:
+            env = env.env
         obs = env.reset(inflow_rate)
         k = 0
         while k < env_params.horizon and not done:
@@ -217,28 +241,39 @@ def run_bottleneck(args, inflow_rate, num_trials):
                      speed_on_one])
             multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
             action_dict = {}
-            for agent_id, a_obs in multi_obs.items():
-                if a_obs is not None:
-                    policy_id = mapping_cache.setdefault(
-                        agent_id, policy_agent_mapping(agent_id))
-                    p_use_lstm = use_lstm[policy_id]
-                    if p_use_lstm:
-                        a_action, p_state, _ = agent.compute_action(
-                            a_obs,
-                            state=agent_states[agent_id],
-                            prev_action=prev_actions[agent_id],
-                            prev_reward=prev_rewards[agent_id],
-                            policy_id=policy_id)
-                        agent_states[agent_id] = p_state
-                    else:
-                        a_action = agent.compute_action(
-                            a_obs,
-                            prev_action=prev_actions[agent_id],
-                            prev_reward=prev_rewards[agent_id],
-                            policy_id=policy_id)
-                    a_action = _flatten_action(a_action)  # tuple actions
-                    action_dict[agent_id] = a_action
-                    prev_actions[agent_id] = a_action
+            if args.qmix:
+                curr_elem = []
+                for obs in multi_obs.values():
+                    for val in obs.values():
+                        if not isinstance(val, np.ndarray):
+                            val = np.array([val])
+                        curr_elem.append(val)
+                import ipdb; ipdb.set_trace()
+                flat_obs = np.concatenate(curr_elem)
+                a_action = agent.get_policy('default_policy').compute_single_action(flat_obs, state=[])
+            else:
+                for agent_id, a_obs in multi_obs.items():
+                    if a_obs is not None:
+                        policy_id = mapping_cache.setdefault(
+                            agent_id, policy_agent_mapping(agent_id))
+                        p_use_lstm = use_lstm[policy_id]
+                        if p_use_lstm:
+                            a_action, p_state, _ = agent.compute_action(
+                                a_obs,
+                                state=agent_states[agent_id],
+                                prev_action=prev_actions[agent_id],
+                                prev_reward=prev_rewards[agent_id],
+                                policy_id=policy_id)
+                            agent_states[agent_id] = p_state
+                        else:
+                            a_action = agent.compute_action(
+                                a_obs,
+                                prev_action=prev_actions[agent_id],
+                                prev_reward=prev_rewards[agent_id],
+                                policy_id=policy_id)
+                        a_action = _flatten_action(a_action)  # tuple actions
+                        action_dict[agent_id] = a_action
+                        prev_actions[agent_id] = a_action
             action = action_dict
 
             action = action if multiagent else action[_DUMMY_AGENT_ID]
@@ -330,6 +365,7 @@ def create_parser():
     parser.add_argument('--end_len', type=int, default=500, help='How many last seconds of the run to use for '
                                                                  'calculating the outflow statistics')
     parser.add_argument('--cluster_mode', action='store_true', help='Specifies if we run it on a cluster')
+    parser.add_argument('--qmix', action='store_true', help='This is just till I figure out how to check this correctly')
 
     return parser
 
