@@ -25,30 +25,41 @@ class FeedForward(TorchModelV2, nn.Module):
         nn.Module.__init__(self)
 
         hiddens = model_config.get("fcnet_hiddens")
-        activation = nn.ReLU
-        logger.debug("Constructing fcnet {} {}".format(hiddens, activation))
+        logger.debug("Constructing fcnet {}".format(hiddens))
         layers = []
         last_layer_size = np.product(obs_space.shape)
         for size in hiddens:
-            layers.append(
-                SlimFC(
-                    in_size=last_layer_size,
-                    out_size=size,
-                    initializer=normc_initializer(1.0),
-                    activation_fn=activation))
+            layers.append(nn.Linear(in_features=last_layer_size, out_features=size))
+            layers.append(nn.ReLU())
             last_layer_size = size
 
         self._hidden_layers = nn.Sequential(*layers)
 
-        self._logits = SlimFC(
-            in_size=last_layer_size,
-            out_size=num_outputs,
-            initializer=normc_initializer(0.01),
-            activation_fn=None)
+        self._hidden_layers.apply(init_weights)
+
+        # TODO(@ev) pick the right initialization
+        self._logits = nn.Linear(
+            in_features=last_layer_size,
+            out_features=num_outputs)
+
+        self._logits.apply(large_initializer)
 
     @override(TorchModelV2)
     def forward(self, input_dict, state, seq_lens):
-        obs = input_dict["obs_flat"]
+        obs = input_dict["obs_flat"].float()
         features = self._hidden_layers(obs.reshape(obs.shape[0], -1))
         logits = self._logits(features)
         return logits, state
+
+
+def init_weights(m):
+    if type(m) == nn.Linear:
+        nn.init.xavier_uniform(m.weight)
+        m.bias.data.fill_(0.01)
+
+
+def large_initializer(m):
+    if type(m) == nn.Linear:
+        nn.init.xavier_uniform(m.weight)
+        m.bias.data.fill_(-500.0)
+

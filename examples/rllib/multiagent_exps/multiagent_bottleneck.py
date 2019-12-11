@@ -196,7 +196,7 @@ def setup_flow_params(args):
 
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
-            warmup_steps=int(200  / args.sim_step),
+            warmup_steps=int(200 / args.sim_step),
             sims_per_step=2,
             horizon=args.horizon,
             clip_actions=False,
@@ -277,6 +277,9 @@ def setup_exps(args):
             ModelCatalog.register_custom_model(model_name, GRU)
             config['model']['custom_model'] = model_name
             config['model']['custom_options'].update({"cell_size": 64, 'use_prev_action': True})
+        elif args.qmix:
+            config['model'].update({'fcnet_hiddens': [64, 64]})
+            config['train_batch_size'] = tune.grid_search([32, 128])
         else:
             config['model'].update({'fcnet_hiddens': [256, 256]})
             model_name = "FeedForward"

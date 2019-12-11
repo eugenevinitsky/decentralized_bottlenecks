@@ -8,7 +8,6 @@ from __future__ import print_function
 from gym.spaces import Tuple, Discrete, Dict
 
 import numpy as np
-import argparse
 
 import ray
 from ray.rllib.agents.dqn.dqn import GenericOffPolicyTrainer
@@ -126,6 +125,10 @@ class VariableQMixLoss(QMixLoss):
 
         # Normal L2 loss, take mean over actual data
         loss = ((masked_td_error)**2).sum() / mask.sum()
+
+        # from torchviz import make_dot
+        # dot = make_dot(loss)
+        # dot.render('test.gv', view=True)
         return loss, mask, masked_td_error, chosen_action_qvals, targets
 
 class VariableQMixTorchPolicy(QMixTorchPolicy):
@@ -167,7 +170,7 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
             config["model"],
             framework="torch",
             name="model",
-            default_model=RNNModel)
+            default_model=FeedForward)
 
         self.target_model = ModelCatalog.get_model_v2(
             agent_obs_space,
@@ -176,7 +179,7 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
             config["model"],
             framework="torch",
             name="target_model",
-            default_model=RNNModel)
+            default_model=FeedForward)
 
         # Setup the mixer network.
         # The global state is just the stacked agent observations for now.
@@ -318,16 +321,19 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
                       next_obs, action_mask, next_action_mask,
                       valid_agents, next_valid_agents)
         # Optimise
-        loss_out.register_hook(lambda grad: print(grad))
-        chosen_action_qvals.register_hook(lambda grad: print(grad))
+        # loss_out.register_hook(lambda grad: print(grad))
+        # chosen_action_qvals.register_hook(lambda grad: print(grad))
 
         self.optimiser.zero_grad()
+
+        # def hook_y(grad):
+        #     print(grad)
+        # chosen_action_qvals.register_hook(hook_y)
+
         loss_out.backward()
         grad_norm = th.nn.utils.clip_grad_norm_(
             self.params, self.config["grad_norm_clipping"])
         self.optimiser.step()
-
-        import ipdb; ipdb.set_trace()
 
         mask_elems = mask.sum().item()
         stats = {

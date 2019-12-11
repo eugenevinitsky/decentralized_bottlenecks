@@ -279,8 +279,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         Per-vehicle accelerations
         """
         if rl_actions:
-            rl_ids = list(rl_actions.keys())
-            actions = list(rl_actions.values())
+            rl_ids = self.k.vehicle.get_rl_ids()
+            actions = [rl_actions[i] for i in range(len(rl_ids))]
             if self.env_params.additional_params.get('communicate', False):
                 accel = np.concatenate([action[0] for action in actions])
             elif self.env_params.additional_params['action_discretization']:
