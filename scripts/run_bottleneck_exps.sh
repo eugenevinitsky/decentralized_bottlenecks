@@ -705,3 +705,7 @@ ray exec ray_autoscale.yaml "python flow/examples/rllib/multiagent_exps/multiage
 ray exec ray_autoscale.yaml "python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py ma_qmix_0p1_lp1  \
 --qmix --max_num_agents_qmix 120 --av_frac 0.1 --checkpoint_freq 50 --num_iters 500 --low_inflow 2300 --high_inflow 2300 \
 --horizon 1000 --use_s3 --grid_search --num_samples 4 --life_penalty 1.0" --start --stop --tmux --cluster-name==ev_exp2
+
+ray exec ray_autoscale.yaml "python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py ma_qmix_0p1_lp0 \
+--qmix --max_num_agents_qmix 120 --av_frac 0.1 --checkpoint_freq 50 --num_iters 500 --low_inflow 2300 --high_inflow 2300 \
+--horizon 1000 --use_s3 --grid_search --num_samples 4 --life_penalty 0.0 --keep_past_actions" --start --stop --tmux --cluster-name==ev_exp3
