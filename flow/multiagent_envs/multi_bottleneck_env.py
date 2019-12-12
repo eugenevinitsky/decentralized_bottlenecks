@@ -151,13 +151,10 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if self.qmix:
             assert self.num_actions != 0 
             assert len(self.k.vehicle.get_rl_ids()) < self.num_qmix_agents
-            veh_info = {idx: {"obs": np.zeros(self.observation_space.spaces['obs'].shape[0]), "valid_agent": 0} for idx in range(self.num_qmix_agents)}
-            veh_info.update({rl_id_idx: {"obs": np.clip(
-                                                    np.concatenate((self.state_util(rl_id),
-                                                                    self.veh_statistics(rl_id))),
-                                                    self.observation_space.spaces['obs'].low,
-                                                    self.observation_space.spaces['obs'].high),
-                                        "valid_agent": 1} for rl_id_idx, rl_id in enumerate(self.k.vehicle.get_rl_ids())})
+            veh_info = {idx: {"obs": np.zeros(self.observation_space.spaces['obs'].shape[0]), "valid_agent": 0}
+                        for idx in range(self.num_qmix_agents)}
+            veh_info.update({rl_id_idx: {"obs":  np.concatenate((self.state_util(rl_id), self.veh_statistics(rl_id))),
+                "valid_agent": 1} for rl_id_idx, rl_id in enumerate(self.k.vehicle.get_rl_ids())})
 
             if self.env_params.additional_params.get('keep_past_actions', False):
                 # update the actions history with the most recent actions
@@ -169,9 +166,13 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     num_steps %= self.num_past_actions
                     self.past_actions_dict[rl_id] = [agent_past_dict, num_steps]
                 actions_history = {rl_id: self.past_actions_dict[rl_id][0] for rl_id in self.k.vehicle.get_rl_ids()}
-                veh_info.update({rl_id_idx: np.concatenate((actions_history[rl_id], veh_info[rl_id])) for
-                            rl_id_idx, rl_id in enumerate(self.k.vehicle.get_rl_ids())})
+                veh_info.update({rl_id_idx: {"obs": np.concatenate((actions_history[rl_id], veh_info[rl_id_idx]["obs"])),
+                                             "valid_agent": veh_info[rl_id_idx]["valid_agent"]} for
+                                 rl_id_idx, rl_id in enumerate(self.k.vehicle.get_rl_ids())})
 
+            veh_info = {key: {"obs": np.clip(val["obs"], a_min=self.observation_space.spaces['obs'].low,
+                                             a_max=self.observation_space.spaces['obs'].high),
+                              "valid_agent": val["valid_agent"]} for key, val in veh_info.items()}
         else:
             if add_params['centralized_obs']:
                 rl_ids = self.k.vehicle.get_rl_ids()

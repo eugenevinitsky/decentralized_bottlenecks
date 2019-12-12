@@ -247,6 +247,12 @@ def setup_exps(args):
     if args.qmix:
         alg_run = QMixTrainer
         config = qmix.DEFAULT_CONFIG.copy()
+        config['model'].update({'fcnet_hiddens': [64, 64]})
+        if args.grid_search:
+            config['train_batch_size'] = tune.grid_search([32, 128])
+            config['lr'] = tune.grid_search([5e-5, 5e-6, 5e-7])
+            config['mixing_embed_dim'] = tune.grid_search([32, 128])
+        config['buffer_size'] = 50000
 
     else:
         alg_run = 'PPO'
@@ -255,6 +261,10 @@ def setup_exps(args):
         config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
         config['gamma'] = 0.999  # discount rate
         config['horizon'] = args.horizon
+
+        # Grid search things
+        if args.grid_search:
+            config['lr'] = tune.grid_search([5e-5, 5e-4])
 
         # LSTM Things
         if args.use_lstm and args.use_gru:
@@ -277,18 +287,11 @@ def setup_exps(args):
             ModelCatalog.register_custom_model(model_name, GRU)
             config['model']['custom_model'] = model_name
             config['model']['custom_options'].update({"cell_size": 64, 'use_prev_action': True})
-        elif args.qmix:
-            config['model'].update({'fcnet_hiddens': [64, 64]})
-            config['train_batch_size'] = tune.grid_search([32, 128])
         else:
             config['model'].update({'fcnet_hiddens': [256, 256]})
             model_name = "FeedForward"
             ModelCatalog.register_custom_model(model_name, FeedForward)
             config['model']['custom_model'] = model_name
-
-    # Grid search things
-    if args.grid_search:
-        config['lr'] = tune.grid_search([5e-5, 5e-4])
 
     if args.imitate:
         config['model']['custom_options'].update({"imitation_weight": 1})

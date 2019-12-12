@@ -113,14 +113,21 @@ class VariableQMixLoss(QMixLoss):
             target_max_qvals = self.target_mixer(next_valid_agent_qvals, next_obs) # pass next valid agents to mixer
 
         # Calculate 1-step Q-Learning targets
+        # WARNING: there is broadcasting done here that expands target_max_qvals to [B, N, T] but a bunch of the reward
+        # terms are totall invalid. We have to apply a mask here to prevent this from being computed incorrectly
         targets = rewards + self.gamma * (1 - terminated) * target_max_qvals
 
         # Td-error
         td_error = (chosen_action_qvals - targets.detach())
 
         mask = mask.expand_as(td_error)
+        # apply the mask so only the valid losses are contributed, removing the effect of broadcasting
+        mask = mask * valid_agents
 
         # 0-out the targets that came from padded data
+
+        # TODO(@evinitsky) walk through this, what do we expect the q values to be and are they on that range?
+        # TODO(@evinitsky) it seems like they're approaching the sum of the agent rewards not the individual rewards
         masked_td_error = td_error * mask
 
         # Normal L2 loss, take mean over actual data
@@ -335,6 +342,18 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
             self.params, self.config["grad_norm_clipping"])
         self.optimiser.step()
 
+        # TODO(@evinitsky) put this back if we ever turn the LSTM on
+        # mask_elems = mask.sum().item()
+        # # TODO(@evinitsky) this is dividing by far too many values, most of these are invalid
+        # stats = {
+        #     "loss": loss_out.item(),
+        #     "grad_norm": grad_norm
+        #     if isinstance(grad_norm, float) else grad_norm.item(),
+        #     "td_error_abs": masked_td_error.abs().sum().item() / mask_elems,
+        #     "q_taken_mean": (chosen_action_qvals * mask).sum().item() /
+        #     mask_elems,
+        #     "target_mean": (targets * mask).sum().item() / mask_elems,
+        # }
         mask_elems = mask.sum().item()
         stats = {
             "loss": loss_out.item(),
@@ -345,6 +364,7 @@ class VariableQMixTorchPolicy(QMixTorchPolicy):
             mask_elems,
             "target_mean": (targets * mask).sum().item() / mask_elems,
         }
+
         return {LEARNER_STATS_KEY: stats}
 
 

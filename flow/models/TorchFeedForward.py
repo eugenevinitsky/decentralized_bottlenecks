@@ -54,12 +54,12 @@ class FeedForward(TorchModelV2, nn.Module):
 
 def init_weights(m):
     if type(m) == nn.Linear:
-        nn.init.xavier_uniform(m.weight)
+        nn.init.xavier_uniform_(m.weight)
         m.bias.data.fill_(0.01)
 
 
 def large_initializer(m):
     if type(m) == nn.Linear:
-        nn.init.xavier_uniform(m.weight)
-        m.bias.data.fill_(-500.0)
+        nn.init.xavier_uniform_(m.weight)
+        m.bias.data.fill_(0.1)
 
