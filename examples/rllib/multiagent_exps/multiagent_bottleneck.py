@@ -102,7 +102,7 @@ def setup_flow_params(args):
             num_vehicles=1)
 
     # flow rate
-    flow_rate = 1900 * args.scaling
+    flow_rate = 800 * args.scaling
 
     controlled_segments = [('1', 1, False), ('2', 2, True), ('3', 2, True),
                            ('4', 2, True), ('5', 1, False)]
