@@ -239,6 +239,8 @@ def on_episode_end(info):
     inflow = int(inflow / 100) * 100
     episode = info["episode"]
     episode.custom_metrics["net_outflow_{}".format(inflow)] = outflow_over_last_500
+    num_avs = len(env.k.vehicle.get_rl_ids())
+    episode.custom_metrics["num_avs_at_end"] = num_avs
 
 
 def setup_exps(args):
@@ -250,9 +252,12 @@ def setup_exps(args):
         config['model'].update({'fcnet_hiddens': [64, 64]})
         if args.grid_search:
             config['train_batch_size'] = tune.grid_search([32, 128])
-            config['lr'] = tune.grid_search([5e-5, 5e-6, 5e-7])
+            config['lr'] = tune.grid_search([5e-6, 5e-7, 5e-8])
             config['mixing_embed_dim'] = tune.grid_search([32, 128])
-        config['buffer_size'] = 50000
+        else:
+            config['lr'] = 5e-07
+        config['buffer_size'] = 10000
+        config['exploration_fraction'] = 0.4
 
     else:
         alg_run = 'PPO'

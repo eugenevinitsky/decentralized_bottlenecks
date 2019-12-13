@@ -248,7 +248,6 @@ def run_bottleneck(args, inflow_rate, num_trials):
                         if not isinstance(val, np.ndarray):
                             val = np.array([val])
                         curr_elem.append(val)
-                import ipdb; ipdb.set_trace()
                 flat_obs = np.concatenate(curr_elem)
                 a_action = agent.get_policy('default_policy').compute_single_action(flat_obs, state=[])
             else:
