@@ -69,6 +69,7 @@ def update_kl(trainer, fetches):
     else:
 
         def update(pi, pi_id):
+            import ipdb; ipdb.set_trace()
             if pi_id in fetches and trainer._iteration > trainer.config['model']['custom_options']['num_imitation_iters']:
                 print("Updating KL")
                 pi.update_kl(fetches[pi_id]["kl"])
