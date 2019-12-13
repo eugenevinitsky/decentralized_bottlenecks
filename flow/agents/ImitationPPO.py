@@ -58,7 +58,7 @@ class ImitationLearningRateSchedule(object):
 
         if self.curr_iter > self.num_imitation_iters:
             self.imitation_weight.load(0.0, session=self._sess)
-            self.policy_weight.load(1.0, session=self._sess)
+            self.policy_weight.load(1.0, session=self._sess)s
         self.curr_iter += 1
 
 def update_kl(trainer, fetches):
@@ -72,7 +72,7 @@ def update_kl(trainer, fetches):
             if pi_id in fetches and trainer._iteration > trainer.config['model']['custom_options']['num_imitation_iters']:
                 pi.update_kl(fetches[pi_id]["kl"])
             else:
-                logger.debug("No data for {}, not updating kl".format(pi_id))
+                print("No data for {}, not updating kl".format(pi_id))
 
         # multi-agent
         trainer.workers.local_worker().foreach_trainable_policy(update)
