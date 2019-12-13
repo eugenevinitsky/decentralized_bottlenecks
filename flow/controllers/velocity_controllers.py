@@ -355,7 +355,7 @@ class FakeStaggeringDecentralizedALINEAController(StaggeringDecentralizedALINEAC
         cur_speed = env.k.vehicle.get_speed(self.veh_id)
         cur_lane = env.k.vehicle.get_lane(self.veh_id)
 
-        if env.k.vehicle.get_edge(self.veh_id)[0] != ':':
+        if len(env.k.vehicle.get_edge(self.veh_id)) and env.k.vehicle.get_edge(self.veh_id)[0] != ':':
             if not self.lane_leader:
                 cars_in_lane = []
                 if self.stop_edge in env.edge_dict:
