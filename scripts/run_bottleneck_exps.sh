@@ -696,29 +696,29 @@
 ####################################################################################################################################################
 # 11/26/19 we run both the imitation and the basic decentralized exps
 
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py high_in_NCN_AGG_NLSTM_Past_0pen_04frac --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
---num_samples 2 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info \
---keep_past_actions --multi_node --vf_loss_coeff .0001 --life_penalty 0.0 --sim_step 0.5" \
---start --stop --cluster-name kp_high_in_NCN_AGG_NLSTM_Past_0pen_04frac --tmux
+# ray exec ray_autoscale.yaml \
+# "python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py high_in_NCN_AGG_NLSTM_Past_0pen_04frac --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
+# --num_samples 2 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info \
+# --keep_past_actions --multi_node --vf_loss_coeff .0001 --life_penalty 0.0 --sim_step 0.5" \
+# --start --stop --cluster-name kp_high_in_NCN_AGG_NLSTM_Past_0pen_04frac --tmux
 
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py high_in_NCN_AGG_NLSTM_Past_0pen_04frac_im --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
---num_samples 2 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info --keep_past_actions \
---imitate --multi_node --vf_loss_coeff .0001 --life_penalty 0.0 --sim_step 0.5" \
---start --stop --cluster-name kp_high_in_NCN_AGG_NLSTM_Past_0pen_04frac_im --tmux
+# ray exec ray_autoscale.yaml \
+# "python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py high_in_NCN_AGG_NLSTM_Past_0pen_04frac_im --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
+# --num_samples 2 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info --keep_past_actions \
+# --imitate --multi_node --vf_loss_coeff .0001 --life_penalty 0.0 --sim_step 0.5" \
+# --start --stop --cluster-name kp_high_in_NCN_AGG_NLSTM_Past_0pen_04frac_im --tmux
 
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py high_in_NCN_AGG_NLSTM_Past_2pen_04frac --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
---num_samples 2 --grid_search --n_cpus 3 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info \
---keep_past_actions --multi_node --vf_loss_coeff .0001 --life_penalty 3.0 --sim_step 0.5" \
---start --stop --cluster-name kp_high_in_NCN_AGG_NLSTM_Past_2pen_04frac --tmux
+# ray exec ray_autoscale.yaml \
+# "python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py high_in_NCN_AGG_NLSTM_Past_2pen_04frac --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
+# --num_samples 2 --grid_search --n_cpus 3 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info \
+# --keep_past_actions --multi_node --vf_loss_coeff .0001 --life_penalty 3.0 --sim_step 0.5" \
+# --start --stop --cluster-name kp_high_in_NCN_AGG_NLSTM_Past_2pen_04frac --tmux
 
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py high_in_NCN_AGG_NLSTM_Past_2pen_04frac_im --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
---num_samples 2 --grid_search --n_cpus 3 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info --keep_past_actions \
---imitate --multi_node --vf_loss_coeff .0001 --life_penalty 3.0 --sim_step 0.5" \
---start --stop --cluster-name kp_high_in_NCN_AGG_NLSTM_Past_2pen_04frac_im --tmux
+# ray exec ray_autoscale.yaml \
+# "python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py high_in_NCN_AGG_NLSTM_Past_2pen_04frac_im --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
+# --num_samples 2 --grid_search --n_cpus 3 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info --keep_past_actions \
+# --imitate --multi_node --vf_loss_coeff .0001 --life_penalty 3.0 --sim_step 0.5" \
+# --start --stop --cluster-name kp_high_in_NCN_AGG_NLSTM_Past_2pen_04frac_im --tmux
 
 ####################################################################################################################################################
 ####################################################################################################################################################
@@ -726,3 +726,27 @@ ray exec ray_autoscale.yaml \
 # python examples/rllib/multiagent_exps/multiagent_bottleneck.py high_in_NCN_AGG_NLSTM_Past_0pen_04frac --num_iters 1 --checkpoint_freq 50 --av_frac 0.4 \
 # --num_samples 2 --grid_search --n_cpus 2 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info \
 # --keep_past_actions --vf_loss_coeff .0001 --life_penalty 0.0 --sim_step 0.5
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py high_in_NCN_AGG_NLSTM_Past_0pen_04frac --num_iters 500 --checkpoint_freq 25 --av_frac 0.4 \
+--num_samples 1 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info \
+--keep_past_actions --multi_node --vf_loss_coeff .0001 --life_penalty 0.0 --sim_step 0.5" \
+--start --stop --cluster-name kp_high_in_NCN_AGG_NLSTM_Past_0pen_04frac --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py high_in_NCN_AGG_NLSTM_Past_0pen_04frac_im --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
+--num_samples 1 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info --keep_past_actions \
+--imitate --multi_node --vf_loss_coeff .0001 --life_penalty 0.0 --sim_step 0.5" \
+--start --stop --cluster-name kp_high_in_NCN_AGG_NLSTM_Past_0pen_04frac_im --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py high_in_NCN_AGG_NLSTM_Past_2pen_04frac --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
+--num_samples 1 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info \
+--keep_past_actions --multi_node --vf_loss_coeff .0001 --life_penalty 3.0 --sim_step 0.5" \
+--start --stop --cluster-name kp_high_in_NCN_AGG_NLSTM_Past_2pen_04frac --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py high_in_NCN_AGG_NLSTM_Past_2pen_04frac_im --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
+--num_samples 1 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info --keep_past_actions \
+--imitate --multi_node --vf_loss_coeff .0001 --life_penalty 3.0 --sim_step 0.5" \
+--start --stop --cluster-name kp_high_in_NCN_AGG_NLSTM_Past_2pen_04frac_im --tmux
