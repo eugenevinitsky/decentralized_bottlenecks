@@ -51,6 +51,7 @@ class MultiEnv(MultiAgentEnv, Env):
         self.step_counter += 1
         for _ in range(self.env_params.sims_per_step):
             self.time_counter += 1
+            print(self.time_counter)
 
             # perform acceleration actions for controlled human-driven vehicles
             if len(self.k.vehicle.get_controlled_ids()) > 0:
