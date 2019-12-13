@@ -61,7 +61,7 @@ class ImitationLearningRateSchedule(object):
             self.policy_weight.load(1.0, session=self._sess)
         else:
             # we don't want the kl coefficient to go wild while we are imitating
-            self.kl_coeff.load(self.start_kl_val, session=self.get_session())
+            self.kl_coeff_val.load(self.start_kl_val, session=self.get_session())
         self.curr_iter += 1
 
 

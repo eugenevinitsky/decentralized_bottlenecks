@@ -290,7 +290,7 @@ def setup_exps(args):
 
     if args.imitate:
         config['model']['custom_options'].update({"imitation_weight": 1e0})
-        config['model']['custom_options'].update({"num_imitation_iters": 150})
+        config['model']['custom_options'].update({"num_imitation_iters": args.num_imitation_iters})
 
 
     # save the flow params for replay

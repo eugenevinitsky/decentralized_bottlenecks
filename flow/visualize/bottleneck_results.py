@@ -238,6 +238,7 @@ def run_bottleneck(args, inflow_rate, num_trials):
                             prev_reward=prev_rewards[agent_id],
                             policy_id=policy_id)
                         agent_states[agent_id] = p_state
+                        print(agent_id, a_action)
                     else:
                         a_action = agent.compute_action(
                             a_obs,
@@ -247,9 +248,11 @@ def run_bottleneck(args, inflow_rate, num_trials):
                     a_action = _flatten_action(a_action)  # tuple actions
                     action_dict[agent_id] = a_action
                     prev_actions[agent_id] = a_action
+                    print(agent_id, a_action)
             action = action_dict
 
             action = action if multiagent else action[_DUMMY_AGENT_ID]
+            # print(action)
             next_obs, reward, done, _ = env.step(action)
 
             if multiagent:
