@@ -58,7 +58,7 @@ class ImitationLearningRateSchedule(object):
 
         if self.curr_iter > self.num_imitation_iters:
             self.imitation_weight.load(0.0, session=self._sess)
-            self.policy_weight.load(1.0, session=self._sess)s
+            self.policy_weight.load(1.0, session=self._sess)
         self.curr_iter += 1
 
 def update_kl(trainer, fetches):
