@@ -136,8 +136,8 @@ def setup_flow_params(args):
         "n_crit": 8,
         "q_max": 15000,
         "q_min": 200,
-        "q_init": 600, # TODO(@evinitsky) pretty sure this is not the right value
-        "feedback_coeff": 10, # TODO(@evinitsky) pretty sure this is not the right value
+        "q_init": 600, #
+        "feedback_coeff": 1, # 
     }
 
     # percentage of flow coming out of each lane
