@@ -70,6 +70,7 @@ def update_kl(trainer, fetches):
 
         def update(pi, pi_id):
             if pi_id in fetches and trainer._iteration > trainer.config['model']['custom_options']['num_imitation_iters']:
+                print("Updating KL")
                 pi.update_kl(fetches[pi_id]["kl"])
             else:
                 print("No data for {}, not updating kl".format(pi_id))
