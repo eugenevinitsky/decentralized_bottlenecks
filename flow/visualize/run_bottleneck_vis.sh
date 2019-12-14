@@ -1,4 +1,4 @@
 #!/bin/bash
 
-python flow/visualize/bottleneck_results.py /Users/kanaad/code/research/learning-traffic/imitation_results/high_in_NCN_AGG_NLSTM_Past_2pen_04frac_im/high_in_NCN_AGG_NLSTM_Past_2pen_04frac_im/ImitationPPOTrainer_MultiBottleneckImitationEnv-v0_0_lr=5e-05_2019-12-13_03-19-33rl4x64m3 150 test \
---num_trials 3 --outflow_min 2300 --outflow_max 2300 --num_cpus 1 --render_mode sumo_gui
+python bottleneck_results.py /Users/eugenevinitsky/Desktop/Research/Data/trb_bottleneck_paper/12-13-2019/3pen_im_200s/3pen_im_200s/ImitationPPOTrainer_MultiBottleneckImitationEnv-v0_1_lr=0.0005_2019-12-13_22-03-09reqzyuqo 300 test \
+--num_trials 1 --outflow_min 1800 --outflow_max 1800 --num_cpus 1 --render_mode sumo_gui
