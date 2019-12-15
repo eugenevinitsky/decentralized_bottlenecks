@@ -255,10 +255,11 @@ def setup_exps(args):
     config['vf_loss_coeff'] = args.vf_loss_coeff
     config['gamma'] = 0.999  # discount rate
     config['horizon'] = args.horizon
+    config['num_sgd_iter'] = tune.grid_search([30, 100])
 
     # Grid search things
     if args.grid_search:
-        config['lr'] = tune.grid_search([5e-5, 5e-4])
+        config['lr'] = tune.grid_search([5e-6, 5e-5, 5e-4])
 
     # LSTM Things
     if args.use_lstm and args.use_gru:
