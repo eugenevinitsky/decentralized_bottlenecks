@@ -496,6 +496,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             return [-1 / 4.0 for _ in range(8)]
 
 
+
+
 class MultiBottleneckImitationEnv(MultiBottleneckEnv):
     """MultiBottleneckEnv but we return as our obs dict that also contains the actions of a queried expert"""
 
@@ -537,10 +539,7 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
             controller = self.curr_rl_vehicles[key]['controller']
             accel = controller.get_accel(self)
             if accel is None:
-                if isinstance(self.action_space, Box):
-                    accel = self.action_space.low[0]
-                else:
-                    accel = self.action_values[0]
+                accel = self.action_space.low[0]
 
             veh_stop_time = controller.stop_time
             if controller.is_waiting_to_go:
@@ -553,19 +552,11 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
             else:
                 first_in_queue = 0
 
-            # TODO(@evinitsky) this is horrifyingly bad subclassing
-            if isinstance(self.observation_space, Box):
-                state_dict[key] = {"obs": np.concatenate((value, [time_since_stop / self.env_params.horizon,
-                                                                  duration / 100.0,
-                                                                  first_in_queue])),
-                                   "expert_action": np.array([np.clip(accel, a_min=self.action_space.low[0],
-                                                                      a_max=self.action_space.high[0])])}
-            else:
-                state_dict[key] = {"obs": np.concatenate((value, [time_since_stop / self.env_params.horizon,
-                                                                  duration / 100.0,
-                                                                  first_in_queue])),
-                                   "expert_action": np.array([np.clip(accel, a_min=self.action_values[0],
-                                                                      a_max=self.action_values[-1])])}
+            state_dict[key] = {"obs": np.concatenate((value, [time_since_stop / self.env_params.horizon,
+                                                              duration / 100.0,
+                                                              first_in_queue])),
+                               "expert_action": np.array([np.clip(accel, a_min=self.action_space.low[0],
+                                                                  a_max=self.action_space.high[0])])}
         return state_dict
 
 
@@ -580,10 +571,11 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
         # how many steps we let the expert control the environment for
         self.num_expert_steps = self.env_params.additional_params['num_expert_steps']
         # whether to include the iteration number in the sample
-        # TODO(@evinitsky) implement fingerprinting
+        # TODO(@evinitsky) add exploration to fingerprinting
         self.fingerprinting = self.env_params.additional_params['fingerprinting']
         self.num_sampled_steps = 0
         self.iteration = 0
+        self.exp_vals = 1.0
 
         self.action_values = np.linspace(-3, 3, self.num_actions)
 
@@ -607,13 +599,16 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
                 action_list = []
                 for key, value in rl_actions.items():
 
-                    controller = self.curr_rl_vehicles[key]['controller']
-                    accel = controller.get_accel(self)
-                    if accel is None:
-                        accel = self.action_values[0]
+                    # a vehicle may have left since we got the state
+                    if key not in self.k.vehicle.get_arrived_ids():
+                        controller = self.curr_rl_vehicles[key]['controller']
+                        accel = controller.get_accel(self)
 
-                    id_list.append(key)
-                    action_list.append(np.clip(accel, a_min=self.action_values[0], a_max=self.action_values[-1]))
+                        if accel is None:
+                            accel = self.action_values[0]
+
+                        id_list.append(key)
+                        action_list.append(self.find_nearest(self.action_values, accel))
                 self.k.vehicle.apply_acceleration(id_list, action_list)
             else:
                 action_list = [(id, self.action_values[action]) for id, action in rl_actions.items()]
@@ -623,12 +618,13 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
 
     @property
     def observation_space(self):
-        obs = super().observation_space
         # Extra keys "time since stop", duration, whether you are first in the queue
-        new_obs = Box(low=-3.0, high=3.0, shape=(33,), dtype=np.float32)
+        num_obs = 33
+        if self.fingerprinting:
+            num_obs += 2
+        new_obs = Box(low=-3.0, high=3.0, shape=(num_obs,), dtype=np.float32)
         # new_obs = Box(low=-3.0, high=3.0, shape=(obs.shape[0],), dtype=np.float32)
         return new_obs
-
 
     def get_state(self, rl_actions=None):
         add_params = self.env_params.additional_params
@@ -680,10 +676,7 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
             controller = self.curr_rl_vehicles[key]['controller']
             accel = controller.get_accel(self)
             if accel is None:
-                if isinstance(self.action_space, Box):
-                    accel = self.action_space.low[0]
-                else:
-                    accel = self.action_values[0]
+                accel = self.action_values[0]
 
             veh_stop_time = controller.stop_time
             if controller.is_waiting_to_go:
@@ -696,37 +689,43 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
             else:
                 first_in_queue = 0
 
-            value = np.concatenate((value, [time_since_stop / self.env_params.horizon,
-                                    duration / 100.0,
-                                    first_in_queue]))
-            expert_action = int(np.array([np.clip(accel, a_min=self.action_values[0], a_max=self.action_values[-1])]))
+            concat_list = [time_since_stop / self.env_params.horizon, duration / 100.0, first_in_queue]
+            if self.fingerprinting:
+                # Since we only either are totally exploring or not exploring at all, lets just put a one in here for now
+                if self.num_sampled_steps < self.num_expert_steps:
+                    concat_list.extend([self.num_sampled_steps / 1e7, 1.0])
+                else:
+                    concat_list.extend([self.num_sampled_steps / 1e7, 0.0])
+            value = np.concatenate((value, concat_list))
+            expert_action = int(self.find_nearest_idx(self.action_values, accel))
             value = np.concatenate((value, [expert_action]))
-
 
             value = np.clip(value, a_min=self.observation_space.low, a_max=self.observation_space.high)
             state_dict[key] = value
 
-            # TODO map the expert action to the discrete value
-            # state_dict[key] = {"obs": np.conctanate(value['obs'], expert_action)
-            #                    "expert_action": int(self.find_nearest(self.action_values, expert_action))}
-
         return state_dict
 
     def reset(self, new_inflow_rate=None):
-
         self.curr_rl_vehicles = {}
         self.update_curr_rl_vehicles()
 
         state_dict = super().reset(new_inflow_rate)
         return state_dict
 
-    def update_num_steps(self, num_steps, iteration):
+    def update_num_steps(self, num_steps, iteration, exp_vals):
         self.num_sampled_steps = num_steps
+        print('number of sampled steps is ', self.num_sampled_steps)
         self.iteration = iteration
+        self.exp_vals = exp_vals
 
     @property
     def action_space(self):
         return Discrete(self.num_actions)
+
+    def find_nearest_idx(self, array, value):
+        array = np.asarray(array)
+        idx = (np.abs(array - value)).argmin()
+        return idx
 
     def find_nearest(self, array, value):
         array = np.asarray(array)

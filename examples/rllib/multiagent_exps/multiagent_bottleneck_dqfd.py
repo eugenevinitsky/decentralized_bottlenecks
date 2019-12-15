@@ -131,16 +131,16 @@ def setup_flow_params(args):
         'exit_history_seconds': 0,  # This doesn't do anything, remove
 
         # parameters for the staggering controller that we imitate
-        "n_crit": 8,
+        "n_crit": 12,
         "q_max": 15000,
         "q_min": 200,
         "q_init": 600, #
-        "feedback_coeff": 10, #
+        "feedback_coeff": 5, #
 
         # DQFD params
-        "num_expert_steps": 300,
+        "num_expert_steps": args.num_expert_steps,
         "action_discretization": 5,
-        "fingerprinting": False
+        "fingerprinting": args.fingerprinting
     }
 
     # percentage of flow coming out of each lane
@@ -245,11 +245,13 @@ def on_episode_end(info):
 
 def on_train_result(info):
     trainer = info["trainer"]
-    num_steps = trainer._timesteps_total
+    num_train_steps = trainer.optimizer.num_steps_trained
     iteration = trainer._iteration
+    global_timestep = trainer.optimizer.num_steps_sampled
+    exp_vals = [trainer.exploration0.value(global_timestep)]
     trainer.workers.foreach_worker(
         lambda ev: ev.foreach_env(
-            lambda env: env.update_num_steps(num_steps, iteration)))
+            lambda env: env.update_num_steps(num_train_steps, iteration, exp_vals)))
 
 
 def setup_exps(args):
@@ -260,7 +262,7 @@ def setup_exps(args):
     config['num_workers'] = rllib_params['n_cpus']
     config['gamma'] = 0.999  # discount rate
     config['horizon'] = args.horizon
-    config['num_expert_steps'] = 5e4
+    config['num_expert_steps'] = args.num_expert_steps
 
     # Grid search things
     if args.grid_search:
@@ -299,6 +301,10 @@ def setup_exps(args):
 
 if __name__ == '__main__':
     parser = get_multiagent_bottleneck_parser()
+    parser.add_argument('--num_expert_steps', type=int, default=1e6, help='How many steps to let the expert take'
+                                                                          'before switching back to the actor')
+    parser.add_argument('--fingerprinting', action='store_true', default=False,
+                        help='Whether to add the iteration number to the inputs')
     args = parser.parse_args()
 
     alg_run, env_name, config = setup_exps(args)

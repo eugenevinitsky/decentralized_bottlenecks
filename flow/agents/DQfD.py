@@ -148,10 +148,10 @@ class DQfDOptimizer(SyncReplayOptimizer):
             for policy_id, s in batch.policy_batches.items():
                 for row in s.rows():
                     # replace the actions with the expert actions
-                    if self.num_steps_sampled < self.num_expert_steps:
+                    if self.num_steps_trained < self.num_expert_steps:
                         self.replay_buffers[policy_id].add(
                             pack_if_needed(row["obs"]),
-                            row["obs"][-1],
+                            int(row["obs"][-1]),
                             row["rewards"],
                             pack_if_needed(row["new_obs"]),
                             row["dones"],

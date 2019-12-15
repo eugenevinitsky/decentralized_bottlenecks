@@ -421,7 +421,7 @@ class IDMController(BaseController):
                  veh_id,
                  v0=30,
                  T=1,
-                 a=1,
+                 a=3, # TODO(@evinitsky) put this back
                  b=1.5,
                  delta=4,
                  s0=2,
