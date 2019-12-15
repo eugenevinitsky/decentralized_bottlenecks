@@ -626,7 +626,10 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
         if self.env_params.additional_params.get('keep_past_actions', False):
             self.num_past_actions = 100
             num_obs += self.num_past_actions
-            
+
+        if self.env_params.additional_params.get('aggregate_info'):
+            num_obs += 6
+
         new_obs = Box(low=-3.0, high=3.0, shape=(num_obs,), dtype=np.float32)
         # new_obs = Box(low=-3.0, high=3.0, shape=(obs.shape[0],), dtype=np.float32)
         return new_obs
