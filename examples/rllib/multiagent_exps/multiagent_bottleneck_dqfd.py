@@ -267,6 +267,8 @@ def setup_exps(args):
     # Grid search things
     if args.grid_search:
         config['lr'] = tune.grid_search([5e-6, 5e-5, 5e-4])
+        config['n_step'] = tune.grid_search([1, 10, 50])
+        config['train_batch_size'] = tune.grid_search([32, 320])
 
     # save the flow params for replay
     flow_json = json.dumps(
