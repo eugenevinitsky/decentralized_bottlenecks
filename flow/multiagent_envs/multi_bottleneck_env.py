@@ -622,6 +622,11 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
         num_obs = 33
         if self.fingerprinting:
             num_obs += 2
+
+        if self.env_params.additional_params.get('keep_past_actions', False):
+            self.num_past_actions = 100
+            num_obs += self.num_past_actions
+            
         new_obs = Box(low=-3.0, high=3.0, shape=(num_obs,), dtype=np.float32)
         # new_obs = Box(low=-3.0, high=3.0, shape=(obs.shape[0],), dtype=np.float32)
         return new_obs
@@ -693,9 +698,9 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
             if self.fingerprinting:
                 # Since we only either are totally exploring or not exploring at all, lets just put a one in here for now
                 if self.num_sampled_steps < self.num_expert_steps:
-                    concat_list.extend([self.num_sampled_steps / 1e7, 1.0])
+                    concat_list.extend([self.num_sampled_steps / 2e6, 1.0])
                 else:
-                    concat_list.extend([self.num_sampled_steps / 1e7, 0.0])
+                    concat_list.extend([self.num_sampled_steps / 2e6, 0.0])
             value = np.concatenate((value, concat_list))
             expert_action = int(self.find_nearest_idx(self.action_values, accel))
             value = np.concatenate((value, [expert_action]))
