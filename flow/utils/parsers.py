@@ -54,6 +54,8 @@ def get_multiagent_bottleneck_parser():
                         help='If true, the first 30 iterations are supervised learning on imitation of an IDM vehicle')
     parser.add_argument('--num_imitation_iters', type=int, default=150,
                         help='Number of iterations to imitate controller. must enable --imitate')
+    parser.add_argument('--hard_negative_mining', action='store_true', default=False,
+                        help='Use only the top 10 percent actions to imitate')
     
     # arguments for ray
     parser.add_argument('--use_lstm', action='store_true')
