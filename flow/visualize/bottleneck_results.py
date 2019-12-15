@@ -187,6 +187,8 @@ def run_bottleneck(args, inflow_rate, num_trials):
     vel = []
     mapping_cache = {}  # in case policy_agent_mapping is stochastic
 
+    mean_error = []
+
     for j in range(num_trials):
         agent_states = DefaultMapping(
             lambda agent_id: state_init[mapping_cache[agent_id]])
@@ -239,6 +241,7 @@ def run_bottleneck(args, inflow_rate, num_trials):
                             policy_id=policy_id)
                         agent_states[agent_id] = p_state
                         print(agent_id, a_action)
+                        print('a_obs is ', a_obs[0])
                     else:
                         a_action = agent.compute_action(
                             a_obs,
@@ -248,7 +251,10 @@ def run_bottleneck(args, inflow_rate, num_trials):
                     a_action = _flatten_action(a_action)  # tuple actions
                     action_dict[agent_id] = a_action
                     prev_actions[agent_id] = a_action
-                    print(agent_id, a_action)
+                    print('our actions: ', agent_id, a_action)
+                    print('expert actions: ',agent_id, a_obs['expert_action'])
+                    mean_error.append(np.abs(a_action - a_obs['expert_action']))
+
             action = action_dict
 
             action = action if multiagent else action[_DUMMY_AGENT_ID]
@@ -270,6 +276,7 @@ def run_bottleneck(args, inflow_rate, num_trials):
             k += 1
             obs = next_obs
 
+        print('mean error was ', np.mean(mean_error))
         vehicles = env.unwrapped.k.vehicle
         outflow = vehicles.get_outflow_rate(500)
         final_outflows.append(outflow)

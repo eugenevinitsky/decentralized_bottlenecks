@@ -10,9 +10,7 @@ import sys
 import numpy as np
 import pytz
 import ray
-import ray.rllib.agents.ppo as ppo
 from ray import tune
-from ray.rllib.models import ModelCatalog
 from ray.tune import run
 from ray.tune.registry import register_env
 
@@ -23,11 +21,11 @@ from flow.core.params import TrafficLightParams
 from flow.core.params import VehicleParams
 from flow.controllers import RLController, ContinuousRouter, \
     SimLaneChangeController
-from flow.models.FeedForward import FeedForward
-from flow.models.GRU import GRU
 from flow.utils.parsers import get_multiagent_bottleneck_parser
 from flow.utils.registry import make_create_env
 from flow.utils.rllib import FlowParamsEncoder
+from flow.agents.DQfD import DQFDTrainer
+import flow.agents.DQfD as DQfD
 
 
 # TODO(@evinitsky) clean this up
@@ -138,6 +136,11 @@ def setup_flow_params(args):
         "q_min": 200,
         "q_init": 600, #
         "feedback_coeff": 10, #
+
+        # DQFD params
+        "num_expert_steps": 300,
+        "action_discretization": 5,
+        "fingerprinting": False
     }
 
     # percentage of flow coming out of each lane
@@ -171,10 +174,7 @@ def setup_flow_params(args):
 
     additional_net_params = {'scaling': args.scaling, "speed_limit": 23.0}
 
-    if args.imitate:
-        env_name = 'MultiBottleneckImitationEnv'
-    else:
-        env_name = 'MultiBottleneckEnv'
+    env_name = 'MultiBottleneckDFQDEnv'
     flow_params = dict(
         # name of the experiment
         exp_tag=args.exp_title,
@@ -243,56 +243,28 @@ def on_episode_end(info):
     episode.custom_metrics["net_outflow_{}".format(inflow)] = outflow_over_last_500
 
 
+def on_train_result(info):
+    trainer = info["trainer"]
+    num_steps = trainer._timesteps_total
+    iteration = trainer._iteration
+    trainer.workers.foreach_worker(
+        lambda ev: ev.foreach_env(
+            lambda env: env.update_num_steps(num_steps, iteration)))
+
+
 def setup_exps(args):
     rllib_params = setup_rllib_params(args)
     flow_params = setup_flow_params(args)
-    alg_run = 'PPO'
-    config = ppo.DEFAULT_CONFIG.copy()
+    alg_run = 'DQFD'
+    config = DQfD.DEFAULT_CONFIG.copy()
     config['num_workers'] = rllib_params['n_cpus']
-    config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
-    config['sgd_minibatch_size'] = min(2000, config['train_batch_size'])
-    config['sample_batch_size'] = 500
-    config['vf_loss_coeff'] = args.vf_loss_coeff
     config['gamma'] = 0.999  # discount rate
     config['horizon'] = args.horizon
+    config['num_expert_steps'] = 5e4
 
     # Grid search things
     if args.grid_search:
         config['lr'] = tune.grid_search([5e-6, 5e-5, 5e-4])
-
-    # LSTM Things
-    if args.use_lstm and args.use_gru:
-        sys.exit("You should not specify both an LSTM and a GRU")
-    if args.use_lstm:
-        if args.grid_search:
-            config['model']["max_seq_len"] = tune.grid_search([10, 20])
-        else:
-            config['model']["max_seq_len"] = 20
-        config['model'].update({'fcnet_hiddens': []})
-        config['model']["lstm_cell_size"] = 64
-        config['model']['lstm_use_prev_action_reward'] = True
-    elif args.use_gru:
-        if args.grid_search:
-            config['model']["max_seq_len"] = tune.grid_search([20, 40])
-        else:
-            config['model']["max_seq_len"] = 20
-            config['model'].update({'fcnet_hiddens': []})
-        model_name = "GRU"
-        ModelCatalog.register_custom_model(model_name, GRU)
-        config['model']['custom_model'] = model_name
-        config['model']['custom_options'].update({"cell_size": 64, 'use_prev_action': True})
-    else:
-        config['model'].update({'fcnet_hiddens': [64, 64]})
-        model_name = "FeedForward"
-        ModelCatalog.register_custom_model(model_name, FeedForward)
-        config['model']['custom_model'] = model_name
-        config['model']['custom_options'].update({'use_prev_action': True})
-
-    if args.imitate:
-        config['num_sgd_iter'] = tune.grid_search([30, 100])
-        config['model']['custom_options'].update({"imitation_weight": 1e0})
-        config['model']['custom_options'].update({"num_imitation_iters": args.num_imitation_iters})
-
 
     # save the flow params for replay
     flow_json = json.dumps(
@@ -340,17 +312,15 @@ if __name__ == '__main__':
     s3_string = "s3://eugene.experiments/trb_bottleneck_paper/" \
                 + date + '/' + args.exp_title
     config['env'] = env_name
+    config['compress_observations'] = False
 
     # store custom metrics
-    config["callbacks"] = {"on_episode_end": tune.function(on_episode_end)}
-
-    if args.imitate:
-        from flow.agents.ImitationPPO import ImitationTrainer
-        alg_run = ImitationTrainer
+    config["callbacks"] = {"on_episode_end": tune.function(on_episode_end),
+                           "on_train_result": tune.function(on_train_result)}
 
     exp_dict = {
             'name': args.exp_title,
-            'run_or_experiment': alg_run,
+            'run_or_experiment': DQFDTrainer,
             'checkpoint_freq': args.checkpoint_freq,
             'stop': {
                 'training_iteration': args.num_iters
