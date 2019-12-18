@@ -24,10 +24,16 @@ def imitation_loss(policy, model, dist_class, train_batch):
         mask = tf.ones_like(
             train_batch[Postprocessing.ADVANTAGES], dtype=tf.bool)
 
-    def reduce_mean_valid(t): return tf.reduce_mean(tf.boolean_mask(t, mask))
+    if policy.config['model']['custom_options']["hard_negative_mining"]:
+        masked_logp = tf.boolean_mask(action_dist.logp(expert_tensor), mask)
+        top_loss, _ = tf.math.top_k(masked_logp, int(policy.config['train_batch_size']/10)) # todo make this an actual 10%
+        top_loss = tf.reduce_sum(top_loss)
+        imitation_loss = -tf.reduce_mean(top_loss)
 
-    # Since we are doing gradient descent, we flip the sign so that we are minimizing the negative log prob
-    imitation_loss = -reduce_mean_valid(action_dist.logp(expert_tensor))
+    else:
+        # Since we are doing gradient descent, we flip the sign so that we are minimizing the negative log prob
+        imitation_loss = -tf.reduce_mean(tf.boolean_mask(action_dist.logp(expert_tensor), mask))    
+    
     return imitation_loss
 
 

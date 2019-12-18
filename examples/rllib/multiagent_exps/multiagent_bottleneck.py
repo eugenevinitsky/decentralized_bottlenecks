@@ -292,7 +292,7 @@ def setup_exps(args):
         config['num_sgd_iter'] = tune.grid_search([30, 100])
         config['model']['custom_options'].update({"imitation_weight": 1e0})
         config['model']['custom_options'].update({"num_imitation_iters": args.num_imitation_iters})
-
+        config['model']['custom_options']['hard_negative_mining'] = args.hard_negative_mining
 
     # save the flow params for replay
     flow_json = json.dumps(
