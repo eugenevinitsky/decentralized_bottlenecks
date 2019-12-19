@@ -303,7 +303,7 @@ def setup_exps(args):
 
 if __name__ == '__main__':
     parser = get_multiagent_bottleneck_parser()
-    parser.add_argument('--num_expert_steps', type=int, default=1e6, help='How many steps to let the expert take'
+    parser.add_argument('--num_expert_steps', type=int, default=5e5, help='How many steps to let the expert take'
                                                                           'before switching back to the actor')
     parser.add_argument('--fingerprinting', action='store_true', default=False,
                         help='Whether to add the iteration number to the inputs')
