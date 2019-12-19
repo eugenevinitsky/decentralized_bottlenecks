@@ -131,11 +131,11 @@ def setup_flow_params(args):
         'exit_history_seconds': 0,  # This doesn't do anything, remove
 
         # parameters for the staggering controller that we imitate
-        "n_crit": 12,
+        "n_crit": 8,
         "q_max": 15000,
         "q_min": 200,
         "q_init": 600, #
-        "feedback_coeff": 5, #
+        "feedback_coeff": 10, #
 
         # DQFD params
         "num_expert_steps": args.num_expert_steps,
@@ -198,7 +198,7 @@ def setup_flow_params(args):
 
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
-            warmup_steps=int(50 / args.sim_step),
+            warmup_steps=0, #int(50 / args.sim_step), # TODO(@ev) put back
             sims_per_step=2,
             horizon=args.horizon,
             clip_actions=False,

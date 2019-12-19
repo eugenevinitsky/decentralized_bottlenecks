@@ -53,6 +53,7 @@ class BottleneckDensityExperiment(Experiment):
             step_densities = []
             state = self.env.reset()
             for j in range(num_steps):
+                print(j)
                 state, reward, done, _ = self.env.step(rl_actions(state))
                 if j >= num_steps - end_len:
                     vehicles = self.env.k.vehicle
@@ -330,7 +331,11 @@ if __name__ == '__main__':
     parser.add_argument('--feedback_coef', type=float, default=1.0)
     args = parser.parse_args()
     if args.render:
-        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter, lc_on=args.lc, render=True, q_init=args.q_init, penetration_rate=args.penetration_rate, feedback_coef=args.feedback_coef)
+        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter, lc_on=args.lc,
+                                 render=True, q_init=args.q_init, penetration_rate=args.penetration_rate,
+                                 feedback_coef=args.feedback_coef)
     else:
-        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter, lc_on=args.lc, render=False, q_init=args.q_init, penetration_rate=args.penetration_rate, feedback_coef=args.feedback_coef)
+        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter,
+                                 lc_on=args.lc, render=False, q_init=args.q_init,
+                                 penetration_rate=args.penetration_rate, feedback_coef=args.feedback_coef)
     exp.run(args.num_runs, args.horizon)

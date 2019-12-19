@@ -830,9 +830,38 @@
 #--imitate --multi_node --vf_loss_coeff .0001 --life_penalty 3.0 --sim_step 0.5 --num_imitation_iters 300" \
 #--start --stop --cluster-name ev_Past_3pen_im200s --tmux
 
+#####################################################################################################################################################
+#####################################################################################################################################################
+## 12/15/19 exps
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck_dqfd.py dqfd_Past_0pen_im_2300i --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info --keep_past_actions \
+#--life_penalty 0.0 --sim_step 0.5 --fingerprinting" \
+#--start --stop --cluster-name ev_exp1 --tmux
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck_dqfd.py dqfd_0pen_im_2300i --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
+#--life_penalty 0.0 --sim_step 0.5 --fingerprinting" \
+#--start --stop --cluster-name ev_exp2 --tmux
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck_dqfd.py dqfd_2pen_im_kp_1900i --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2300 --high_inflow 2301 --aggregate_info --keep_past_actions \
+#--life_penalty 2.0 --sim_step 0.5 --fingerprinting" \
+#--start --stop --cluster-name ev_exp3 --tmux
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck_dqfd.py dqfd_2pen_im_1900i --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
+#--life_penalty 2.0 --sim_step 0.5 --fingerprinting" \
+#--start --stop --cluster-name ev_exp4 --tmux
+
+
 ####################################################################################################################################################
 ####################################################################################################################################################
-# 12/15/19 exps
+# 12/18/19 exps
 
 ray exec ray_autoscale.yaml \
 "python flow/examples/rllib/multiagent_exps/multiagent_bottleneck_dqfd.py dqfd_Past_0pen_im_2300i --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
@@ -857,4 +886,3 @@ ray exec ray_autoscale.yaml \
 --num_samples 1 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
 --life_penalty 2.0 --sim_step 0.5 --fingerprinting" \
 --start --stop --cluster-name ev_exp4 --tmux
-

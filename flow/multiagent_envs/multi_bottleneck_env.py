@@ -715,6 +715,8 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
 
     def reset(self, new_inflow_rate=None):
         self.curr_rl_vehicles = {}
+        self.waiting_queue = []
+
         self.update_curr_rl_vehicles()
 
         state_dict = super().reset(new_inflow_rate)
