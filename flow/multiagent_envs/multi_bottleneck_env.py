@@ -499,6 +499,12 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 class MultiBottleneckImitationEnv(MultiBottleneckEnv):
     """MultiBottleneckEnv but we return as our obs dict that also contains the actions of a queried expert"""
 
+    def __init__(self, env_params, sim_params, scenario, simulator='traci'):
+        import ipdb; ipdb.set_trace()
+        super().__init__(env_params, sim_params, scenario, simulator)
+        self.iter_num = 0
+        self.num_imitation_iters = env_params.additional_params.get("num_imitation_iters")
+
     def init_decentral_controller(self, rl_id):
         return FakeStaggeringDecentralizedALINEAController(rl_id, stop_edge="2", stop_pos=310,
                                                        additional_env_params=self.env_params.additional_params,
@@ -510,6 +516,9 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
                                               'is_stopped': False,}
                                               for rl_id in self.k.vehicle.get_rl_ids()
                                       if rl_id not in self.curr_rl_vehicles.keys()})
+
+    def set_iteration_num(self, iter_num):
+        self.iter_num = iter_num
 
     @property
     def observation_space(self):
@@ -556,3 +565,23 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
                                "expert_action": np.array([np.clip(accel, a_min=self.action_space.low[0],
                                                                   a_max=self.action_space.high[0])])}
         return state_dict
+
+    def _apply_rl_actions(self, rl_actions):
+
+        if rl_actions:
+            if self.iter_num < self.num_imitation_iters:
+                id_list = []
+                action_list = []
+                for key, value in rl_actions.items():
+
+                    # a vehicle may have left since we got the state
+                    if key not in self.k.vehicle.get_arrived_ids():
+                        controller = self.curr_rl_vehicles[key]['controller']
+                        accel = controller.get_accel(self)
+                        id_list.append(key)
+                        if not accel:
+                            accel = -3.0
+                        action_list.append(accel)
+                self.k.vehicle.apply_acceleration(id_list, action_list)
+            else:
+                super()._apply_rl_actions(rl_actions)
