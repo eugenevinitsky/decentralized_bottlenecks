@@ -79,7 +79,10 @@ def update_kl(trainer, fetches):
                 print("Updating KL")
                 pi.update_kl(fetches[pi_id]["kl"])
             else:
-                print("No data for {}, not updating kl".format(pi_id))
+                if pi_id not in fetches:
+                    print("No data for {}, not updating kl".format(pi_id))
+                elif trainer._iteration > trainer.config['model']['custom_options']['num_imitation_iters']:
+                    print("Still imitating, not updating KL yet")
 
         # multi-agent
         trainer.workers.local_worker().foreach_trainable_policy(update)
