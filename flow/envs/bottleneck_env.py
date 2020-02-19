@@ -946,7 +946,7 @@ class DesiredVelocityEnv(BottleneckEnv):
             else:
                 reward = self.k.vehicle.get_outflow_rate(int(add_params["num_sample_seconds"] / self.sim_step)) / 2000.0 - \
                          self.env_params.additional_params["life_penalty"]
-
+            print(self.k.vehicle.get_outflow_rate(int(add_params["num_sample_seconds"])))
             if add_params["congest_penalty"]:
                 num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
                 if num_vehs > add_params["congest_penalty_start"] * self.scaling:

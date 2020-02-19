@@ -13,7 +13,7 @@ from gym.spaces.discrete import Discrete
 from gym.spaces.tuple_space import Tuple
 import numpy as np
 
-from flow.controllers.velocity_controllers import FakeStaggeringDecentralizedALINEAController, IDMController
+from flow.controllers.velocity_controllers import FakeDecentralizedALINEAController, IDMController
 from flow.controllers.rlcontroller import RLController
 from flow.controllers.routing_controllers import ContinuousRouter
 from flow.controllers.lane_change_controllers import SimLaneChangeController
@@ -506,7 +506,7 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
         self.num_imitation_iters = env_params.additional_params.get("num_imitation_iters")
 
     def init_decentral_controller(self, rl_id):
-        return FakeStaggeringDecentralizedALINEAController(rl_id, stop_edge="2", stop_pos=310,
+        return FakeDecentralizedALINEAController(rl_id, stop_edge="2", stop_pos=310,
                                                        additional_env_params=self.env_params.additional_params,
                                                        car_following_params=SumoCarFollowingParams())
 

@@ -26,7 +26,7 @@ def imitation_loss(policy, model, dist_class, train_batch):
 
     if policy.config['model']['custom_options']["hard_negative_mining"]:
         masked_logp = tf.boolean_mask(action_dist.logp(expert_tensor), mask)
-        top_loss, _ = tf.math.top_k(masked_logp, int(policy.config['train_batch_size']/10)) # todo make this an actual 10%
+        top_loss, _ = tf.math.top_k(masked_logp, int(policy.config['sgd_minibatch_size']/10)) # todo make this an actual 10%
         top_loss = tf.reduce_sum(top_loss)
         imitation_loss = -tf.reduce_mean(top_loss)
 
