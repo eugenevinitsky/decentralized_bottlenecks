@@ -139,6 +139,7 @@ def setup_flow_params(args):
         "q_min": 200,
         "q_init": 600, #
         "feedback_coeff": 1, # 
+        'num_imitation_iters': 1 # TODO(kp): make this configurable
     }
 
     # percentage of flow coming out of each lane
@@ -251,6 +252,15 @@ def on_train_result(info):
         lambda ev: ev.foreach_env(
             lambda env: env.set_iteration_num(result['training_iteration'])))
 
+
+def on_train_result(info):
+    """Store the mean score of the episode, and increment or decrement how many adversaries are on"""
+    result = info["result"]
+    import ipdb; ipdb.set_trace()
+    iter_num = 5
+    trainer.workers.foreach_worker(
+        lambda ev: ev.foreach_env(
+            lambda env: env.set_iteration_number(iter_num)))
 
 def setup_exps(args):
     rllib_params = setup_rllib_params(args)

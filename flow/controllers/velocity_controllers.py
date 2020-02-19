@@ -340,6 +340,70 @@ class StaggeringDecentralizedALINEAController(DecentralizedALINEAController):
 
         return None
 
+class FakeDecentralizedALINEAController(StaggeringDecentralizedALINEAController):
+    """Same as the controller above but never actually calls set_stop"""
+
+    def __init__(self, veh_id, stop_edge, stop_pos, additional_env_params, car_following_params):
+        super().__init__(veh_id, stop_edge, stop_pos, additional_env_params, car_following_params)
+        self.idm_controller = IDMController(veh_id, car_following_params=car_following_params)       
+        self.stop_time = 0.0 
+
+    def get_accel(self, env):
+        cur_pos = env.k.vehicle.get_position(self.veh_id)
+        cur_speed = env.k.vehicle.get_speed(self.veh_id)
+        cur_lane = env.k.vehicle.get_lane(self.veh_id)
+
+        if len(env.k.vehicle.get_edge(self.veh_id)) and env.k.vehicle.get_edge(self.veh_id)[0] != ':':
+            if int(env.k.vehicle.get_edge(self.veh_id)) > int(self.stop_edge):
+                if self.veh_id in env.waiting_queue:
+                    env.waiting_queue.remove(self.veh_id)
+                self.is_waiting_to_go = False
+                return self.idm_controller.get_accel(env)
+            elif self.is_waiting_to_go:
+                # stop until conditions are met
+                if env.sim_step * (env.time_counter + 1) > self.stop_time + self.duration:
+                    self.stop_set = False
+                    return self.idm_controller.get_accel(env)
+                else:
+                    return None
+            elif self.stop_set:
+                self.set_stop(env)
+                b = self.max_deaccel
+                dt = env.sim_step
+                h = self.stop_pos - cur_pos - 4
+                if (b ** 2) * (dt ** 2) + 2 * b * h > 0:
+                    safe_velocity = - b * dt + np.sqrt((b ** 2) * (dt ** 2) + 2 * b * h)
+                else:
+                    safe_velocity = 0.0
+                idm_accel = self.idm_controller.get_accel(env)
+
+                if self.stop_pos - cur_pos < 4:
+                    self.stop_time = env.sim_step * env.time_counter
+                    self.is_waiting_to_go = True
+                    return None
+                else:
+                    if cur_speed + idm_accel * env.sim_step > safe_velocity:
+                        if safe_velocity > 0:
+                            return (safe_velocity - cur_speed) / env.sim_step
+                        else:
+                            return None # return max deaccel
+                    else:
+                        return idm_accel
+            else:
+                self.set_stop(env)
+                return self.idm_controller.get_accel(env)
+        else:
+            return self.idm_controller.get_accel(env)
+
+    def set_stop(self, env):
+        duration = self.get_duration(env)
+        if duration < 1.0:                
+            self.stop_set = False
+        else:
+            self.duration = duration
+            self.stop_set = True
+
+
 
 class FakeStaggeringDecentralizedALINEAController(StaggeringDecentralizedALINEAController):
     """Same as the controller above but never actually calls set_stop"""
@@ -350,7 +414,6 @@ class FakeStaggeringDecentralizedALINEAController(StaggeringDecentralizedALINEAC
         self.stop_time = 0.0 
 
     def get_accel(self, env):
-        env.k.vehicle.set_color(self.veh_id, (0, 255, 0))
         cur_pos = env.k.vehicle.get_position(self.veh_id)
         cur_speed = env.k.vehicle.get_speed(self.veh_id)
         cur_lane = env.k.vehicle.get_lane(self.veh_id)
