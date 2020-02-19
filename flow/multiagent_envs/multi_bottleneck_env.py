@@ -514,8 +514,8 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
     @property
     def observation_space(self):
         obs = super().observation_space
-        # Extra keys "time since stop", duration, whether you are first in the queue
-        new_obs = Box(low=-3.0, high=3.0, shape=(obs.shape[0] + 3,), dtype=np.float32)
+        # Extra keys "time since stop", duration
+        new_obs = Box(low=-3.0, high=3.0, shape=(obs.shape[0] + 2,), dtype=np.float32)
         # new_obs = Box(low=-3.0, high=3.0, shape=(obs.shape[0],), dtype=np.float32)
         return Dict({"obs": new_obs, "expert_action": self.action_space})
 
@@ -535,24 +535,23 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
 
         for key, value in state_dict.items():
             controller = self.curr_rl_vehicles[key]['controller']
+            if self.k.vehicle.get_speed(key) <= 0.0:
+                self.curr_rl_vehicles[key]['time_since_stopped'] += 1.0
+            else:
+                self.curr_rl_vehicles[key]['time_since_stopped'] = 0.0
+
             accel = controller.get_accel(self)
             if accel is None:
                 accel = self.action_space.low[0]
 
-            veh_stop_time = controller.stop_time
-            if controller.is_waiting_to_go:
-                time_since_stop = self.time_counter - veh_stop_time
-            else:
-                time_since_stop = 0.0
             duration = controller.duration
             if len(self.waiting_queue) > 0:
                 first_in_queue = 1 if self.waiting_queue[0] == key else 0
             else:
                 first_in_queue = 0
 
-            state_dict[key] = {"obs": np.concatenate((value, [time_since_stop / self.env_params.horizon,
-                                                              duration / 100.0,
-                                                              first_in_queue])),
+            state_dict[key] = {"obs": np.concatenate((value, [self.curr_rl_vehicles[key]['time_since_stopped'] / self.env_params.horizon,
+                                                              duration / 100.0])),
                                "expert_action": np.array([np.clip(accel, a_min=self.action_space.low[0],
                                                                   a_max=self.action_space.high[0])])}
         return state_dict
