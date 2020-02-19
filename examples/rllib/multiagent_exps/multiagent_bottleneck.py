@@ -292,7 +292,7 @@ def setup_exps(args):
     if args.imitate:
         config['model']['custom_options'].update({"imitation_weight": 1e0})
         config['model']['custom_options'].update({"num_imitation_iters": args.num_imitation_iters})
-
+        config['model']['custom_options']['hard_negative_mining'] = args.hard_negative_mining
 
     # save the flow params for replay
     flow_json = json.dumps(
