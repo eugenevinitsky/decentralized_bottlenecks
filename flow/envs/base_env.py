@@ -135,6 +135,9 @@ class Env(*classdef):
         self.time_counter = 0
         # step_counter: number of total steps taken
         self.step_counter = 0
+        self.num_resets = 0
+        self.should_render = self.sim_params.render
+        self.sim_params.render = False
         # initial_state:
         self.initial_state = {}
         self.state = None
@@ -419,6 +422,11 @@ class Env(*classdef):
             the initial observation of the space. The initial reward is assumed
             to be zero.
         """
+        # set rendering to true
+        self.num_resets += 1
+        if self.num_resets > 0 and self.should_render:
+            self.sim_params.render = True
+
         # reset the time counter
         self.time_counter = 0
 
