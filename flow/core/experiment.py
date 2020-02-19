@@ -125,6 +125,7 @@ class Experiment:
 
                 if done:
                     break
+            import ipdb; ipdb.set_trace()
             rets.append(ret)
             vels.append(vel)
             mean_rets.append(np.mean(ret_list))

@@ -51,7 +51,7 @@ class DQfDOptimizer(SyncReplayOptimizer):
                  beta_annealing_fraction=0.2,
                  final_prioritized_replay_beta=0.4,
                  train_batch_size=32,
-                 num_expert_steps=5e4,
+                 num_expert_steps=1e2,
                  sample_batch_size=4,
                  before_learn_on_batch=None,
                  synchronize_sampling=False):
@@ -71,7 +71,7 @@ class DQfDOptimizer(SyncReplayOptimizer):
                 beta over
             final_prioritized_replay_beta (float): final value of beta
             train_batch_size (int): size of batches to learn on
-            num_expert_steps (float): how many steps to take using the expert in the env
+            num_expert_steps (float): how many training iterations to take using the expert in the env
             sample_batch_size (int): size of batches to sample from workers
             before_learn_on_batch (function): callback to run before passing
                 the sampled batch to learn on
@@ -148,7 +148,7 @@ class DQfDOptimizer(SyncReplayOptimizer):
             for policy_id, s in batch.policy_batches.items():
                 for row in s.rows():
                     # replace the actions with the expert actions
-                    if self.num_steps_trained < self.num_expert_steps:
+                    if self.num_steps_sampled < self.num_expert_steps:
                         self.replay_buffers[policy_id].add(
                             pack_if_needed(row["obs"]),
                             int(row["obs"][-1]),

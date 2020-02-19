@@ -253,8 +253,9 @@ def setup_exps(args):
     config['sgd_minibatch_size'] = min(2000, config['train_batch_size'])
     config['sample_batch_size'] = 500
     config['vf_loss_coeff'] = args.vf_loss_coeff
-    config['gamma'] = 0.999  # discount rate
+    config['gamma'] = 0.995  # discount rate
     config['horizon'] = args.horizon
+    # TODO(@evinitsky) grid sweep GAE
 
     # Grid search things
     if args.grid_search:

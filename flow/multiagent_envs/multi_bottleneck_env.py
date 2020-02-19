@@ -13,7 +13,7 @@ from gym.spaces.discrete import Discrete
 from gym.spaces.tuple_space import Tuple
 import numpy as np
 
-from flow.controllers.velocity_controllers import FakeStaggeringDecentralizedALINEAController, IDMController
+from flow.controllers.velocity_controllers import FakeStaggeringDecentralizedALINEAController, IDMController, FakeDecentralizedALINEAController
 from flow.controllers.rlcontroller import RLController
 from flow.controllers.routing_controllers import ContinuousRouter
 from flow.controllers.lane_change_controllers import SimLaneChangeController
@@ -573,14 +573,17 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
         # whether to include the iteration number in the sample
         # TODO(@evinitsky) add exploration to fingerprinting
         self.fingerprinting = self.env_params.additional_params['fingerprinting']
-        self.num_sampled_steps = 0
+        self.num_steps_sampled = 0
         self.iteration = 0
         self.exp_vals = 1.0
 
         self.action_values = np.linspace(-3, 3, self.num_actions)
 
     def init_decentral_controller(self, rl_id):
-        return FakeStaggeringDecentralizedALINEAController(rl_id, stop_edge="2", stop_pos=310,
+        # return FakeStaggeringDecentralizedALINEAController(rl_id, stop_edge="2", stop_pos=310,
+        #                                                additional_env_params=self.env_params.additional_params,
+        #                                                car_following_params=SumoCarFollowingParams())
+        return FakeDecentralizedALINEAController(rl_id, stop_edge="2", stop_pos=310,
                                                        additional_env_params=self.env_params.additional_params,
                                                        car_following_params=SumoCarFollowingParams())
 
@@ -594,7 +597,7 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
     def _apply_rl_actions(self, rl_actions):
 
         if rl_actions:
-            if self.num_sampled_steps < self.num_expert_steps:
+            if self.num_steps_sampled < self.num_expert_steps:
                 id_list = []
                 action_list = []
                 for key, value in rl_actions.items():
@@ -619,7 +622,7 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
     @property
     def observation_space(self):
         # Extra keys "time since stop", duration, whether you are first in the queue
-        num_obs = 33
+        num_obs = 32
         if self.fingerprinting:
             num_obs += 2
 
@@ -692,18 +695,20 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
             else:
                 time_since_stop = 0.0
             duration = controller.duration
-            if len(self.waiting_queue) > 0:
-                first_in_queue = 1 if self.waiting_queue[0] == key else 0
-            else:
-                first_in_queue = 0
+            # if len(self.waiting_queue) > 0:
+            #     first_in_queue = 1 if self.waiting_queue[0] == key else 0
+            # else:
+            #     first_in_queue = 0
 
-            concat_list = [time_since_stop / self.env_params.horizon, duration / 100.0, first_in_queue]
+            # concat_list = [time_since_stop / self.env_params.horizon, duration / 100.0, first_in_queue]
+            concat_list = [time_since_stop / self.env_params.horizon, duration / 100.0]
+
             if self.fingerprinting:
                 # Since we only either are totally exploring or not exploring at all, lets just put a one in here for now
-                if self.num_sampled_steps < self.num_expert_steps:
-                    concat_list.extend([self.num_sampled_steps / 2e6, 1.0])
+                if self.num_steps_sampled < self.num_expert_steps:
+                    concat_list.extend([self.num_steps_sampled / 1e5, 1.0])
                 else:
-                    concat_list.extend([self.num_sampled_steps / 2e6, 0.0])
+                    concat_list.extend([self.num_steps_sampled / 1e5, 0.0])
             value = np.concatenate((value, concat_list))
             expert_action = int(self.find_nearest_idx(self.action_values, accel))
             value = np.concatenate((value, [expert_action]))
@@ -722,9 +727,9 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
         state_dict = super().reset(new_inflow_rate)
         return state_dict
 
-    def update_num_steps(self, num_steps, iteration, exp_vals):
-        self.num_sampled_steps = num_steps
-        print('number of sampled steps is ', self.num_sampled_steps)
+    def update_num_steps(self, num_steps_sampled, iteration, exp_vals):
+        self.num_steps_sampled = num_steps_sampled
+        print('number of sampled steps is ', self.num_steps_sampled)
         self.iteration = iteration
         self.exp_vals = exp_vals
 

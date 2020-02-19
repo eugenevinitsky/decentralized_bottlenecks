@@ -84,6 +84,8 @@ setup_commands:
     # set up ray by pip installing and copying over rllib and tune folder
     - pip install --upgrade pyzmq notebook
     - pip install -r ~/flow/requirements.txt
+    - pip install ray==0.7.7
+    - pip install tensorflow==1.15.0
     - python ~/flow/scripts/replace_rnn_sequence.py
 
 # Custom commands that will be run on the head node after common setup.
