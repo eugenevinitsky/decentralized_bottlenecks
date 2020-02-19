@@ -131,6 +131,7 @@ def setup_flow_params(args):
         "speed_reward": args.speed_reward,
         'fair_reward': False,  # This doesn't do anything, remove
         'exit_history_seconds': 0,  # This doesn't do anything, remove
+        'num_imitation_iters': args.num_imitation_iters,
 
         # parameters for the staggering controller that we imitate
         "n_crit": 8,
@@ -242,6 +243,14 @@ def on_episode_end(info):
     episode = info["episode"]
     episode.custom_metrics["net_outflow_{}".format(inflow)] = outflow_over_last_500
 
+def on_train_result(info):
+    """Store the mean score of the episode, and increment or decrement how many adversaries are on"""
+    result = info["result"]
+    trainer = info["trainer"]
+    trainer.workers.foreach_worker(
+        lambda ev: ev.foreach_env(
+            lambda env: env.set_iteration_num(result['training_iteration'])))
+
 
 def setup_exps(args):
     rllib_params = setup_rllib_params(args)
@@ -284,10 +293,10 @@ def setup_exps(args):
         config['model']['custom_options'].update({"cell_size": 64, 'use_prev_action': True})
     else:
         config['model'].update({'fcnet_hiddens': [64, 64]})
-        model_name = "FeedForward"
-        ModelCatalog.register_custom_model(model_name, FeedForward)
-        config['model']['custom_model'] = model_name
-        config['model']['custom_options'].update({'use_prev_action': True})
+        # model_name = "FeedForward"
+        # ModelCatalog.register_custom_model(model_name, FeedForward)
+        # config['model']['custom_model'] = model_name
+        # config['model']['custom_options'].update({'use_prev_action': True})
 
     if args.imitate:
         config['model']['custom_options'].update({"imitation_weight": 1e0})
@@ -332,6 +341,8 @@ if __name__ == '__main__':
     alg_run, env_name, config = setup_exps(args)
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
+    elif args.local_mode:
+        ray.init(local_mode=True)
     else:
         ray.init()
     eastern = pytz.timezone('US/Eastern')
@@ -342,7 +353,12 @@ if __name__ == '__main__':
     config['env'] = env_name
 
     # store custom metrics
-    config["callbacks"] = {"on_episode_end": tune.function(on_episode_end)}
+    if args.imitate:
+        config["callbacks"] = {"on_episode_end": tune.function(on_episode_end),
+                               "on_train_result": tune.function(on_train_result)}
+
+    else:
+        config["callbacks"] = {"on_episode_end": tune.function(on_episode_end)}
 
     if args.imitate:
         from flow.agents.ImitationPPO import ImitationTrainer

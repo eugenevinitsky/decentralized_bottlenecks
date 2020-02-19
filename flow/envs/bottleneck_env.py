@@ -659,10 +659,6 @@ class DesiredVelocityEnv(BottleneckEnv):
     def __init__(self, env_params, sim_params, scenario, simulator='traci'):
         """Initialize DesiredVelocityEnv."""
         super().__init__(env_params, sim_params, scenario, simulator)
-        for p in ADDITIONAL_VSL_ENV_PARAMS.keys():
-            if p not in env_params.additional_params:
-                raise KeyError(
-                    'Environment parameter "{}" not supplied'.format(p))
 
         # default (edge, segment, controlled) status
         add_env_params = self.env_params.additional_params

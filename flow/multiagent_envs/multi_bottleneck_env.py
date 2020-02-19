@@ -500,7 +500,6 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
     """MultiBottleneckEnv but we return as our obs dict that also contains the actions of a queried expert"""
 
     def __init__(self, env_params, sim_params, scenario, simulator='traci'):
-        import ipdb; ipdb.set_trace()
         super().__init__(env_params, sim_params, scenario, simulator)
         self.iter_num = 0
         self.num_imitation_iters = env_params.additional_params.get("num_imitation_iters")
@@ -554,10 +553,6 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
                 accel = self.action_space.low[0]
 
             duration = controller.duration
-            if len(self.waiting_queue) > 0:
-                first_in_queue = 1 if self.waiting_queue[0] == key else 0
-            else:
-                first_in_queue = 0
 
             state_dict[key] = {"obs": np.concatenate((value, [self.curr_rl_vehicles[key]['time_since_stopped'] / self.env_params.horizon,
                                                               duration / 100.0])),

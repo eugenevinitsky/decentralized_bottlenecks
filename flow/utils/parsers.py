@@ -11,6 +11,8 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument('--n_cpus', type=int, default=1, help='Number of cpus to run experiment with')
     parser.add_argument('--multi_node', action='store_true', help='Set to true if this will '
                                                                   'be run in cluster mode')
+    parser.add_argument('--local_mode', action='store_true', default=False,
+                        help='If true only 1 CPU will be used')
     parser.add_argument("--num_iters", type=int, default=350)
     parser.add_argument("--checkpoint_freq", type=int, default=50)
     parser.add_argument("--num_samples", type=int, default=1)
