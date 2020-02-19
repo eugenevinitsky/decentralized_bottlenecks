@@ -157,6 +157,11 @@ class MultiEnv(MultiAgentEnv, Env):
             the initial observation of the space. The initial reward is assumed
             to be zero.
         """
+        # set rendering to true
+        self.num_resets += 1
+        if self.num_resets > 0 and self.should_render:
+            self.sim_params.render = True
+
         # reset the time counter
         self.time_counter = 0
 
