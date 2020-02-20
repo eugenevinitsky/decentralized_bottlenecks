@@ -124,7 +124,7 @@ class Env(*classdef):
         self.scenario = scenario
         self.net_params = scenario.net_params
         self.initial_config = scenario.initial_config
-        self.sim_params = sim_params
+        self.sim_params = deepcopy(sim_params)
         time_stamp = ''.join(str(time.time()).split('.'))
         if os.environ.get("TEST_FLAG", 0):
             # 1.0 works with stress_test_start 10k times
@@ -136,6 +136,7 @@ class Env(*classdef):
         # step_counter: number of total steps taken
         self.step_counter = 0
         self.num_resets = 0
+        # storage variable used to turn rendering back on after a call to reset
         self.should_render = self.sim_params.render
         self.sim_params.render = False
         # initial_state:
@@ -151,7 +152,7 @@ class Env(*classdef):
 
         # create the Flow kernel
         self.k = Kernel(simulator=self.simulator,
-                        sim_params=sim_params)
+                        sim_params=self.sim_params)
 
         # use the scenario class's network parameters to generate the necessary
         # scenario components within the scenario kernel
@@ -164,7 +165,7 @@ class Env(*classdef):
         # the scenario kernel as an input in order to determine what network
         # needs to be simulated.
         kernel_api = self.k.simulation.start_simulation(
-            scenario=self.k.scenario, sim_params=sim_params)
+            scenario=self.k.scenario, sim_params=self.sim_params)
 
         # pass the kernel api to the kernel and it's subclasses
         self.k.pass_api(kernel_api)

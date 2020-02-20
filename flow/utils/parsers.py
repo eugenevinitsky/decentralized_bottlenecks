@@ -58,6 +58,10 @@ def get_multiagent_bottleneck_parser():
                         help='Number of iterations to imitate controller. must enable --imitate')
     parser.add_argument('--hard_negative_mining', action='store_true', default=False,
                         help='Use only the top 10 percent actions to imitate')
+    parser.add_argument('--centralized_vf', action='store_true', default=False,
+                        help='If true, use a centralized value function')
+    parser.add_argument('--central_vf_size', type=int, default=64, help='The number of hidden units in '
+                                                                        'the value function')
     
     # arguments for ray
     parser.add_argument('--use_lstm', action='store_true')

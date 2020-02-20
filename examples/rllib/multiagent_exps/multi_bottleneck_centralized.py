@@ -28,8 +28,7 @@ from flow.utils.parsers import get_multiagent_bottleneck_parser
 if __name__ == "__main__":
 
     parser = get_multiagent_bottleneck_parser()
-    parser.add_argument('--central_vf_size', type=int, default=64, help='The number of hidden units in '
-                                                                        'the value function')
+
     args = parser.parse_args()
 
     alg_run, env_name, config = setup_exps(args)

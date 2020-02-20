@@ -16,6 +16,11 @@ from ray.rllib.models import ModelCatalog
 from ray.tune import run
 from ray.tune.registry import register_env
 
+from flow.agents.centralized_PPO import CentralizedCriticModel, CentralizedCriticModelRNN
+from flow.agents.centralized_PPO import CCTrainer
+
+
+from flow.agents.centralized_imitation_PPO import CCImitationTrainer
 
 from flow.core.params import SumoParams, EnvParams, InitialConfig, NetParams, \
     InFlows, SumoLaneChangeParams, SumoCarFollowingParams
@@ -23,7 +28,6 @@ from flow.core.params import TrafficLightParams
 from flow.core.params import VehicleParams
 from flow.controllers import RLController, ContinuousRouter, \
     SimLaneChangeController
-from flow.models.FeedForward import FeedForward
 from flow.models.GRU import GRU
 from flow.utils.parsers import get_multiagent_bottleneck_parser
 from flow.utils.registry import make_create_env
@@ -131,7 +135,6 @@ def setup_flow_params(args):
         "speed_reward": args.speed_reward,
         'fair_reward': False,  # This doesn't do anything, remove
         'exit_history_seconds': 0,  # This doesn't do anything, remove
-        'num_imitation_iters': args.num_imitation_iters,
 
         # parameters for the staggering controller that we imitate
         "n_crit": 8,
@@ -139,7 +142,7 @@ def setup_flow_params(args):
         "q_min": 200,
         "q_init": 600, #
         "feedback_coeff": 1, # 
-        'num_imitation_iters': 1 # TODO(kp): make this configurable
+        'num_imitation_iters': args.num_imitation_iters,
     }
 
     # percentage of flow coming out of each lane
@@ -200,7 +203,7 @@ def setup_flow_params(args):
 
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
-            warmup_steps=int(50 / args.sim_step),
+            warmup_steps=int(100 / args.sim_step),
             sims_per_step=2,
             horizon=args.horizon,
             clip_actions=False,
@@ -252,16 +255,6 @@ def on_train_result(info):
         lambda ev: ev.foreach_env(
             lambda env: env.set_iteration_num(result['training_iteration'])))
 
-
-def on_train_result(info):
-    """Store the mean score of the episode, and increment or decrement how many adversaries are on"""
-    result = info["result"]
-    import ipdb; ipdb.set_trace()
-    iter_num = 5
-    trainer.workers.foreach_worker(
-        lambda ev: ev.foreach_env(
-            lambda env: env.set_iteration_number(iter_num)))
-
 def setup_exps(args):
     rllib_params = setup_rllib_params(args)
     flow_params = setup_flow_params(args)
@@ -274,10 +267,10 @@ def setup_exps(args):
     config['vf_loss_coeff'] = args.vf_loss_coeff
     config['gamma'] = 0.999  # discount rate
     config['horizon'] = args.horizon
-    config['num_sgd_iter'] = tune.grid_search([30, 100])
 
     # Grid search things
     if args.grid_search:
+        config['num_sgd_iter'] = tune.grid_search([30, 100])
         config['lr'] = tune.grid_search([5e-6, 5e-5, 5e-4])
 
     # LSTM Things
@@ -307,6 +300,16 @@ def setup_exps(args):
         # ModelCatalog.register_custom_model(model_name, FeedForward)
         # config['model']['custom_model'] = model_name
         # config['model']['custom_options'].update({'use_prev_action': True})
+
+    # model setup for the centralized case
+    # Set up model
+    if args.centralized_vf:
+        if args.use_lstm:
+            ModelCatalog.register_custom_model("cc_model", CentralizedCriticModelRNN)
+        else:
+            ModelCatalog.register_custom_model("cc_model", CentralizedCriticModel)
+        config['model']['custom_model'] = "cc_model"
+        config['model']['custom_options']['central_vf_size'] = args.central_vf_size
 
     if args.imitate:
         config['model']['custom_options'].update({"imitation_weight": 1e0})
@@ -370,9 +373,13 @@ if __name__ == '__main__':
     else:
         config["callbacks"] = {"on_episode_end": tune.function(on_episode_end)}
 
-    if args.imitate:
+    if args.imitate and not args.centralized_vf:
         from flow.agents.ImitationPPO import ImitationTrainer
         alg_run = ImitationTrainer
+    elif args.imitate and args.centralized_vf:
+        alg_run = CCImitationTrainer
+    elif not args.imitate and args.centralized_vf:
+        alg_run = CCTrainer
 
     exp_dict = {
             'name': args.exp_title,

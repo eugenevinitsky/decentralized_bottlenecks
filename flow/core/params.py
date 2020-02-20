@@ -384,6 +384,8 @@ class SimParams(object):
         specifies whether to render the radius of RL observation
     pxpm : int, optional
         specifies rendering resolution (pixel / meter)
+    first_init: bool, optional
+        whether the env that uses this has been initialized
     """
 
     def __init__(self,
@@ -394,7 +396,8 @@ class SimParams(object):
                  save_render=False,
                  sight_radius=25,
                  show_radius=False,
-                 pxpm=2):
+                 pxpm=2,
+                 first_init=True):
         """Instantiate SimParams."""
         self.sim_step = sim_step
         self.render = render
@@ -404,6 +407,7 @@ class SimParams(object):
         self.sight_radius = sight_radius
         self.pxpm = pxpm
         self.show_radius = show_radius
+        self.first_init = first_init
 
 
 class AimsunParams(SimParams):

@@ -62,7 +62,7 @@ class ImitationLearningRateSchedule(object):
     def on_global_var_update(self, global_vars):
         super(ImitationLearningRateSchedule, self).on_global_var_update(global_vars)
 
-        if self.curr_iter > self.num_imitation_iters:
+        if self.curr_iter >= self.num_imitation_iters:
             self.imitation_weight.load(0.0, session=self._sess)
             self.policy_weight.load(1.0, session=self._sess)
         self.curr_iter += 1
