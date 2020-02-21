@@ -48,11 +48,11 @@ class CentralizedCriticModel(TFModelV2):
         self.register_variables(self.model.variables())
 
         # Central VF maps (obs, opp_ops, opp_act) -> vf_pred
-        self.max_num_agents = model_config.get("max_num_agents", 120)
+        self.max_num_agents = model_config['custom_options']['max_num_agents']
         self.obs_space_shape = obs_space.shape[0]
         other_obs = tf.keras.layers.Input(shape=(obs_space.shape[0] * self.max_num_agents, ), name="opp_obs")
         central_vf_dense = tf.keras.layers.Dense(
-            model_config.get("central_vf_size", 64), activation=tf.nn.tanh, name="c_vf_dense")(other_obs)
+            model_config['custom_options']['central_vf_size'], activation=tf.nn.tanh, name="c_vf_dense")(other_obs)
         central_vf_out = tf.keras.layers.Dense(
             1, activation=None, name="c_vf_out")(central_vf_dense)
         self.central_vf = tf.keras.Model(
