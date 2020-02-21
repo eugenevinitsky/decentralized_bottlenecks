@@ -108,6 +108,10 @@ def setup_flow_params(args):
     controlled_segments = [('1', 1, False), ('2', 2, True), ('3', 2, True),
                            ('4', 2, True), ('5', 1, False)]
     num_observed_segments = [('1', 1), ('2', 3), ('3', 3), ('4', 3), ('5', 1)]
+    if args.av_frac == 0.4:
+        q_init = 1000
+    else:
+        q_init = 600
     additional_env_params = {
         'target_velocity': 40,
         'disable_tb': True,
@@ -139,7 +143,7 @@ def setup_flow_params(args):
         "n_crit": 8,
         "q_max": 15000,
         "q_min": 200,
-        "q_init": 600, #
+        "q_init": q_init, #
         "feedback_coeff": 1, #
         'num_imitation_iters': args.num_imitation_iters,
     }

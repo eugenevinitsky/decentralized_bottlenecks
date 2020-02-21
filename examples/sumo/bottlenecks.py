@@ -324,7 +324,7 @@ if __name__ == '__main__':
     parser.add_argument('--render', type=int, default=1)
     parser.add_argument('--num_runs', type=int, default=5)
     parser.add_argument('--horizon', type=int, default=2000)
-    parser.add_argument('--q_init', type=int, default=400)
+    parser.add_argument('--q_init', type=int, default=1000)
     parser.add_argument('--penetration_rate', type=float, default=0.4)
     parser.add_argument('--lc', action="store_true")
     parser.add_argument('--feedback_coef', type=float, default=1.0)
