@@ -15,8 +15,6 @@ from ray.rllib.agents.ppo.ppo import DEFAULT_CONFIG
 import tensorflow as tf
 
 BEHAVIOUR_LOGITS = "behaviour_logits"
-imitation_default_config = deepcopy(DEFAULT_CONFIG)
-imitation_default_config['final_imitation_weight'] = 0.0
 
 def imitation_loss(policy, model, dist_class, train_batch):
     original_space = restore_original_dimensions(train_batch['obs'], model.obs_space)
@@ -192,7 +190,7 @@ class ImitationLearningRateSchedule(object):
                                                 trainable=False, dtype=tf.float32)
         self.policy_weight = tf.get_variable("policy_weight", initializer=0.0, trainable=False,
                                              dtype=tf.float32)
-        self.final_imitation_weight = config["final_imitation_weight"]
+        self.final_imitation_weight = config["model"]["custom_options"]["final_imitation_weight"]
         self.start_kl_val = config["kl_coeff"]
         self.num_imitation_iters = num_imitation_iters
         self.curr_iter = 0
@@ -258,7 +256,6 @@ def grad_stats(policy, train_batch, grads):
 ImitationPolicy = PPOTFPolicy.with_updates(
     name="ImitationPolicy",
     before_loss_init=setup_mixins,
-    get_default_config=lambda: imitation_default_config,
     stats_fn=loss_stats,
     grad_stats_fn=grad_stats,
     loss_fn=new_ppo_surrogate_loss,
@@ -268,5 +265,4 @@ ImitationPolicy = PPOTFPolicy.with_updates(
     ])
 
 ImitationTrainer = PPOTrainer.with_updates(name="ImitationPPOTrainer", default_policy=ImitationPolicy,
-                                           default_config=imitation_default_config,
                                            after_optimizer_step=update_kl)

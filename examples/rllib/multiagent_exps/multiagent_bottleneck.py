@@ -19,7 +19,6 @@ from ray.tune.registry import register_env
 
 from flow.agents.centralized_PPO import CentralizedCriticModel, CentralizedCriticModelRNN
 from flow.agents.centralized_PPO import CCTrainer
-from flow.agents.ImitationPPO import imitation_default_config
 from flow.agents.centralized_imitation_PPO import CCImitationTrainer
 
 from flow.core.params import SumoParams, EnvParams, InitialConfig, NetParams, \
@@ -259,10 +258,7 @@ def setup_exps(args):
     rllib_params = setup_rllib_params(args)
     flow_params = setup_flow_params(args)
     alg_run = 'PPO'
-    if args.imitate:
-        config = imitation_default_config
-    else:
-        config = ppo.DEFAULT_CONFIG.copy()
+    config = ppo.DEFAULT_CONFIG.copy()
     config['num_workers'] = rllib_params['n_cpus']
     config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
     config['sgd_minibatch_size'] = min(2000, config['train_batch_size'])
@@ -322,6 +318,7 @@ def setup_exps(args):
         config['model']['custom_options'].update({"imitation_weight": 1e0})
         config['model']['custom_options'].update({"num_imitation_iters": args.num_imitation_iters})
         config['model']['custom_options']['hard_negative_mining'] = args.hard_negative_mining
+        config["model"]["custom_options"]["final_imitation_weight"] = args.final_imitation_weight
 
     # save the flow params for replay
     flow_json = json.dumps(

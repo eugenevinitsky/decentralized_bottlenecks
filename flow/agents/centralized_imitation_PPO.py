@@ -14,7 +14,7 @@ from ray.rllib.utils.explained_variance import explained_variance
 from ray.rllib.evaluation.postprocessing import Postprocessing
 import tensorflow as tf
 
-from flow.agents.ImitationPPO import update_kl, ImitationLearningRateSchedule, imitation_loss, loss_stats, imitation_default_config
+from flow.agents.ImitationPPO import update_kl, ImitationLearningRateSchedule, imitation_loss, loss_stats
 from flow.agents.centralized_PPO import CentralizedValueMixin, \
     centralized_critic_postprocessing, loss_with_central_critic
 
@@ -69,5 +69,4 @@ ImitationCentralizedTrainer = PPOTrainer.with_updates(name="ImitationCentralized
 
 
 CCImitationTrainer = PPOTrainer.with_updates(name="CCImitationPPOTrainer", default_policy=ImitationCentralizedPolicy,
-                                             default_config=imitation_default_config,
                                              )
