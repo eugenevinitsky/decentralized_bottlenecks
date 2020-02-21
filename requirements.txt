@@ -15,7 +15,7 @@ matplotlib==3.0.0
 imutils==0.5.1
 numpydoc
 ray==0.7.4
-tensorflow==1.14.0
+tensorflow==1.15.0
 tensorflow-probability==0.7.0
 pandas
 opencv-python
