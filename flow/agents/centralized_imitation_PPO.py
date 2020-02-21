@@ -14,7 +14,7 @@ from ray.rllib.utils.explained_variance import explained_variance
 from ray.rllib.evaluation.postprocessing import Postprocessing
 import tensorflow as tf
 
-from flow.agents.ImitationPPO import update_kl, ImitationLearningRateSchedule, imitation_loss, loss_state
+from flow.agents.ImitationPPO import update_kl, ImitationLearningRateSchedule, imitation_loss, loss_stats, imitation_default_config
 from flow.agents.centralized_PPO import CentralizedValueMixin, \
     centralized_critic_postprocessing, loss_with_central_critic
 
@@ -22,11 +22,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--stop", type=int, default=100000)
 
 
-# def new_ppo_surrogate_loss(policy, batch_tensors):
 def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     policy.imitation_loss = imitation_loss(policy, model, dist_class, train_batch)
-    return policy.policy_weight * loss_with_central_critic(policy, model, dist_class, train_batch) \
-               + policy.imitation_weight * policy.imitation_loss
+    loss = loss_with_central_critic(policy, model, dist_class, train_batch)
+    # train your centralized value function all the time
+    return policy.policy_weight * loss.policy_loss \
+               + policy.imitation_weight * policy.imitation_loss + loss.mean_vf_loss
 
 
 def setup_mixins(policy, obs_space, action_space, config):
@@ -54,7 +55,7 @@ ImitationCentralizedPolicy = PPOTFPolicy.with_updates(
     name="ImitationCentralizedPolicy",
     before_loss_init=setup_mixins,
     postprocess_fn=centralized_critic_postprocessing,
-    stats_fn=loss_state,
+    stats_fn=loss_stats,
     grad_stats_fn=grad_stats,
     loss_fn=new_ppo_surrogate_loss,
     mixins=[
@@ -67,4 +68,6 @@ ImitationCentralizedTrainer = PPOTrainer.with_updates(name="ImitationCentralized
                                                       after_optimizer_step=update_kl)
 
 
-CCImitationTrainer = PPOTrainer.with_updates(name="CCImitationPPOTrainer", default_policy=ImitationCentralizedPolicy)
+CCImitationTrainer = PPOTrainer.with_updates(name="CCImitationPPOTrainer", default_policy=ImitationCentralizedPolicy,
+                                             default_config=imitation_default_config,
+                                             )

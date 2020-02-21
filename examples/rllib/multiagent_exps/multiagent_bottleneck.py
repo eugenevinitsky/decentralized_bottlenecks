@@ -3,6 +3,7 @@ In this example, each agent is given a single acceleration per timestep.
 
 The agents all share a single model.
 """
+from copy import deepcopy
 from datetime import datetime
 import json
 import sys
@@ -18,8 +19,7 @@ from ray.tune.registry import register_env
 
 from flow.agents.centralized_PPO import CentralizedCriticModel, CentralizedCriticModelRNN
 from flow.agents.centralized_PPO import CCTrainer
-
-
+from flow.agents.ImitationPPO import imitation_default_config
 from flow.agents.centralized_imitation_PPO import CCImitationTrainer
 
 from flow.core.params import SumoParams, EnvParams, InitialConfig, NetParams, \
@@ -141,7 +141,7 @@ def setup_flow_params(args):
         "q_max": 15000,
         "q_min": 200,
         "q_init": 600, #
-        "feedback_coeff": 1, # 
+        "feedback_coeff": 1, #
         'num_imitation_iters': args.num_imitation_iters,
     }
 
@@ -203,7 +203,7 @@ def setup_flow_params(args):
 
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
-            warmup_steps=int(100 / args.sim_step),
+            warmup_steps=int(50 / args.sim_step),
             sims_per_step=2,
             horizon=args.horizon,
             clip_actions=False,
@@ -259,14 +259,20 @@ def setup_exps(args):
     rllib_params = setup_rllib_params(args)
     flow_params = setup_flow_params(args)
     alg_run = 'PPO'
-    config = ppo.DEFAULT_CONFIG.copy()
+    if args.imitate:
+        config = imitation_default_config
+    else:
+        config = ppo.DEFAULT_CONFIG.copy()
     config['num_workers'] = rllib_params['n_cpus']
     config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
     config['sgd_minibatch_size'] = min(2000, config['train_batch_size'])
-    config['sample_batch_size'] = 500
-    config['vf_loss_coeff'] = args.vf_loss_coeff
-    config['gamma'] = 0.999  # discount rate
+    if args.use_lstm:
+        config['vf_loss_coeff'] = args.vf_loss_coeff
+    config['gamma'] = 0.995  # discount rate
     config['horizon'] = args.horizon
+    config["batch_mode"] = "truncate_episodes"
+    config["sample_batch_size"] = args.horizon
+    config["observation_filter"] = "MeanStdFilter"
 
     # Grid search things
     if args.grid_search:
@@ -310,6 +316,7 @@ def setup_exps(args):
             ModelCatalog.register_custom_model("cc_model", CentralizedCriticModel)
         config['model']['custom_model'] = "cc_model"
         config['model']['custom_options']['central_vf_size'] = args.central_vf_size
+        config['model']['custom_options']['max_num_agents'] = args.max_num_agents
 
     if args.imitate:
         config['model']['custom_options'].update({"imitation_weight": 1e0})

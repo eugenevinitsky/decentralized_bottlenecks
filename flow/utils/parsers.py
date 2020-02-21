@@ -54,7 +54,10 @@ def get_multiagent_bottleneck_parser():
                         help='If true the reward is the mean AV speed. If not set the reward is outflow')
     parser.add_argument('--imitate', action='store_true', default=False,
                         help='If true, the first 30 iterations are supervised learning on imitation of an IDM vehicle')
-    parser.add_argument('--num_imitation_iters', type=int, default=150,
+    parser.add_argument('--final_imitation_weight', type=float, default=0.0,
+                        help='This is the value we decrease the imitation weight to after imitation is done.'
+                             'Make it non-zero to prevent the policy from totally straying from the imitation weight.')
+    parser.add_argument('--num_imitation_iters', type=int, default=50,
                         help='Number of iterations to imitate controller. must enable --imitate')
     parser.add_argument('--hard_negative_mining', action='store_true', default=False,
                         help='Use only the top 10 percent actions to imitate')
@@ -62,7 +65,8 @@ def get_multiagent_bottleneck_parser():
                         help='If true, use a centralized value function')
     parser.add_argument('--central_vf_size', type=int, default=64, help='The number of hidden units in '
                                                                         'the value function')
-    
+    parser.add_argument('--max_num_agents', type=int, default=120, help='The maximum number of agents we could ever have')
+
     # arguments for ray
     parser.add_argument('--use_lstm', action='store_true')
     parser.add_argument('--use_gru', action='store_true')

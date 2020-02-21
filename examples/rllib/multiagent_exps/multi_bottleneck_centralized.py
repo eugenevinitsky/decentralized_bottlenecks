@@ -28,7 +28,6 @@ from flow.utils.parsers import get_multiagent_bottleneck_parser
 if __name__ == "__main__":
 
     parser = get_multiagent_bottleneck_parser()
-
     args = parser.parse_args()
 
     alg_run, env_name, config = setup_exps(args)

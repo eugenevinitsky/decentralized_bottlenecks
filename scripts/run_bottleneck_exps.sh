@@ -832,15 +832,42 @@
 
 ####################################################################################################################################################
 ####################################################################################################################################################
-# 2/19/20 exps
-ray exec scripts/ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 3pen_im --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
---num_samples 1 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
+## 2/19/20 exps
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 3pen_im --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
+#--imitate --multi_node  --life_penalty 3.0 --sim_step 0.5" \
+#--start --stop --cluster-name kp_3pen_im --tmux
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 3pen_im_cvf --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
+#--imitate --multi_node  --life_penalty 3.0 --sim_step 0.5 --centralized_vf" \
+#--start --stop --cluster-name kp_3pen_im_cvf --tmux
+
+####################################################################################################################################################
+####################################################################################################################################################
+## 2/20/20 exps
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 3pen_im_i2600 --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
+--num_samples 1 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --low_inflow 2600 --high_inflow 2600 --aggregate_info \
 --imitate --multi_node  --life_penalty 3.0 --sim_step 0.5" \
 --start --stop --cluster-name kp_3pen_im --tmux
 
-ray exec scripts/ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 3pen_im_cvf --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
---num_samples 1 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
---imitate --multi_node  --life_penalty 3.0 --sim_step 0.5 --centralized_vf" \
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 3pen_im_cvf_i2600 --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
+--num_samples 1 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --low_inflow 2600 --high_inflow 2600 --aggregate_info \
+--imitate --multi_node  --life_penalty 3.0 --sim_step 0.5 --centralized_vf --max_num_agents 200" \
+--start --stop --cluster-name kp_3pen_im_cvf --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 3pen_im_i2600_f0p1 --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
+--num_samples 1 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --low_inflow 2600 --high_inflow 2600 --aggregate_info \
+--imitate --multi_node  --life_penalty 3.0 --sim_step 0.5 --final_imitation_weight 0.1" \
+--start --stop --cluster-name kp_3pen_im --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 3pen_im_cvf_i2600_f0p1 --num_iters 500 --checkpoint_freq 50 --av_frac 0.4 \
+--num_samples 1 --grid_search --n_cpus 2 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --low_inflow 2600 --high_inflow 2600 --aggregate_info \
+--imitate --multi_node  --life_penalty 3.0 --sim_step 0.5 --centralized_vf --final_imitation_weight 0.1 --max_num_agents 200" \
 --start --stop --cluster-name kp_3pen_im_cvf --tmux

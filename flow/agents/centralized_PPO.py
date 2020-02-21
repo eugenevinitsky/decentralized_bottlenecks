@@ -8,8 +8,7 @@ import numpy as np
 
 from ray import tune
 from ray.rllib.agents.ppo.ppo import PPOTrainer
-from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy, KLCoeffMixin, \
-    PPOLoss, BEHAVIOUR_LOGITS
+from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy, KLCoeffMixin, BEHAVIOUR_LOGITS
 from ray.rllib.evaluation.postprocessing import compute_advantages, \
     Postprocessing
 from ray.rllib.policy.sample_batch import SampleBatch
@@ -22,6 +21,8 @@ from ray.rllib.utils.annotations import override
 from ray.rllib.models.tf.fcnet_v2 import FullyConnectedNetwork
 from ray.rllib.utils.explained_variance import explained_variance
 from ray.rllib.utils import try_import_tf
+
+from flow.agents.ImitationPPO import PPOLoss
 
 tf = try_import_tf()
 
@@ -331,7 +332,12 @@ def loss_with_central_critic(policy, model, dist_class, train_batch):
         use_gae=policy.config["use_gae"],
         model_config=policy.config["model"])
 
-    return policy.loss_obj.loss
+    return policy.loss_obj
+
+
+def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
+    loss = loss_with_central_critic(policy, model, dist_class, train_batch)
+    return loss.policy_loss + loss.mean_vf_loss
 
 
 def setup_mixins(policy, obs_space, action_space, config):
@@ -357,7 +363,7 @@ def central_vf_stats(policy, train_batch, grads):
 CCPPO = PPOTFPolicy.with_updates(
     name="CCPPO",
     postprocess_fn=centralized_critic_postprocessing,
-    loss_fn=loss_with_central_critic,
+    loss_fn=new_ppo_surrogate_loss,
     before_loss_init=setup_mixins,
     grad_stats_fn=central_vf_stats,
     mixins=[
