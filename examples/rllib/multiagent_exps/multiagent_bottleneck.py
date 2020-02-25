@@ -156,20 +156,20 @@ def setup_flow_params(args):
             edge='1',
             vehs_per_hour=flow_rate * (1 - args.av_frac),
             departLane='random',
-            departSpeed=10.0)
+            departSpeed=23.0)
         inflow.add(
             veh_type='av',
             edge='1',
             vehs_per_hour=flow_rate * args.av_frac,
             departLane='random',
-            departSpeed=10.0)
+            departSpeed=23.0)
     else:
         inflow.add(
             veh_type='av',
             edge='1',
             vehs_per_hour=flow_rate,
             departLane='random',
-            departSpeed=10.0)
+            departSpeed=23.0)
 
     traffic_lights = TrafficLightParams()
     if not DISABLE_TB:
@@ -206,7 +206,7 @@ def setup_flow_params(args):
 
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
-            warmup_steps=int(50 / args.sim_step),
+            warmup_steps=int(0 / args.sim_step),
             sims_per_step=2,
             horizon=args.horizon,
             clip_actions=False,

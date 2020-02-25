@@ -186,7 +186,7 @@ def centralized_critic_postprocessing(policy,
                                  (other_agent_batches[agent_id][1]["t"][0],
                                   other_agent_batches[agent_id][1]["t"][-1])
                              for agent_id in other_agent_batches.keys()}
-        # find agents whose time overlaps with the crrent agent
+        # find agents whose time overlaps with the current agent
         rel_agents = {agent_id: other_agent_time for agent_id,
                                                      other_agent_time in
                       other_agent_times.items()

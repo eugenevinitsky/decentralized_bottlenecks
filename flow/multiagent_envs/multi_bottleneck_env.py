@@ -355,20 +355,20 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                             edge="1",
                             vehs_per_hour=flow_rate * add_params.get("av_frac"),
                             departLane="random",
-                            departSpeed=10.0)
+                            departSpeed=23.0)
                         inflow.add(
                             veh_type="human",
                             edge="1",
                             vehs_per_hour=flow_rate * (1 - add_params.get("av_frac")),
                             departLane="random",
-                            departSpeed=10.0)
+                            departSpeed=23.0)
                     else:
                         inflow.add(
                             veh_type="av",
                             edge="1",
                             vehs_per_hour=flow_rate,
                             departLane="random",
-                            departSpeed=10.0)
+                            departSpeed=23.0)
 
                     additional_net_params = {
                         "scaling": self.scaling,
