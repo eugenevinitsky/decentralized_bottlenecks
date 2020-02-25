@@ -340,15 +340,17 @@ class StaggeringDecentralizedALINEAController(DecentralizedALINEAController):
 
         return None
 
-class FakeDecentralizedALINEAController(StaggeringDecentralizedALINEAController):
+class FakeDecentralizedALINEAController(DecentralizedALINEAController):
     """Same as the controller above but never actually calls set_stop"""
 
     def __init__(self, veh_id, stop_edge, stop_pos, additional_env_params, car_following_params):
         super().__init__(veh_id, stop_edge, stop_pos, additional_env_params, car_following_params)
         self.idm_controller = IDMController(veh_id, car_following_params=car_following_params)       
         self.stop_time = 0.0 
+        self.is_waiting_to_go = False
 
     def get_accel(self, env):
+        env.k.vehicle.set_color(self.veh_id, (255, 0, 0))
         cur_pos = env.k.vehicle.get_position(self.veh_id)
         cur_speed = env.k.vehicle.get_speed(self.veh_id)
         cur_lane = env.k.vehicle.get_lane(self.veh_id)
@@ -365,7 +367,7 @@ class FakeDecentralizedALINEAController(StaggeringDecentralizedALINEAController)
                     self.stop_set = False
                     return self.idm_controller.get_accel(env)
                 else:
-                    return None
+                    return -np.abs(self.max_deaccel)
             elif self.stop_set:
                 self.set_stop(env)
                 b = self.max_deaccel
@@ -380,13 +382,13 @@ class FakeDecentralizedALINEAController(StaggeringDecentralizedALINEAController)
                 if self.stop_pos - cur_pos < 4:
                     self.stop_time = env.sim_step * env.time_counter
                     self.is_waiting_to_go = True
-                    return None
+                    return -np.abs(self.max_deaccel)
                 else:
                     if cur_speed + idm_accel * env.sim_step > safe_velocity:
                         if safe_velocity > 0:
                             return (safe_velocity - cur_speed) / env.sim_step
                         else:
-                            return None # return max deaccel
+                            return -np.abs(self.max_deaccel) # return max deaccel
                     else:
                         return idm_accel
             else:
@@ -397,7 +399,8 @@ class FakeDecentralizedALINEAController(StaggeringDecentralizedALINEAController)
 
     def set_stop(self, env):
         duration = self.get_duration(env)
-        if duration < 1.0:                
+        if duration < 1.0:        
+            self.duration = 0.0
             self.stop_set = False
         else:
             self.duration = duration
