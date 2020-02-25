@@ -1,5 +1,8 @@
 """File demonstrating formation of congestion in bottleneck."""
 
+from flow.core.experiment import Experiment
+from flow.envs.bottleneck_env import DesiredVelocityEnv
+from flow.controllers.car_following_models import CFMController
 import argparse
 import logging
 
@@ -11,10 +14,8 @@ from flow.core.params import VehicleParams
 from flow.core.params import TrafficLightParams
 
 from flow.scenarios.bottleneck import BottleneckScenario
-from flow.controllers import SimLaneChangeController, ContinuousRouter, HandTunedVelocityController, TimeDelayVelocityController, DecentralizedALINEAController, FakeStaggeringDecentralizedALINEAController
-from flow.controllers.car_following_models import CFMController
-from flow.envs.bottleneck_env import DesiredVelocityEnv
-from flow.core.experiment import Experiment
+from flow.controllers import SimLaneChangeController, ContinuousRouter, HandTunedVelocityController, \
+    TimeDelayVelocityController, DecentralizedALINEAController, FakeDecentralizedALINEAController
 
 
 class BottleneckDensityExperiment(Experiment):
@@ -22,6 +23,7 @@ class BottleneckDensityExperiment(Experiment):
 
     Extends flow.core.experiment.Experiment
     """
+
     def __init__(self, env, inflow=2300):
         """Instantiate the bottleneck experiment."""
         super().__init__(env)
@@ -80,13 +82,13 @@ class BottleneckDensityExperiment(Experiment):
                 ret += reward
                 ret_list.append(reward)
 
-                env = self.env
-                step_outflow = env.k.vehicle.get_outflow_rate(20)
+                step_outflow = self.env.k.vehicle.get_outflow_rate(20)
                 density = self.env.get_bottleneck_density()
 
                 step_outflows.append(step_outflow)
                 step_densities.append(density)
                 if done:
+                    print("Done")
                     break
             rets.append(ret)
             vels.append(vel)
@@ -124,7 +126,7 @@ class BottleneckDensityExperiment(Experiment):
 
 def bottleneck_example(flow_rate, horizon, restart_instance=False,
                        render=False, scaling=1, disable_ramp_meter=True, disable_tb=True,
-                       lc_on=False, n_crit=8.0, q_max=None, q_min=None, feedback_coef=1, q_init=2300, 
+                       lc_on=False, n_crit=8.0, q_max=None, q_min=None, feedback_coef=1, q_init=2300,
                        penetration_rate=0.4):
     """
     Perform a simulation of vehicles on a bottleneck.
@@ -178,7 +180,7 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
         lc_mode = 0
 
     controlled_segments = [("1", 1, True), ("2", 8, True), ("3", 3, True),
-                        ("4", 1, True), ("5", 3, True)] # 12 controllable segments
+                           ("4", 1, True), ("5", 3, True)]  # 12 controllable segments
     num_observed_segments = [('1', 1), ('2', 3), ('3', 3), ('4', 3), ('5', 1)]
     v_regions = [23,
                  23, 23, 10, 5, 5, 23, 23, 23,
@@ -186,13 +188,13 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
                  23,
                  23, 23, 23]
 
-    ## set default q_max, q_min values
+    # set default q_max, q_min values
     if not q_max:
         if disable_ramp_meter:
             q_max = 14401
         else:
             q_max = 3000
-    
+
     if not q_min:
         if disable_ramp_meter:
             q_min = 200
@@ -208,12 +210,12 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
         "disable_tb": disable_tb,
         "disable_ramp_metering": disable_ramp_meter,
         "n_crit": n_crit,
-        "q_max": 15000,
+        "q_max": 14401,
         "q_min": 200,
         "q_init": q_init,
         "feedback_coeff": feedback_coef,
         "controlled_segments": controlled_segments,
-        "inflow_range": [2200, 2200],
+        "inflow_range": [flow_rate, flow_rate],
         "reset_inflow": False,
         "symmetric": True,
         "observed_segments": num_observed_segments,
@@ -237,7 +239,7 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
             # acceleration_controller=(CFMController, {"v_des": 10, "d_des": 30, "k_d": 30, "k_v": 15}),
             # acceleration_controller=(HandTunedVelocityController, {"v_regions": v_regions}),
             # acceleration_controller=(DecentralizedALINEAController, {"stop_edge": "2", "stop_pos": 310, "additional_env_params": additional_env_params}),
-            acceleration_controller=(FakeStaggeringDecentralizedALINEAController, {"stop_edge": "2", "stop_pos": 310, "additional_env_params": additional_env_params}),
+            acceleration_controller=(FakeDecentralizedALINEAController, {"stop_edge": "2", "stop_pos": 310, "additional_env_params": additional_env_params}),
             car_following_params=SumoCarFollowingParams(
                 speed_mode=31,
             ),
@@ -319,9 +321,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description='Runs the bottleneck exps')
-    parser.add_argument('--inflow', type=int, default=2300, help='inflow value for running the experiment')
+    parser.add_argument('--inflow', type=int, default=1900, help='inflow value for running the experiment')
     parser.add_argument('--ramp_meter', action='store_true', help='If set, ALINEA is active in this scenario')
-    parser.add_argument('--render', type=int, default=1)
+    parser.add_argument('--render', action='store_true')
     parser.add_argument('--num_runs', type=int, default=5)
     parser.add_argument('--horizon', type=int, default=2000)
     parser.add_argument('--q_init', type=int, default=1000)
@@ -330,7 +332,9 @@ if __name__ == '__main__':
     parser.add_argument('--feedback_coef', type=float, default=1.0)
     args = parser.parse_args()
     if args.render:
-        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter, lc_on=args.lc, render=True, q_init=args.q_init, penetration_rate=args.penetration_rate, feedback_coef=args.feedback_coef)
+        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter, lc_on=args.lc, render=True,
+                                 q_init=args.q_init, penetration_rate=args.penetration_rate, feedback_coef=args.feedback_coef)
     else:
-        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter, lc_on=args.lc, render=False, q_init=args.q_init, penetration_rate=args.penetration_rate, feedback_coef=args.feedback_coef)
+        exp = bottleneck_example(args.inflow, args.horizon, disable_ramp_meter=not args.ramp_meter, lc_on=args.lc, render=False,
+                                 q_init=args.q_init, penetration_rate=args.penetration_rate, feedback_coef=args.feedback_coef)
     exp.run(args.num_runs, args.horizon)

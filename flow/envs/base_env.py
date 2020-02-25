@@ -392,7 +392,7 @@ class Env(*classdef):
 
         # test if the environment should terminate due to a collision or the
         # time horizon being met
-        done = crash or (self.step_counter >= self.env_params.warmup_steps
+        done = crash or (self.time_counter >= self.env_params.warmup_steps
                          + self.env_params.horizon)
 
         # compute the info for each agent
@@ -424,8 +424,10 @@ class Env(*classdef):
             to be zero.
         """
         # set rendering to true
-        self.num_resets += 1
-        if self.num_resets > 0 and self.should_render:
+        if self.should_render:
+            # restart the sumo instance
+            self.restart_simulation(self.sim_params, True)
+            self.should_render = False
             self.sim_params.render = True
 
         # reset the time counter
