@@ -270,8 +270,8 @@ def setup_exps(args):
         config['vf_loss_coeff'] = args.vf_loss_coeff
     config['gamma'] = 0.995  # discount rate
     config['horizon'] = args.horizon
-    config["batch_mode"] = "truncate_episodes"
-    config["sample_batch_size"] = args.horizon
+    # config["batch_mode"] = "truncate_episodes"
+    # config["sample_batch_size"] = args.horizon
     config["observation_filter"] = "MeanStdFilter"
 
     # Grid search things
