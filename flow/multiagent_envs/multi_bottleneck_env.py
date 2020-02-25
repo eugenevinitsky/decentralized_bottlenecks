@@ -574,7 +574,7 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
                         accel = controller.get_accel(self)
                         id_list.append(key)
                         if not accel:
-                            accel = -3.0
+                            accel = -np.abs(self.action_space.low[0])
                         action_list.append(accel)
                 self.k.vehicle.apply_acceleration(id_list, action_list)
             else:

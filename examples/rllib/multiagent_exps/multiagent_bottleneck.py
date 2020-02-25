@@ -108,7 +108,7 @@ def setup_flow_params(args):
     controlled_segments = [('1', 1, False), ('2', 2, True), ('3', 2, True),
                            ('4', 2, True), ('5', 1, False)]
     num_observed_segments = [('1', 1), ('2', 3), ('3', 3), ('4', 3), ('5', 1)]
-    if args.av_frac == 0.4:
+    if np.isclose(args.av_frac, 0.4):
         q_init = 1000
     else:
         q_init = 600
