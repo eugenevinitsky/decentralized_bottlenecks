@@ -565,6 +565,9 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
 
     def _apply_rl_actions(self, rl_actions):
 
+
+        # iterate through the RL vehicles and find what the other agent would have done
+        self.update_curr_rl_vehicles()
         if rl_actions:
             if self.iter_num < self.num_imitation_iters:
                 id_list = []
@@ -572,7 +575,7 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
                 for key, value in rl_actions.items():
 
                     # a vehicle may have left since we got the state
-                    if key not in self.k.vehicle.get_arrived_ids():
+                    if key not in self.k.vehicle.get_arrived_ids() and key in self.k.vehicle.get_rl_ids():
                         controller = self.curr_rl_vehicles[key]['controller']
                         accel = controller.get_accel(self)
                         id_list.append(key)

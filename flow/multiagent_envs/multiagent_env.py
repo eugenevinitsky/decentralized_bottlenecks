@@ -127,6 +127,9 @@ class MultiEnv(MultiAgentEnv, Env):
                 "**********************************************************"
             )
 
+        if (self.time_counter >= self.env_params.sims_per_step *
+                (self.env_params.warmup_steps + self.env_params.horizon)):
+            # TODO(@ev) clean this up
             done['__all__'] = False
         else:
             done['__all__'] = False
