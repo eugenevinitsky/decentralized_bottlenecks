@@ -243,7 +243,7 @@ def setup_flow_params(args):
 
 def on_episode_end(info):
     env = info['env'].get_unwrapped()[0]
-    outflow_over_last_500 = env.k.vehicle.get_outflow_rate(int(500 / env.sim_step))
+    outflow_over_last_500 = env.k.vehicle.get_outflow_rate(int(500))
     inflow = env.inflow
     # round it to 100
     inflow = int(inflow / 100) * 100
@@ -301,7 +301,7 @@ def setup_exps(args):
         config['model']['custom_model'] = model_name
         config['model']['custom_options'].update({"cell_size": 64, 'use_prev_action': True})
     else:
-        config['model'].update({'fcnet_hiddens': [64, 64]})
+        config['model'].update({'fcnet_hiddens': [100, 50, 25]})
         # model_name = "FeedForward"
         # ModelCatalog.register_custom_model(model_name, FeedForward)
         # config['model']['custom_model'] = model_name
@@ -319,6 +319,7 @@ def setup_exps(args):
         config['model']['custom_options']['max_num_agents'] = args.max_num_agents
 
     if args.imitate:
+        config['kl_coeff'] = 20  # start with it high so we take smaller steps to start and don't just forget the imitation
         config['model']['custom_options'].update({"imitation_weight": 1e0})
         config['model']['custom_options'].update({"num_imitation_iters": args.num_imitation_iters})
         config['model']['custom_options']['hard_negative_mining'] = args.hard_negative_mining

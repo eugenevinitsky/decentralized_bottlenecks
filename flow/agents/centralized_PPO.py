@@ -6,6 +6,8 @@ from __future__ import print_function
 import argparse
 import numpy as np
 
+from gym.spaces import Dict
+
 from ray import tune
 from ray.rllib.agents.ppo.ppo import PPOTrainer
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy, KLCoeffMixin, BEHAVIOUR_LOGITS
@@ -17,6 +19,7 @@ from ray.rllib.policy.tf_policy import LearningRateSchedule, \
 from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from ray.rllib.models.tf.recurrent_tf_modelv2 import RecurrentTFModelV2
+from ray.rllib.models.model import restore_original_dimensions
 from ray.rllib.utils.annotations import override
 from ray.rllib.models.tf.fcnet_v2 import FullyConnectedNetwork
 from ray.rllib.utils.explained_variance import explained_variance
@@ -26,7 +29,7 @@ from flow.agents.ImitationPPO import PPOLoss
 
 tf = try_import_tf()
 
-OPPONENT_OBS = "opponent_obs"
+CENTRAL_OBS = "central_obs"
 OPPONENT_ACTION = "opponent_action"
 
 parser = argparse.ArgumentParser()
@@ -50,7 +53,8 @@ class CentralizedCriticModel(TFModelV2):
         # Central VF maps (obs, opp_ops, opp_act) -> vf_pred
         self.max_num_agents = model_config['custom_options']['max_num_agents']
         self.obs_space_shape = obs_space.shape[0]
-        other_obs = tf.keras.layers.Input(shape=(obs_space.shape[0] * self.max_num_agents, ), name="opp_obs")
+        self.obs_space = obs_space
+        other_obs = tf.keras.layers.Input(shape=(obs_space.shape[0] * self.max_num_agents, ), name="central_obs")
         central_vf_dense = tf.keras.layers.Dense(
             model_config['custom_options']['central_vf_size'], activation=tf.nn.tanh, name="c_vf_dense")(other_obs)
         central_vf_out = tf.keras.layers.Dense(
@@ -62,10 +66,10 @@ class CentralizedCriticModel(TFModelV2):
     def forward(self, input_dict, state, seq_lens):
         return self.model.forward(input_dict, state, seq_lens)
 
-    def central_value_function(self, obs, opponent_obs):
+    def central_value_function(self, central_obs):
         return tf.reshape(
             self.central_vf(
-                [opponent_obs]), [-1])
+                [central_obs]), [-1])
 
     def value_function(self):
         return self.model.value_function()  # not used
@@ -123,7 +127,7 @@ class CentralizedCriticModelRNN(RecurrentTFModelV2):
         # Central VF maps (obs, opp_ops, opp_act) -> vf_pred
         self.max_num_agents = model_config.get("max_num_agents", 120)
         self.obs_space_shape = obs_space.shape[0]
-        other_obs = tf.keras.layers.Input(shape=(obs_space.shape[0] * self.max_num_agents,), name="opp_obs")
+        other_obs = tf.keras.layers.Input(shape=(obs_space.shape[0] * self.max_num_agents,), name="all_agent_obs")
         central_vf_dense = tf.keras.layers.Dense(
             model_config.get("central_vf_size", 64), activation=tf.nn.tanh, name="c_vf_dense")(other_obs)
         central_vf_out = tf.keras.layers.Dense(
@@ -145,10 +149,10 @@ class CentralizedCriticModelRNN(RecurrentTFModelV2):
             np.zeros(self.cell_size, np.float32),
         ]
 
-    def central_value_function(self, obs, opponent_obs):
+    def central_value_function(self, central_obs):
         return tf.reshape(
             self.central_vf(
-                [opponent_obs]), [-1])
+                [central_obs]), [-1])
 
     def value_function(self):
         return tf.reshape(self._value_out, [-1])  # not used
@@ -160,14 +164,12 @@ class CentralizedValueMixin(object):
     def __init__(self):
         # TODO(@evinitsky) clean up naming
         self.central_value_function = self.model.central_value_function(
-            self.get_placeholder(SampleBatch.CUR_OBS),
-            self.get_placeholder(OPPONENT_OBS)
+            self.get_placeholder(CENTRAL_OBS)
         )
 
-    def compute_central_vf(self, obs, opponent_obs):
+    def compute_central_vf(self, central_obs):
         feed_dict = {
-            self.get_placeholder(SampleBatch.CUR_OBS): obs,
-            self.get_placeholder(OPPONENT_OBS): opponent_obs,
+            self.get_placeholder(CENTRAL_OBS): central_obs,
         }
         return self.get_session().run(self.central_value_function, feed_dict)
 
@@ -202,14 +204,29 @@ def centralized_critic_postprocessing(policy,
                     other_obs[agent_id])
                 for agent_id,
                     rel_agent_time in rel_agents.items()}
-            central_obs_batch = np.hstack(
-                [padded_obs for padded_obs in padded_agent_obs.values()])
-            central_obs_batch = np.hstack(
-                (central_obs_batch, sample_batch["obs"]))
+            # okay, now we need to stack and sort
+            central_obs_list = [padded_obs for padded_obs in padded_agent_obs.values()]
+            # sort by absolute position
+            # if isinstance(policy.model.obs_space.original_space, Dict):
+            #     central_obs_list = sorted(central_obs_list, key=lambda x:
+            #         restore_original_dimensions(x, policy.model.obs_space)["obs"][0])
+            #     central_obs_batch = np.hstack(central_obs_list)
+            # else:
+            #     central_obs_list = sorted(central_obs_list, key=lambda x: x[0])
+            #     central_obs_batch = np.hstack(central_obs_list)
+            # central_obs_list = sorted(central_obs_list, key=lambda x: x[0])
+            final_stack = []
+            for i in range(central_obs_list[0].shape[0]):
+                elems = sorted([elem[i, :] for elem in central_obs_list], key=lambda x: x[0])
+                final_stack.append(np.hstack(elems))
+
+            central_obs_batch = np.array(final_stack)
+            central_obs_batch = np.hstack((sample_batch["obs"], central_obs_batch))
         else:
             central_obs_batch = sample_batch["obs"]
         max_vf_agents = policy.model.max_num_agents
         num_agents = len(rel_agents) + 1
+        print('THE NUMBER OF AGENTS IS', num_agents)
         if num_agents < max_vf_agents:
             diff = max_vf_agents - num_agents
             zero_pad = np.zeros((central_obs_batch.shape[0],
@@ -220,17 +237,16 @@ def centralized_critic_postprocessing(policy,
             print("Too many agents!")
 
         # also record the opponent obs and actions in the trajectory
-        sample_batch[OPPONENT_OBS] = central_obs_batch
+        sample_batch[CENTRAL_OBS] = central_obs_batch
 
         # overwrite default VF prediction with the central VF
-        sample_batch[SampleBatch.VF_PREDS] = policy.compute_central_vf(
-            sample_batch[SampleBatch.CUR_OBS], sample_batch[OPPONENT_OBS])
+        sample_batch[SampleBatch.VF_PREDS] = policy.compute_central_vf(sample_batch[CENTRAL_OBS])
     else:
         # policy hasn't initialized yet, use zeros
         #TODO(evinitsky) put in the right shape
         obs_shape = sample_batch[SampleBatch.CUR_OBS].shape[1]
         obs_shape = (1, obs_shape * (policy.model.max_num_agents))
-        sample_batch[OPPONENT_OBS] = np.zeros(obs_shape)
+        sample_batch[CENTRAL_OBS] = np.zeros(obs_shape)
         # TODO(evinitsky) put in the right shape. Will break if actions aren't 1
         sample_batch[SampleBatch.VF_PREDS] = np.zeros(1, dtype=np.float32)
 

@@ -91,14 +91,14 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             if self.env_params.additional_params['communicate']:
                 # eight possible signals if above
                 if self.env_params.additional_params.get('aggregate_info'):
-                    num_obs = 6 * MAX_LANES * self.scaling + 19
+                    num_obs = 6 * MAX_LANES * self.scaling + 20
                 else:
-                    num_obs = 6 * MAX_LANES * self.scaling + 13
+                    num_obs = 6 * MAX_LANES * self.scaling + 14
             else:
                 if self.env_params.additional_params.get('aggregate_info'):
-                    num_obs = 6 * MAX_LANES * self.scaling + 11
+                    num_obs = 6 * MAX_LANES * self.scaling + 12
                 else:
-                    num_obs = 6 * MAX_LANES * self.scaling + 5
+                    num_obs = 6 * MAX_LANES * self.scaling + 6
 
         # TODO(@evinitsky) eventually remove the get once backwards compatibility is no longer needed
         if self.env_params.additional_params.get('keep_past_actions', False):
@@ -128,19 +128,20 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if add_params['centralized_obs']:
             rl_ids = self.k.vehicle.get_rl_ids()
             state = self.get_centralized_state()
-            veh_info = {rl_id: np.concatenate((state, self.veh_statistics(rl_id))) for rl_id in rl_ids}
+            veh_info = {rl_id: np.concatenate((self.veh_statistics(rl_id), state)) for rl_id in rl_ids}
         else:
             if self.env_params.additional_params.get('communicate', False):
-                veh_info = {rl_id: np.concatenate((self.state_util(rl_id),
-                                                   self.veh_statistics(rl_id),
+                veh_info = {rl_id: np.concatenate((self.veh_statistics(rl_id),
+                                                   self.state_util(rl_id),
                                                    self.get_signal(rl_id,
                                                                    rl_actions)
                                                    )
                                                   )
                             for rl_id in self.k.vehicle.get_rl_ids()}
             else:
-                veh_info = {rl_id: np.concatenate((self.state_util(rl_id),
-                                                   self.veh_statistics(rl_id)))
+                veh_info = {rl_id: np.concatenate((self.veh_statistics(rl_id),
+                                                    self.state_util(rl_id),
+                                                   ))
                             for rl_id in self.k.vehicle.get_rl_ids()}
             if self.env_params.additional_params.get('aggregate_info'):
                 agg_statistics = self.aggregate_statistics()
@@ -157,7 +158,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 num_steps %= self.num_past_actions
                 self.past_actions_dict[rl_id] = [agent_past_dict, num_steps]
             actions_history = {rl_id: self.past_actions_dict[rl_id][0] for rl_id in self.k.vehicle.get_rl_ids()}
-            veh_info = {rl_id: np.concatenate((actions_history[rl_id], veh_info[rl_id])) for
+            veh_info = {rl_id: np.concatenate((veh_info[rl_id], actions_history[rl_id])) for
                         rl_id in self.k.vehicle.get_rl_ids()}
 
         # Go through the human drivers and add zeros if the vehicles have left as a final observation
@@ -170,8 +171,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                         key, value in veh_info.items()}
         elif isinstance(self.observation_space, Dict):
             # TODO(@evinitsky) this is bad subclassing and will break if the obs space isn't uniform
-            veh_info = {key: np.clip(value, a_min=[self.observation_space.spaces['obs'].low[0]] * value.shape[0],
-                                     a_max=[self.observation_space.spaces['obs'].high[0]] * value.shape[0]) for
+            veh_info = {key: np.clip(value, a_min=[self.observation_space.spaces['a_obs'].low[0]] * value.shape[0],
+                                     a_max=[self.observation_space.spaces['a_obs'].high[0]] * value.shape[0]) for
                         key, value in veh_info.items()}
 
         return veh_info
@@ -424,7 +425,9 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 edge_id = - 1 / 10.0
         else:
             edge_id = - 1 / 10.0
-        return np.array([speed, edge_id, lane, headway, position])
+        # an absolute position used to make it easier to sort the vehicles for the centralized value function
+        absolute_pos = self.k.vehicle.get_x_by_id(rl_id) / 1000.0
+        return np.array([absolute_pos, speed, edge_id, lane, headway, position])
 
     def state_util(self, rl_id):
         ''' Returns an array of headway, tailway, leader speed, follower speed
@@ -525,7 +528,7 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
         # Extra keys "time since stop", duration
         new_obs = Box(low=-3.0, high=3.0, shape=(obs.shape[0] + 2,), dtype=np.float32)
         # new_obs = Box(low=-3.0, high=3.0, shape=(obs.shape[0],), dtype=np.float32)
-        return Dict({"obs": new_obs, "expert_action": self.action_space})
+        return Dict({"a_obs": new_obs, "expert_action": self.action_space})
 
     def reset(self, new_inflow_rate=None):
 
@@ -554,7 +557,7 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
 
             duration = controller.duration
 
-            state_dict[key] = {"obs": np.concatenate((value, [self.curr_rl_vehicles[key]['time_since_stopped'] / self.env_params.horizon,
+            state_dict[key] = {"a_obs": np.concatenate((value, [self.curr_rl_vehicles[key]['time_since_stopped'] / self.env_params.horizon,
                                                               duration / 100.0])),
                                "expert_action": np.array([np.clip(accel, a_min=self.action_space.low[0],
                                                                   a_max=self.action_space.high[0])])}
