@@ -9,7 +9,7 @@ min_workers: 0 #<NUM WORKERS IN CLUSTER>
 
 # The maximum number of workers nodes to launch in addition to the head
 # node. This takes precedence over min_workers.
-max_workers: 20
+max_workers: 0
 
 # The initial number of worker nodes to launch in addition to the head
 # node. When the cluster is first brought up (or when it is refreshed with a
@@ -34,6 +34,7 @@ provider:
 # How Ray will authenticate with newly launched nodes.
 auth:
     ssh_user: ubuntu
+    ssh_private_key: /Users/eugenevinitsky/.ssh/MyKeyPair.pem
 # By default Ray creates a new private keypair, but you can also use your own.
 # If you do so, make sure to also set "KeyName" in the head and worker node
 # configurations below.
@@ -44,7 +45,7 @@ auth:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 head_node:
     KeyName: MyKeyPair
-    InstanceType: m4.4xlarge # c4.4xlarge
+    InstanceType: m4.10xlarge # c4.4xlarge
     ImageId: ami-0c047f3ddd3939b30  # Flow AMI (Ubuntu)
     InstanceMarketOptions:
         MarketType: spot

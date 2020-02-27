@@ -207,7 +207,7 @@ def setup_flow_params(args):
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
             warmup_steps=int(0 / args.sim_step),
-            sims_per_step=2,
+            sims_per_step=10,
             horizon=args.horizon,
             clip_actions=False,
             additional_params=additional_env_params,
