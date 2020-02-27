@@ -226,7 +226,6 @@ def centralized_critic_postprocessing(policy,
             central_obs_batch = sample_batch["obs"]
         max_vf_agents = policy.model.max_num_agents
         num_agents = len(rel_agents) + 1
-        print('THE NUMBER OF AGENTS IS', num_agents)
         if num_agents < max_vf_agents:
             diff = max_vf_agents - num_agents
             zero_pad = np.zeros((central_obs_batch.shape[0],

@@ -49,6 +49,7 @@ class MultiEnv(MultiAgentEnv, Env):
             contains other diagnostic information from the previous action
         """
         self.step_counter += 1
+        self.left_av_list = []
         for _ in range(self.env_params.sims_per_step):
             self.time_counter += 1
 
@@ -93,6 +94,8 @@ class MultiEnv(MultiAgentEnv, Env):
 
             # advance the simulation in the simulator by one step
             self.k.simulation.simulation_step()
+            left_avs = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if veh_id in self.k.vehicle.get_arrived_ids()]
+            self.left_av_list.extend(left_avs)
 
             # store new observations in the vehicles and traffic lights class
             self.k.update(reset=False)

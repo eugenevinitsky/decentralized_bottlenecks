@@ -143,6 +143,7 @@ class Env(*classdef):
         self.initial_state = {}
         self.state = None
         self.obs_var_labels = []
+        self.left_av_list = []
 
         # simulation step size
         self.sim_step = sim_params.sim_step

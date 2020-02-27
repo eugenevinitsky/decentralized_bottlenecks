@@ -65,6 +65,7 @@ head_node:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 worker_nodes:
+    KeyName: MyKeyPair
     InstanceType: c4.8xlarge
     ImageId: ami-0c047f3ddd3939b30 # Flow AMI (Ubuntu)
     #Run workers on spot by default. Comment this out to use on-demand.
