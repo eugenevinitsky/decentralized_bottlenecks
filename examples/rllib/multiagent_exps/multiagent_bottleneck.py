@@ -276,7 +276,7 @@ def setup_exps(args):
 
     # Grid search things
     if args.grid_search:
-        config['num_sgd_iter'] = tune.grid_search([30, 100])
+        config['num_sgd_iter'] = tune.grid_search([10, 30])
         config['lr'] = tune.grid_search([5e-6, 5e-5, 5e-4])
 
     # LSTM Things

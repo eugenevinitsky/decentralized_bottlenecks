@@ -249,9 +249,17 @@ def centralized_critic_postprocessing(policy,
         # TODO(evinitsky) put in the right shape. Will break if actions aren't 1
         sample_batch[SampleBatch.VF_PREDS] = np.zeros(1, dtype=np.float32)
 
+    completed = sample_batch["dones"][-1]
+    if completed:
+        last_r = 0.0
+    else:
+        next_state = []
+        for i in range(policy.num_state_tensors()):
+            next_state.append([sample_batch["state_out_{}".format(i)][-1]])
+        last_r = policy.compute_central_vf(sample_batch[CENTRAL_OBS][-1])
     train_batch = compute_advantages(
         sample_batch,
-        0.0,
+        last_r,
         policy.config["gamma"],
         policy.config["lambda"],
         use_gae=policy.config["use_gae"])

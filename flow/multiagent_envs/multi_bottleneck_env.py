@@ -261,6 +261,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
     def compute_reward(self, rl_actions, **kwargs):
         """Outflow rate over last ten seconds normalized to max of 1."""
 
+
         if self.env_params.evaluate:
             if self.time_counter == self.env_params.horizon:
                 reward = self.k.vehicle.get_outflow_rate(500)
@@ -277,7 +278,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         # reward is the outflow over "num_sample_seconds" seconds
         else:
             reward = self.k.vehicle.get_outflow_rate(
-                int(add_params["num_sample_seconds"] / self.sim_step)) / 2000.0 - \
+                int(add_params["num_sample_seconds"])) / 2000.0 - \
                      self.env_params.additional_params["life_penalty"]
         if add_params["congest_penalty"]:
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
