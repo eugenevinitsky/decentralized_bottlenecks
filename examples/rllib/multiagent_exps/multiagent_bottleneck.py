@@ -265,7 +265,7 @@ def setup_exps(args):
     config = ppo.DEFAULT_CONFIG.copy()
     config['num_workers'] = rllib_params['n_cpus']
     config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
-    config['sgd_minibatch_size'] = min(args.horizon, 0.5 * config['train_batch_size'])
+    config['sgd_minibatch_size'] = min(args.horizon * 10, 0.5 * config['train_batch_size'])
     if args.use_lstm:
         config['vf_loss_coeff'] = args.vf_loss_coeff
     config['gamma'] = 0.995  # discount rate

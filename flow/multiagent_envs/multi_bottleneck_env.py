@@ -270,7 +270,6 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 return 0
 
         add_params = self.env_params.additional_params
-        print(self.k.vehicle.get_outflow_rate(500))
         # reward is the mean AV speed
         if add_params["speed_reward"]:
             rl_ids = self.k.vehicle.get_rl_ids()
