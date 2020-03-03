@@ -66,7 +66,3 @@ ImitationCentralizedPolicy = PPOTFPolicy.with_updates(
 ImitationCentralizedTrainer = PPOTrainer.with_updates(name="ImitationCentralizedPPOTrainer",
                                                       default_policy=ImitationCentralizedPolicy,
                                                       after_optimizer_step=update_kl)
-
-
-CCImitationTrainer = PPOTrainer.with_updates(name="CCImitationPPOTrainer", default_policy=ImitationCentralizedPolicy,
-                                             )

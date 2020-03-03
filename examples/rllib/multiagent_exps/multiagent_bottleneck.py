@@ -19,7 +19,7 @@ from ray.tune.registry import register_env
 
 from flow.agents.centralized_PPO import CentralizedCriticModel, CentralizedCriticModelRNN
 from flow.agents.centralized_PPO import CCTrainer
-from flow.agents.centralized_imitation_PPO import CCImitationTrainer
+from flow.agents.centralized_imitation_PPO import ImitationCentralizedTrainer
 
 from flow.core.params import SumoParams, EnvParams, InitialConfig, NetParams, \
     InFlows, SumoLaneChangeParams, SumoCarFollowingParams
@@ -329,7 +329,6 @@ def setup_exps(args):
     flow_json = json.dumps(
         flow_params, cls=FlowParamsEncoder, sort_keys=True, indent=4)
     config['env_config']['flow_params'] = flow_json
-    config['env_config']['run'] = alg_run
 
     create_env, env_name = make_create_env(params=flow_params, version=0)
 
@@ -386,9 +385,10 @@ if __name__ == '__main__':
         from flow.agents.ImitationPPO import ImitationTrainer
         alg_run = ImitationTrainer
     elif args.imitate and args.centralized_vf:
-        alg_run = CCImitationTrainer
+        alg_run = ImitationCentralizedTrainer
     elif not args.imitate and args.centralized_vf:
         alg_run = CCTrainer
+    config['env_config']['run'] = alg_run
 
     exp_dict = {
             'name': args.exp_title,
