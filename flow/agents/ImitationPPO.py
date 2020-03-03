@@ -229,8 +229,10 @@ def update_kl(trainer, fetches):
 
 def loss_stats(policy, train_batch):
     stats = kl_and_loss_stats(policy, train_batch)
-    stats.update({'imitation_logprob': -policy.imitation_loss, 'policy_weight': policy.policy_weight,
-                  'imitation_weight': policy.imitation_weight})
+    stats.update({'imitation_logprob': -policy.imitation_loss,
+                  'policy_weight': policy.policy_weight,
+                  'imitation_weight': policy.imitation_weight,
+                  'imitation_loss': policy.imitation_weight * -policy.imitation_loss})
     return stats
 
 
