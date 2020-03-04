@@ -71,4 +71,7 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument('--use_lstm', action='store_true')
     parser.add_argument('--use_gru', action='store_true')
 
+    # arguments about output
+    parser.add_argument('--create_inflow_graph', action='store_true', default=False)
+
     return parser

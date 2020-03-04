@@ -920,44 +920,58 @@
 ####################################################################################################################################################
 ## 3//0220 exps
 # Imitation
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 2pen_im_i1900 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
---num_samples 1 --grid_search --n_cpus 19 --use_s3 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
---imitate --multi_node --sim_step 0.5 --life_penalty 2.0 --num_imitation_iters 150" \
---start --stop --cluster-name kp_0pen_im1 --tmux
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 2pen_im_i1900 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 19 --use_s3 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
+#--imitate --multi_node --sim_step 0.5 --life_penalty 2.0 --num_imitation_iters 150" \
+#--start --stop --cluster-name kp_0pen_im1 --tmux
 
-# Imitation with CVF
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 2pen_im_cvf_i1900 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
---num_samples 1 --grid_search --n_cpus 19 --use_s3 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
---imitate --multi_node --sim_step 0.5 --centralized_vf --max_num_agents 200 --life_penalty 2.0 --num_imitation_iters 150" \
---start --stop --cluster-name kp_0pen_im_cvf2 --tmux
+## Imitation with CVF
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 2pen_im_cvf_i1900 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 19 --use_s3 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
+#--imitate --multi_node --sim_step 0.5 --centralized_vf --max_num_agents 200 --life_penalty 2.0 --num_imitation_iters 150" \
+#--start --stop --cluster-name kp_0pen_im_cvf2 --tmux
+#
+## Imitation with prierarchy
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 2pen_im_i1900_f0p02 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 19 --use_s3 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
+#--imitate --multi_node --sim_step 0.5 --final_imitation_weight 0.02 --life_penalty 2.0 --num_imitation_iters 300" \
+#--start --stop --cluster-name kp_0pen_im3 --tmux
+#
+## Imitation with prierarchy and CVF
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 2pen_im_cvf_i1900_f0p02 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 19 --use_s3 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
+#--imitate --multi_node --sim_step 0.5 --centralized_vf --final_imitation_weight 0.02 --max_num_agents 200 --life_penalty 2.0 --num_imitation_iters 150" \
+#--start --stop --cluster-name kp_0pen_im_cvf4 --tmux
+#
+## Just CVF
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 2pen_cvf_i1900 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 19 --use_s3 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
+#--multi_node --sim_step 0.5 --centralized_vf --max_num_agents 200 --life_penalty 2.0 --num_imitation_iters 150" \
+#--start --stop --cluster-name kp_0pen_cvf5 --tmux
+#
+## NO CVF
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 2pen_i1900 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 19 --use_s3 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
+#--multi_node --sim_step 0.5 --max_num_agents 200 --life_penalty 2.0 --num_imitation_iters 150" \
+#--start --stop --cluster-name kp_0pen_6 --tmux
 
-# Imitation with prierarchy
+# Imitation with hard negative mining
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 2pen_im_i1900_f0p02 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 2pen_im_i1900_neg --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
 --num_samples 1 --grid_search --n_cpus 19 --use_s3 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
---imitate --multi_node --sim_step 0.5 --final_imitation_weight 0.02 --life_penalty 2.0 --num_imitation_iters 300" \
---start --stop --cluster-name kp_0pen_im3 --tmux
+--imitate --multi_node --sim_step 0.5 --life_penalty 2.0 --num_imitation_iters 150 --hard_negative_mining" \
+--start --stop --cluster-name kp_0pen_im7 --tmux
 
-# Imitation with prierarchy and CVF
+
+# Imitation with prierarchy and hard negative mining
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 2pen_im_cvf_i1900_f0p02 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 2pen_im_i1900_f0p02_neg --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
 --num_samples 1 --grid_search --n_cpus 19 --use_s3 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
---imitate --multi_node --sim_step 0.5 --centralized_vf --final_imitation_weight 0.02 --max_num_agents 200 --life_penalty 2.0 --num_imitation_iters 150" \
---start --stop --cluster-name kp_0pen_im_cvf4 --tmux
-
-# Just CVF
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 2pen_cvf_i1900 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
---num_samples 1 --grid_search --n_cpus 19 --use_s3 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
---multi_node --sim_step 0.5 --centralized_vf --max_num_agents 200 --life_penalty 2.0 --num_imitation_iters 150" \
---start --stop --cluster-name kp_0pen_cvf5 --tmux
-
-# NO CVF
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 2pen_i1900 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
---num_samples 1 --grid_search --n_cpus 19 --use_s3 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 1900 --high_inflow 1900 --aggregate_info \
---multi_node --sim_step 0.5 --max_num_agents 200 --life_penalty 2.0 --num_imitation_iters 150" \
---start --stop --cluster-name kp_0pen_6 --tmux
-
+--imitate --multi_node --sim_step 0.5 --final_imitation_weight 0.02 --life_penalty 2.0 --num_imitation_iters 300 --hard_negative_mining" \
+--start --stop --cluster-name kp_0pen_im8 --tmux

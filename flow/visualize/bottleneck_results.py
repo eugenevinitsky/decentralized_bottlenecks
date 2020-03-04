@@ -6,7 +6,7 @@ EXAMPLE_USAGE : str
     Example call to the function, which is
     ::
 
-        python ./visualizer_rllib.py /tmp/ray/result_dir 1
+        python ./visualizer_rllib.py /tmp/ray/checkpoint_dir 1
 
 parser : ArgumentParser
     Command-line argument parser
@@ -17,7 +17,6 @@ import collections
 from datetime import datetime
 from functools import reduce
 import os
-import sys
 
 import gym
 import matplotlib
@@ -34,6 +33,9 @@ from ray.tune.registry import register_env
 from ray.rllib.models import ModelCatalog
 from flow.models.FeedForward import FeedForward
 from flow.models.GRU import GRU
+from flow.agents.ImitationPPO import ImitationTrainer
+from flow.agents.centralized_PPO import CCTrainer
+from flow.agents.centralized_imitation_PPO import ImitationCentralizedTrainer
 from flow.agents.centralized_PPO import CentralizedCriticModel, CentralizedCriticModelRNN
 
 from flow.utils.registry import make_create_env
@@ -52,11 +54,14 @@ def default_policy_agent_mapping(unused_agent_id):
     return DEFAULT_POLICY_ID
 
 @ray.remote
-def run_bottleneck(args, inflow_rate, num_trials):
-    result_dir = args.result_dir if args.result_dir[-1] != '/' \
-        else args.result_dir[:-1]
+def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render_mode,
+                   checkpoint_num,
+                   end_len,
+                   horizon=None):
+    checkpoint_dir = checkpoint_dir if checkpoint_dir[-1] != '/' \
+        else checkpoint_dir[:-1]
 
-    config = get_rllib_pkl(result_dir)
+    config = get_rllib_pkl(checkpoint_dir)
 
     # Run on only one cpu for rendering purposes
     config['num_workers'] = 0
@@ -64,26 +69,17 @@ def run_bottleneck(args, inflow_rate, num_trials):
     flow_params = get_flow_params(config)
 
     # Determine agent and checkpoint
-    config_run = config['env_config']['run'] if 'run' in config['env_config'] \
-        else None
-    if args.run and config_run:
-        if args.run != config_run:
-            print('visualizer_rllib.py: error: run argument '
-                  + '\'{}\' passed in '.format(args.run)
-                  + 'differs from the one stored in params.json '
-                  + '\'{}\''.format(config_run))
-            sys.exit(1)
-    if args.run:
-        agent_cls = get_agent_class(args.run)
-    elif config_run:
-        agent_cls = get_agent_class(config_run)
+    config_run = config['env_config']['run']
+    if config_run == "imitation_trainer":
+        from flow.agents.ImitationPPO import ImitationTrainer
+        agent_cls = ImitationTrainer
+    elif config_run == "imitation_central_trainer":
+        agent_cls = ImitationCentralizedTrainer
+    elif config_run == "central_trainer":
+        from flow.agents.centralized_PPO import CCTrainer
+        agent_cls = CCTrainer
     else:
-        print('visualizer_rllib.py: error: could not find flow parameter '
-              '\'run\' in params.json, '
-              'add argument --run to provide the algorithm or model used '
-              'to train the results\n e.g. '
-              'python ./visualizer_rllib.py /tmp/ray/result_dir 1 --run PPO')
-        sys.exit(1)
+        agent_cls = get_agent_class(config_run)
 
     # if using a custom model
     if config['model']['custom_model'] == "cc_model":
@@ -98,46 +94,37 @@ def run_bottleneck(args, inflow_rate, num_trials):
     elif config['model']['custom_model'] == "FeedForward":
         ModelCatalog.register_custom_model("FeedForward", FeedForward)
 
-    # If we trained by imitating
-    if "imitation_weight" in config['model']['custom_options'].keys():
-        from flow.agents.ImitationPPO import ImitationTrainer
-        agent_cls = ImitationTrainer
-
     sim_params = flow_params['sim']
     sim_params.restart_instance = False
     dir_path = os.path.dirname(os.path.realpath(__file__))
     emission_path = '{0}/test_time_rollout/'.format(dir_path)
-    sim_params.emission_path = emission_path if args.gen_emission else None
+    sim_params.emission_path = emission_path if gen_emission else None
 
     # pick your rendering mode
-    if args.render_mode == 'sumo_web3d':
+    if render_mode == 'sumo_web3d':
         sim_params.num_clients = 2
         sim_params.render = False
-    elif args.render_mode == 'drgb':
+    elif render_mode == 'drgb':
         sim_params.render = 'drgb'
         sim_params.pxpm = 4
-    elif args.render_mode == 'sumo_gui':
+    elif render_mode == 'sumo_gui':
         sim_params.render = False
-    elif args.render_mode == 'no_render':
+    elif render_mode == 'no_render':
         sim_params.render = False
-    if args.save_render:
-        sim_params.render = 'drgb'
-        sim_params.pxpm = 4
-        sim_params.save_render = True
 
     # Start the environment with the gui turned on and a path for the
     # emission file
     env_params = flow_params['env']
-    # TODO(@evinitsky) remove this this is a backwards compatibility hack
-    if 'life_penalty' not in env_params.additional_params.keys():
-        env_params.additional_params['life_penalty'] = - 3
-    if args.evaluate:
-        env_params.evaluate = True
+    # # TODO(@evinitsky) remove this this is a backwards compatibility hack
+    # if 'life_penalty' not in env_params.additional_params.keys():
+    #     env_params.additional_params['life_penalty'] = - 3
+    # if args.evaluate:
+    #     env_params.evaluate = True
 
     # lower the horizon if testing
-    if args.horizon:
-        config['horizon'] = args.horizon
-        env_params.horizon = args.horizon
+    if horizon:
+        config['horizon'] = horizon
+        env_params.horizon = horizon
 
     # Create and register a gym+rllib env
     create_env, env_name = make_create_env(params=flow_params, version=0)
@@ -145,8 +132,8 @@ def run_bottleneck(args, inflow_rate, num_trials):
 
     # create the agent that will be used to compute the actions
     agent = agent_cls(env=env_name, config=config)
-    checkpoint = result_dir + '/checkpoint_' + args.checkpoint_num
-    checkpoint = checkpoint + '/checkpoint-' + args.checkpoint_num
+    checkpoint = checkpoint_dir + '/checkpoint_' + checkpoint_num
+    checkpoint = checkpoint + '/checkpoint-' + checkpoint_num
     agent.restore(checkpoint)
 
     policy_agent_mapping = default_policy_agent_mapping
@@ -169,7 +156,7 @@ def run_bottleneck(args, inflow_rate, num_trials):
         multiagent = False
         use_lstm = {DEFAULT_POLICY_ID: False}
 
-    if args.render_mode == 'sumo_gui':
+    if render_mode == 'sumo_gui':
         env.sim_params.render = True  # set to True after initializing agent and env
 
     # Simulate and collect metrics
@@ -181,11 +168,13 @@ def run_bottleneck(args, inflow_rate, num_trials):
     mean_rewards = []
     per_agent_rew = collections.defaultdict(lambda: 0.0)
 
-    # keep track of the last 500 points of velocity data for lane 0
+    # keep track of the last 500 seconds of velocity data for lane 0
     # and 1 in edge 4
     velocity_arr = []
     vel = []
     mapping_cache = {}  # in case policy_agent_mapping is stochastic
+
+    sim_step = sim_params.sim_step
 
     for j in range(num_trials):
         agent_states = DefaultMapping(
@@ -201,7 +190,7 @@ def run_bottleneck(args, inflow_rate, num_trials):
             vehicles = env.unwrapped.k.vehicle
             vel.append(np.mean(vehicles.get_speed(vehicles.get_ids())))
             # don't start recording till we have hit the warmup time
-            if k >= env_params.horizon - args.end_len:
+            if k >= env_params.horizon - (end_len / sim_step):
                 vehs_on_four = vehicles.get_ids_by_edge('4')
                 lanes = vehicles.get_lane(vehs_on_four)
                 lane_dict = {veh_id: lane for veh_id, lane in
@@ -238,7 +227,6 @@ def run_bottleneck(args, inflow_rate, num_trials):
                             prev_reward=prev_rewards[agent_id],
                             policy_id=policy_id)
                         agent_states[agent_id] = p_state
-                        print(agent_id, a_action)
                     else:
                         a_action = agent.compute_action(
                             a_obs,
@@ -248,7 +236,6 @@ def run_bottleneck(args, inflow_rate, num_trials):
                     a_action = _flatten_action(a_action)  # tuple actions
                     action_dict[agent_id] = a_action
                     prev_actions[agent_id] = a_action
-                    print(agent_id, a_action)
             action = action_dict
 
             action = action if multiagent else action[_DUMMY_AGENT_ID]
@@ -279,7 +266,7 @@ def run_bottleneck(args, inflow_rate, num_trials):
         mean_speed.append(np.mean(vel))
         std_speed.append(np.std(vel))
         mean_rewards.append([inflow, np.mean(list(per_agent_rew.values()))])
-    return [outflow_arr, velocity_arr, mean_speed, std_speed, mean_rewards]
+    return [outflow_arr, velocity_arr, mean_rewards]
 
 
 def create_parser():
@@ -295,14 +282,6 @@ def create_parser():
     parser.add_argument('filename', type=str, help='Specifies the filename to output the results into.')
 
     # optional input parameters
-    parser.add_argument(
-        '--run',
-        type=str,
-        help='The algorithm or model to train. This may refer to '
-             'the name of a built-on algorithm (e.g. RLLib\'s DQN '
-             'or PPO), or a user-defined trainable function or '
-             'class registered in the tune registry. '
-             'Required for results trained with flow-0.2.0 and before.')
     parser.add_argument(
         '--num_rollouts',
         type=int,
@@ -341,37 +320,32 @@ def create_parser():
     parser.add_argument('--end_len', type=int, default=500, help='How many last seconds of the run to use for '
                                                                  'calculating the outflow statistics')
     parser.add_argument('--cluster_mode', action='store_true', help='Specifies if we run it on a cluster')
+    parser.add_argument('--output_path', type=str, default=os.getcwd())
 
     return parser
 
 
-if __name__ == '__main__':
-    parser = create_parser()
-    args = parser.parse_args()
-    ray.init(num_cpus=args.num_cpus)
-    inflow_grid = list(range(args.outflow_min, args.outflow_max + args.step_size,
-                             args.step_size))
-    temp_output = [run_bottleneck.remote(args, inflow, args.num_trials) for inflow in inflow_grid]
+def run_bottleneck_results(outflow_min, outflow_max, step_size, num_trials, output_path, filename,
+                           checkpoint_dir, gen_emission, render_mode, checkpoint_num,
+                           horizon=None,
+                           end_len=500):
+    inflow_grid = list(range(outflow_min, outflow_max + step_size,
+                             step_size))
+    temp_output = [run_bottleneck.remote(checkpoint_dir, inflow, num_trials, gen_emission,
+                                         render_mode, checkpoint_num, horizon, end_len) for inflow in inflow_grid]
     final_output = ray.get(temp_output)
 
     outflow_arr = np.asarray([elem[0] for elem in final_output])
     outflow_arr = np.reshape(outflow_arr, (-1, outflow_arr.shape[-1]))
     velocity_arr = reduce(lambda x, y: x + y, [elem[1] for elem in final_output])
-    mean_speed = reduce(lambda x, y: x + y,  [elem[2] for elem in final_output])
-    std_speed = reduce(lambda x, y: x + y, [elem[3] for elem in final_output])
-    final_rewards = np.asarray(reduce(lambda x, y: x + y, [elem[4] for elem in final_output]))
+    final_rewards = np.asarray(reduce(lambda x, y: x + y, [elem[2] for elem in final_output]))
 
     # save the file
-    output_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), './trb_data/av_results'))
-    if args.cluster_mode:
-        output_path = os.path.join(output_path, 'tmp')
-    else:
-        output_path = os.path.join(output_path, datetime.now().strftime("%m-%d-%Y"))
+    output_path = os.path.abspath(output_path)
+    output_path = os.path.join(output_path, datetime.now().strftime("%m-%d-%Y"))
     if not os.path.exists(output_path):
         os.makedirs(output_path)
         os.makedirs(os.path.join(output_path, 'figures'))
-    filename = args.filename
     outflow_name = 'bottleneck_outflow_{}.txt'.format(filename)
     speed_name = 'speed_outflow_{}.txt'.format(filename)
     with open(os.path.join(output_path, outflow_name), 'ab') as file:
@@ -398,15 +372,14 @@ if __name__ == '__main__':
     std_outflows = np.asarray([np.std(sorted_outflows[inflow])
                                for inflow in unique_inflows])
     mean_throughputs = np.asarray([np.mean(sorted_throughputs[inflow])
-                                for inflow in unique_inflows])
+                                   for inflow in unique_inflows])
     std_throughputs = np.asarray([np.std(sorted_throughputs[inflow])
-                               for inflow in unique_inflows])
+                                  for inflow in unique_inflows])
 
     mean_rewards = np.asarray([np.mean(sorted_rewards[inflow])
-                                for inflow in unique_inflows])
-    std_rewards = np.asarray([np.std(sorted_rewards[inflow])
                                for inflow in unique_inflows])
-
+    std_rewards = np.asarray([np.std(sorted_rewards[inflow])
+                              for inflow in unique_inflows])
 
     plt.figure(figsize=(27, 9))
     plt.plot(unique_inflows, mean_outflows, linewidth=2, color='orange')
@@ -470,19 +443,17 @@ if __name__ == '__main__':
     plt.minorticks_on()
     plt.savefig(os.path.join(output_path, 'figures/rewards_{}'.format(filename)) + '.png')
 
-    # if we wanted to save the render, here we create the movie
-    if args.save_render:
-        dirs = os.listdir(os.path.expanduser('~') + '/flow_rendering')
-        # Ignore hidden files
-        dirs = [d for d in dirs if d[0] != '.']
-        dirs.sort(key=lambda date: datetime.strptime(date, "%Y-%m-%d-%H%M%S"))
-        recent_dir = dirs[-1]
-        # create the movie
-        movie_dir = os.path.expanduser('~') + '/flow_rendering/' + recent_dir
-        save_dir = os.path.expanduser('~') + '/flow_movies'
-        if not os.path.exists(save_dir):
-            os.mkdir(save_dir)
-        os_cmd = "cd " + movie_dir + " && ffmpeg -i frame_%06d.png"
-        os_cmd += " -pix_fmt yuv420p " + dirs[-1] + ".mp4"
-        os_cmd += "&& cp " + dirs[-1] + ".mp4 " + save_dir + "/"
-        os.system(os_cmd)
+
+if __name__ == '__main__':
+    parser = create_parser()
+    args = parser.parse_args()
+    ray.init(num_cpus=args.num_cpus)
+    horizon = None
+    if args.horizon:
+        horizon = args.horizon
+    run_bottleneck_results(args.outflow_min, args.outflow_max, args.step_size, args.num_trials,
+                           args.output_path, args.filename,
+                           args.checkpoint_dir, args.gen_emission, args.render_mode, args.checkpoint_num,
+                           end_len=args.end_len,
+                           horizon=horizon,
+                           )

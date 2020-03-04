@@ -3,9 +3,11 @@ In this example, each agent is given a single acceleration per timestep.
 
 The agents all share a single model.
 """
-from copy import deepcopy
 from datetime import datetime
+import errno
 import json
+import os
+import subprocess
 import sys
 
 import numpy as np
@@ -28,6 +30,7 @@ from flow.core.params import VehicleParams
 from flow.controllers import RLController, ContinuousRouter, \
     SimLaneChangeController
 from flow.models.GRU import GRU
+from flow.visualize.bottleneck_results import run_bottleneck_results
 from flow.utils.parsers import get_multiagent_bottleneck_parser
 from flow.utils.registry import make_create_env
 from flow.utils.rllib import FlowParamsEncoder
@@ -384,16 +387,21 @@ if __name__ == '__main__':
     if args.imitate and not args.centralized_vf:
         from flow.agents.ImitationPPO import ImitationTrainer
         alg_run = ImitationTrainer
+        run_name = "imitation_trainer"
     elif args.imitate and args.centralized_vf:
         alg_run = ImitationCentralizedTrainer
+        run_name = "imitation_central_trainer"
     elif not args.imitate and args.centralized_vf:
         alg_run = CCTrainer
-    config['env_config']['run'] = alg_run
+        run_name = "central_trainer"
+    else:
+        run_name = alg_run
+    config['env_config']['run'] = run_name
 
     exp_dict = {
             'name': args.exp_title,
             'run_or_experiment': alg_run,
-            'checkpoint_freq': args.checkpoint_freq,
+            'checkpoint_at_end': True,
             'stop': {
                 'training_iteration': args.num_iters
             },
@@ -404,3 +412,42 @@ if __name__ == '__main__':
         exp_dict['upload_dir'] = s3_string
 
     run(**exp_dict, queue_trials=False)
+
+    # Now we add code to loop through the results and create scores of the results
+    if args.create_inflow_graph:
+        output_path = os.path.join(os.path.join(os.path.expanduser('~/bottleneck_results'), date), args.exp_title)
+        if not os.path.exists(output_path):
+            try:
+                os.makedirs(output_path)
+            except OSError as exc:
+                if exc.errno != errno.EEXIST:
+                    raise
+        for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
+            if "checkpoint" in dirpath and dirpath.split('/')[-3] == args.exp_title:
+                # grab the experiment name
+                folder = os.path.dirname(dirpath)
+                tune_name = folder.split("/")[-1]
+                checkpoint_path = os.path.dirname(dirpath)
+
+                ray.shutdown()
+                if args.local_mode:
+                    ray.init(local_mode=True)
+                else:
+                    ray.init()
+
+                run_bottleneck_results(400, 3500, 100, 20, output_path, args.exp_title, checkpoint_path,
+                                       gen_emission=False, render_mode='no_render', checkpoint_num=dirpath.split('_')[-1],
+                                       horizon=args.horizon, end_len=500)
+                
+                if args.use_s3:
+                    # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
+                    for i in range(4):
+                        try:
+                            p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
+                                                                             "s3://eugene.experiments/trb_bottleneck_paper/graphs/{}/{}/{}".format(date,
+                                                                                                                              args.exp_title,
+                                                                                                                              tune_name)).split(
+                                ' '))
+                            p1.wait(50)
+                        except Exception as e:
+                            print('This is the error ', e)
