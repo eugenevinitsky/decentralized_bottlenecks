@@ -438,7 +438,7 @@ if __name__ == '__main__':
                 run_bottleneck_results(400, 3500, 100, 20, output_path, args.exp_title, checkpoint_path,
                                        gen_emission=False, render_mode='no_render', checkpoint_num=dirpath.split('_')[-1],
                                        horizon=args.horizon, end_len=500)
-                
+
                 if args.use_s3:
                     # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
                     for i in range(4):

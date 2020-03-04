@@ -95,7 +95,7 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
         ModelCatalog.register_custom_model("FeedForward", FeedForward)
 
     sim_params = flow_params['sim']
-    sim_params.restart_instance = False
+    sim_params.restart_instance = True
     dir_path = os.path.dirname(os.path.realpath(__file__))
     emission_path = '{0}/test_time_rollout/'.format(dir_path)
     sim_params.emission_path = emission_path if gen_emission else None
@@ -108,7 +108,7 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
         sim_params.render = 'drgb'
         sim_params.pxpm = 4
     elif render_mode == 'sumo_gui':
-        sim_params.render = False
+        sim_params.render = True
     elif render_mode == 'no_render':
         sim_params.render = False
 
@@ -277,7 +277,7 @@ def create_parser():
 
     # required input parameters
     parser.add_argument(
-        'result_dir', type=str, help='Directory containing results')
+        'checkpoint_dir', type=str, help='Directory containing results')
     parser.add_argument('checkpoint_num', type=str, help='Checkpoint number.')
     parser.add_argument('filename', type=str, help='Specifies the filename to output the results into.')
 
@@ -312,6 +312,7 @@ def create_parser():
         '--horizon',
         type=int,
         help='Specifies the horizon.')
+    parser.add_argument('--local_mode', action='store_true', default=False)
     parser.add_argument('--num_cpus', type=int, default=1, help='how many cpus to run ray with')
     parser.add_argument('--outflow_min', type=int, default=400, help='Lowest inflow to evaluate over')
     parser.add_argument('--outflow_max', type=int, default=2500, help='Lowest inflow to evaluate over')
@@ -332,7 +333,7 @@ def run_bottleneck_results(outflow_min, outflow_max, step_size, num_trials, outp
     inflow_grid = list(range(outflow_min, outflow_max + step_size,
                              step_size))
     temp_output = [run_bottleneck.remote(checkpoint_dir, inflow, num_trials, gen_emission,
-                                         render_mode, checkpoint_num, horizon, end_len) for inflow in inflow_grid]
+                                         render_mode, checkpoint_num, end_len, horizon) for inflow in inflow_grid]
     final_output = ray.get(temp_output)
 
     outflow_arr = np.asarray([elem[0] for elem in final_output])
@@ -447,7 +448,10 @@ def run_bottleneck_results(outflow_min, outflow_max, step_size, num_trials, outp
 if __name__ == '__main__':
     parser = create_parser()
     args = parser.parse_args()
-    ray.init(num_cpus=args.num_cpus)
+    if args.local_mode:
+        ray.init(num_cpus=args.num_cpus, local_mode=True)
+    else:
+        ray.init(num_cpus=args.num_cpus)
     horizon = None
     if args.horizon:
         horizon = args.horizon
