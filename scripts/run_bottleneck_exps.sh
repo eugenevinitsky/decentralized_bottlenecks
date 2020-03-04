@@ -976,17 +976,32 @@
 #--imitate --multi_node --sim_step 0.5 --final_imitation_weight 0.02 --life_penalty 2.0 --num_imitation_iters 300 --hard_negative_mining" \
 #--start --stop --cluster-name kp_0pen_im8 --tmux
 
+#####################################################################################################################################################
+### 3/03/20 exps
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 2pen_i2400 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 2.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
+#--multi_node --sim_step 0.5 --life_penalty 2.0 --create_inflow_graph" \
+#--start --stop --cluster-name ev_2pen_1 --tmux
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 2pen_il400h3500 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 2.0 --horizon 200 --low_inflow 400 --high_inflow 3500 --aggregate_info \
+#--multi_node --sim_step 0.5 --life_penalty 2.0 --create_inflow_graph" \
+#--start --stop --cluster-name ev_2pen_2 --tmux
+
 ####################################################################################################################################################
-## 3/03/20 exps
+## 3/04/20 exps
 
 ray exec ray_autoscale.yaml \
 "python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 2pen_i2400 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
 --num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 2.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
---multi_node --sim_step 0.5 --life_penalty 2.0 --create_inflow_graph" \
---start --stop --cluster-name ev_2pen_1 --tmux
+--multi_node --sim_step 0.5 --life_penalty 2.0 --create_inflow_graph --sims_per_step 10" \
+--start --stop --cluster-name ev_2pen_3 --tmux
 
 ray exec ray_autoscale.yaml \
 "python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 2pen_il400h3500 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
 --num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 2.0 --horizon 200 --low_inflow 400 --high_inflow 3500 --aggregate_info \
---multi_node --sim_step 0.5 --life_penalty 2.0 --create_inflow_graph" \
---start --stop --cluster-name ev_2pen_2 --tmux
+--multi_node --sim_step 0.5 --life_penalty 2.0 --create_inflow_graph --sims_per_step" \
+--start --stop --cluster-name ev_2pen_4 --tmux
