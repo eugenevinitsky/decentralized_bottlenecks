@@ -22,6 +22,7 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument("--vf_loss_coeff", type=float, default=.0001, help='coeff of the vf loss')
     
     # arguments for flow
+    parser.add_argument('--sims_per_step', type=int, default=1, help='How many steps to take per action')
     parser.add_argument('--render', action='store_true', help='Show sumo-gui of results')
     parser.add_argument('--horizon', type=int, default=1000, help='Horizon of the environment')
     parser.add_argument('--sim_step', type=float, default=0.5, help='dt of a timestep')

@@ -355,12 +355,12 @@ def loss_with_central_critic(policy, model, dist_class, train_batch):
         use_gae=policy.config["use_gae"],
         model_config=policy.config["model"])
 
-    return policy.loss_obj
+    return policy.loss_obj.loss
 
 
 def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     loss = loss_with_central_critic(policy, model, dist_class, train_batch)
-    return loss.policy_loss + loss.mean_vf_loss
+    return loss
 
 
 def setup_mixins(policy, obs_space, action_space, config):

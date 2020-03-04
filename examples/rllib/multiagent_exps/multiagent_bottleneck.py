@@ -210,7 +210,7 @@ def setup_flow_params(args):
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
             warmup_steps=int(0 / args.sim_step),
-            sims_per_step=10,
+            sims_per_step=args.sims_per_step,
             horizon=args.horizon,
             clip_actions=False,
             additional_params=additional_env_params,
@@ -411,7 +411,7 @@ if __name__ == '__main__':
     if args.use_s3:
         exp_dict['upload_dir'] = s3_string
 
-    run(**exp_dict, queue_trials=False)
+    run(**exp_dict, queue_trials=False, raise_on_failed_trial=False)
 
     # Now we add code to loop through the results and create scores of the results
     if args.create_inflow_graph:

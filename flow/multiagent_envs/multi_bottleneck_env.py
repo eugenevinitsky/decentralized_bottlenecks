@@ -125,8 +125,9 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         # action space is speed and velocity of leading and following
         # vehicles for all of the avs
         add_params = self.env_params.additional_params
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) == '2']
+
         if add_params['centralized_obs']:
-            rl_ids = self.k.vehicle.get_rl_ids()
             state = self.get_centralized_state()
             veh_info = {rl_id: np.concatenate((self.veh_statistics(rl_id), state)) for rl_id in rl_ids}
         else:
@@ -137,12 +138,12 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                                                                    rl_actions)
                                                    )
                                                   )
-                            for rl_id in self.k.vehicle.get_rl_ids()}
+                            for rl_id in rl_ids}
             else:
                 veh_info = {rl_id: np.concatenate((self.veh_statistics(rl_id),
                                                     self.state_util(rl_id),
                                                    ))
-                            for rl_id in self.k.vehicle.get_rl_ids()}
+                            for rl_id in rl_ids}
             if self.env_params.additional_params.get('aggregate_info'):
                 agg_statistics = self.aggregate_statistics()
                 veh_info = {rl_id: np.concatenate((val, agg_statistics))
@@ -159,7 +160,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 self.past_actions_dict[rl_id] = [agent_past_dict, num_steps]
             actions_history = {rl_id: self.past_actions_dict[rl_id][0] for rl_id in self.k.vehicle.get_rl_ids()}
             veh_info = {rl_id: np.concatenate((veh_info[rl_id], actions_history[rl_id])) for
-                        rl_id in self.k.vehicle.get_rl_ids()}
+                        rl_id in rl_ids}
 
         # Go through the human drivers and add zeros if the vehicles have left as a final observation
         left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
@@ -271,25 +272,23 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
         add_params = self.env_params.additional_params
         # reward is the mean AV speed
-        if add_params["speed_reward"]:
-            rl_ids = self.k.vehicle.get_rl_ids()
-            mean_vel = np.mean(self.k.vehicle.get_speed(rl_ids)) / 60.0
-            reward = mean_vel
         # reward is the outflow over "num_sample_seconds" seconds
-        else:
-            reward = self.k.vehicle.get_outflow_rate(
-                int(add_params["num_sample_seconds"])) / 2000.0 - \
-                     self.env_params.additional_params["life_penalty"]
+        reward = self.k.vehicle.get_outflow_rate(
+            add_params["num_sample_seconds"]) / 2000.0 - \
+                 self.env_params.additional_params["life_penalty"]
         if add_params["congest_penalty"]:
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
             if num_vehs > 30 * self.scaling:
                 penalty = (num_vehs - 30 * self.scaling) / 10.0
                 reward -= penalty
 
-        reward_dict = {rl_id: reward for rl_id in self.k.vehicle.get_rl_ids()}
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) == '2']
+        reward_dict = {rl_id: reward for rl_id in rl_ids}
+        if add_params["speed_reward"]:
+            reward_dict = {rl_id: reward + (self.k.vehicle.get_speed(rl_id) / 10) for rl_id, reward in reward_dict.items()}
         # If a vehicle has left, just make sure to return a reward for it
         left_vehicles_dict = {veh_id: 0 for veh_id
-                              in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
+                              in self.k.vehicle.get_arrived_ids() if veh_id in self.left_av_list}
         reward_dict.update(left_vehicles_dict)
         return reward_dict
 

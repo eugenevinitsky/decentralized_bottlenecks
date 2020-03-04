@@ -25,9 +25,7 @@ parser.add_argument("--stop", type=int, default=100000)
 def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     policy.imitation_loss = imitation_loss(policy, model, dist_class, train_batch)
     loss = loss_with_central_critic(policy, model, dist_class, train_batch)
-    # train your centralized value function all the time
-    return policy.policy_weight * loss.policy_loss \
-               + policy.imitation_weight * policy.imitation_loss + loss.mean_vf_loss
+    return policy.policy_weight * loss + policy.imitation_weight * policy.imitation_loss
 
 
 def setup_mixins(policy, obs_space, action_space, config):

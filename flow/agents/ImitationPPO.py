@@ -48,10 +48,7 @@ def imitation_loss(policy, model, dist_class, train_batch):
 def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
     policy.imitation_loss = imitation_loss(policy, model, dist_class, train_batch)
     loss = ppo_surrogate_loss(policy, model, dist_class, train_batch)
-    policy_loss = loss.policy_loss
-    vf_loss = loss.mean_vf_loss
-    # we always train the value function, no reason not to
-    return policy.policy_weight * policy_loss + policy.imitation_weight * policy.imitation_loss + vf_loss
+    return policy.policy_weight * loss + policy.imitation_weight * policy.imitation_loss
 
 
 class PPOLoss(object):
@@ -140,8 +137,7 @@ class PPOLoss(object):
             loss = reduce_mean_valid(-surrogate_loss +
                                      cur_kl_coeff * action_kl -
                                      entropy_coeff * curr_entropy)
-        self.policy_loss = loss
-        self.loss = loss + self.mean_vf_loss
+        self.loss = loss
 
 
 def ppo_surrogate_loss(policy, model, dist_class, train_batch):
@@ -177,7 +173,7 @@ def ppo_surrogate_loss(policy, model, dist_class, train_batch):
         use_gae=policy.config["use_gae"],
         model_config=policy.config["model"])
 
-    return policy.loss_obj
+    return policy.loss_obj.loss
 
 
 @DeveloperAPI
