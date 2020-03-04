@@ -435,7 +435,7 @@ if __name__ == '__main__':
                 else:
                     ray.init()
 
-                run_bottleneck_results(400, 3500, 100, 20, output_path, args.exp_title, checkpoint_path,
+                run_bottleneck_results(400, 3500, 100, args.num_test_trials, output_path, args.exp_title, checkpoint_path,
                                        gen_emission=False, render_mode='no_render', checkpoint_num=dirpath.split('_')[-1],
                                        horizon=args.horizon, end_len=500)
 

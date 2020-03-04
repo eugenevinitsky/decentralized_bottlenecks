@@ -73,5 +73,6 @@ def get_multiagent_bottleneck_parser():
 
     # arguments about output
     parser.add_argument('--create_inflow_graph', action='store_true', default=False)
+    parser.add_argument('--num_test_trials', type=int, default=20)
 
     return parser
