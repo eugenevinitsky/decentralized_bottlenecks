@@ -38,7 +38,7 @@ def imitation_loss(policy, model, dist_class, train_batch):
         imitation_loss = tf.reduce_mean(top_loss)
 
     else:
-        # Since we are doing gradient descent, we flip the sign so that we are minimizing the negative log prob
+        # We want to maximize log likelihood, we flip the sign so that we are minimizing the negative log prob
         imitation_loss = -tf.reduce_mean(tf.boolean_mask(action_dist.logp(expert_tensor), mask))
 
     return imitation_loss
@@ -228,7 +228,7 @@ def loss_stats(policy, train_batch):
     stats.update({'imitation_logprob': -policy.imitation_loss,
                   'policy_weight': policy.policy_weight,
                   'imitation_weight': policy.imitation_weight,
-                  'imitation_loss': policy.imitation_weight * -policy.imitation_loss})
+                  'imitation_loss': policy.imitation_weight * policy.imitation_loss})
     return stats
 
 
