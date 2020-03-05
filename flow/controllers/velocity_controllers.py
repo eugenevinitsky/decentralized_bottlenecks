@@ -430,6 +430,11 @@ class FakeStaggeringDecentralizedALINEAController(StaggeringDecentralizedALINEAC
                     self.lane_leader = True
                     env.waiting_queue.append(self.veh_id)
 
+            # if self.lane_leader and len(env.waiting_queue) == 4:
+            #     all_stopped = False
+            #     for waiting_veh in env.waiting_queue:
+            #         if self.env.kernel.vehicle.get_speed()
+
             if int(env.k.vehicle.get_edge(self.veh_id)) > int(self.stop_edge):
                 if self.veh_id in env.waiting_queue:
                     env.waiting_queue.remove(self.veh_id)
@@ -457,7 +462,6 @@ class FakeStaggeringDecentralizedALINEAController(StaggeringDecentralizedALINEAC
                 if self.stop_pos - cur_pos < 4:
                     self.stop_time = env.sim_step * env.time_counter
                     self.is_waiting_to_go = True
-                    self.stop_time = env.sim_step * env.time_counter
                     return None
                 else:
                     if cur_speed + idm_accel * env.sim_step > safe_velocity:
@@ -480,3 +484,90 @@ class FakeStaggeringDecentralizedALINEAController(StaggeringDecentralizedALINEAC
         else:
             self.duration = duration
             self.stop_set = True
+
+
+class FakeDecentralizedALINEAController(TimeDelayVelocityController):
+    def __init__(self, veh_id, stop_edge, stop_pos, additional_env_params, car_following_params):
+        super().__init__(veh_id, stop_edge, stop_pos, car_following_params)
+        # values for the ALINEA ramp meter algorithm
+        self.n_crit = additional_env_params.get("n_crit")
+        self.q_max = 14401
+        self.q_min = 200
+        self.feedback_coeff = additional_env_params.get('feedback_coeff')
+        self.q = additional_env_params.get('q_init')  # 600 # ramp meter feedback controller
+        self.feedback_update_time = 0
+        self.feedback_timer = 0.0
+        self.duration = 0.0
+        self.idm_controller = IDMController(veh_id, car_following_params=car_following_params)
+        self.stop_time = 0.0
+        self.is_waiting_to_go = False
+        self.stop_set = False
+
+
+    def get_duration(self, env):
+        self.feedback_timer += env.sim_step
+        if self.feedback_timer > self.feedback_update_time:
+            self.feedback_timer = 0
+            # now implement the integral controller update
+            # find all the vehicles in an edge
+            q_update = self.feedback_coeff * (
+                self.n_crit - np.average(env.smoothed_num))
+            self.q = min(max(self.q + q_update, self.q_min), self.q_max)
+            # convert q to cycle time, we keep track of the previous cycle time to let the cycle coplete
+            duration = 3600 * env.scaling * 4 / self.q
+        return duration
+
+    def set_stop(self, env):
+        duration = self.get_duration(env)
+
+        if duration < 1.0:
+            self.stop_set = False
+        else:
+            self.duration = duration
+            self.stop_set = True
+
+    def get_accel(self, env):
+        if (env.k.vehicle.is_stopped(self.veh_id)):
+            env.k.vehicle.set_color(self.veh_id, (255, 255, 0))
+        else:
+            env.k.vehicle.set_color(self.veh_id, (0, 255, 0))
+        cur_pos = env.k.vehicle.get_position(self.veh_id)
+        cur_speed = env.k.vehicle.get_speed(self.veh_id)
+
+        if self.stop_pos - cur_pos < 4 and not self.is_waiting_to_go:
+            self.stop_time = env.sim_step * env.time_counter
+            self.is_waiting_to_go = True
+
+        self.set_stop(env)
+
+        if len(env.k.vehicle.get_edge(self.veh_id)) and env.k.vehicle.get_edge(self.veh_id)[0] != ':':
+
+            if int(env.k.vehicle.get_edge(self.veh_id)) > int(self.stop_edge):
+                return self.idm_controller.get_accel(env)
+            elif self.is_waiting_to_go:
+                # stop until conditions are met
+                if env.sim_step * (env.time_counter + 1) > self.stop_time + self.duration:
+                    return self.idm_controller.get_accel(env)
+                return -1 * self.max_deaccel
+            elif self.stop_set:
+                self.set_stop(env)
+                b = self.max_deaccel
+                dt = env.sim_step
+                h = self.stop_pos - cur_pos - 4
+                if (b ** 2) * (dt ** 2) + 2 * b * h > 0:
+                    safe_velocity = - b * dt + np.sqrt((b ** 2) * (dt ** 2) + 2 * b * h)
+                else:
+                    safe_velocity = 0.0
+                idm_accel = self.idm_controller.get_accel(env)
+
+                if cur_speed + idm_accel * env.sim_step > safe_velocity:
+                    if safe_velocity > 0:
+                        return (safe_velocity - cur_speed) / env.sim_step
+                    else:
+                        return None  # return max deaccel
+                else:
+                    return idm_accel
+            else:
+                return self.idm_controller.get_accel(env)
+        else:
+            return self.idm_controller.get_accel(env)

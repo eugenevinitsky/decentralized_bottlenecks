@@ -68,6 +68,12 @@ def get_multiagent_bottleneck_parser():
                                                                         'the value function')
     parser.add_argument('--max_num_agents', type=int, default=120, help='The maximum number of agents we could ever have')
 
+    # dqfd arguments
+    parser.add_argument('--num_expert_steps', type=int, default=5e4, help='How many steps to let the expert take'
+                                                                          'before switching back to the actor')
+    parser.add_argument('--fingerprinting', action='store_true', default=False,
+                        help='Whether to add the iteration number to the inputs')
+
     # arguments for ray
     parser.add_argument('--use_lstm', action='store_true')
     parser.add_argument('--use_gru', action='store_true')

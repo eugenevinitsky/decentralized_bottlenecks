@@ -55,6 +55,7 @@ class BottleneckDensityExperiment(Experiment):
             step_densities = []
             state = self.env.reset()
             for j in range(num_steps):
+                print(j)
                 state, reward, done, _ = self.env.step(rl_actions(state))
                 if j >= num_steps - end_len:
                     vehicles = self.env.k.vehicle

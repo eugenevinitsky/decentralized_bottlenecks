@@ -78,6 +78,9 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
     elif config_run == "central_trainer":
         from flow.agents.centralized_PPO import CCTrainer
         agent_cls = CCTrainer
+    elif config_run == "dqfd":
+        from flow.agents.DQfD import DQFDTrainer
+        agent_cls = DQFDTrainer
     else:
         agent_cls = get_agent_class(config_run)
 
@@ -257,6 +260,7 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
             k += 1
             obs = next_obs
 
+        print('mean error was ', np.mean(mean_error))
         vehicles = env.unwrapped.k.vehicle
         outflow = vehicles.get_outflow_rate(500)
         final_outflows.append(outflow)

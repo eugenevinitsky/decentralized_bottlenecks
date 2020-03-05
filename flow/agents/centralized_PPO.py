@@ -217,6 +217,7 @@ def centralized_critic_postprocessing(policy,
             # central_obs_list = sorted(central_obs_list, key=lambda x: x[0])
             final_stack = []
             for i in range(central_obs_list[0].shape[0]):
+                # sort based on the zero element, which we guarantee is absolute position
                 elems = sorted([elem[i, :] for elem in central_obs_list], key=lambda x: x[0])
                 final_stack.append(np.hstack(elems))
 

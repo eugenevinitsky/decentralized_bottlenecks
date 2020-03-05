@@ -4,26 +4,16 @@ In this example, each agent is given a single acceleration per timestep.
 The agents all share a single model.
 """
 from datetime import datetime
-import errno
 import json
-import os
-import subprocess
 import sys
 
 import numpy as np
 import pytz
 import ray
-import ray.rllib.agents.ppo as ppo
 from ray import tune
-from ray.rllib.models import ModelCatalog
 from ray.tune import run
 from ray.tune.registry import register_env
 
-from flow.agents.centralized_PPO import CentralizedCriticModel, CentralizedCriticModelRNN
-from flow.agents.centralized_PPO import CCTrainer
-from flow.agents.centralized_imitation_PPO import ImitationCentralizedTrainer
-from flow.agents.DQfD import DQFDTrainer
-import flow.agents.DQfD as DQfD
 
 from flow.core.params import SumoParams, EnvParams, InitialConfig, NetParams, \
     InFlows, SumoLaneChangeParams, SumoCarFollowingParams
@@ -31,11 +21,11 @@ from flow.core.params import TrafficLightParams
 from flow.core.params import VehicleParams
 from flow.controllers import RLController, ContinuousRouter, \
     SimLaneChangeController
-from flow.models.GRU import GRU
-from flow.visualize.bottleneck_results import run_bottleneck_results
 from flow.utils.parsers import get_multiagent_bottleneck_parser
 from flow.utils.registry import make_create_env
 from flow.utils.rllib import FlowParamsEncoder
+from flow.agents.DQfD import DQFDTrainer
+import flow.agents.DQfD as DQfD
 
 
 # TODO(@evinitsky) clean this up
@@ -113,10 +103,6 @@ def setup_flow_params(args):
     controlled_segments = [('1', 1, False), ('2', 2, True), ('3', 2, True),
                            ('4', 2, True), ('5', 1, False)]
     num_observed_segments = [('1', 1), ('2', 3), ('3', 3), ('4', 3), ('5', 1)]
-    if np.isclose(args.av_frac, 0.4):
-        q_init = 1000
-    else:
-        q_init = 600
     additional_env_params = {
         'target_velocity': 40,
         'disable_tb': True,
@@ -145,12 +131,16 @@ def setup_flow_params(args):
         'exit_history_seconds': 0,  # This doesn't do anything, remove
 
         # parameters for the staggering controller that we imitate
-        "n_crit": 8,
+        "n_crit": 12,
         "q_max": 15000,
         "q_min": 200,
-        "q_init": q_init, #
-        "feedback_coeff": 1, #
-        'num_imitation_iters': args.num_imitation_iters,
+        "q_init": 600, #
+        "feedback_coeff": 10, #
+
+        # DQFD params
+        "num_expert_steps": args.num_expert_steps,
+        "action_discretization": 5,
+        "fingerprinting": args.fingerprinting
     }
 
     # percentage of flow coming out of each lane
@@ -161,20 +151,20 @@ def setup_flow_params(args):
             edge='1',
             vehs_per_hour=flow_rate * (1 - args.av_frac),
             departLane='random',
-            departSpeed=23.0)
+            departSpeed=10.0)
         inflow.add(
             veh_type='av',
             edge='1',
             vehs_per_hour=flow_rate * args.av_frac,
             departLane='random',
-            departSpeed=23.0)
+            departSpeed=10.0)
     else:
         inflow.add(
             veh_type='av',
             edge='1',
             vehs_per_hour=flow_rate,
             departLane='random',
-            departSpeed=23.0)
+            departSpeed=10.0)
 
     traffic_lights = TrafficLightParams()
     if not DISABLE_TB:
@@ -184,10 +174,7 @@ def setup_flow_params(args):
 
     additional_net_params = {'scaling': args.scaling, "speed_limit": 23.0}
 
-    if args.imitate:
-        env_name = 'MultiBottleneckImitationEnv'
-    else:
-        env_name = 'MultiBottleneckEnv'
+    env_name = 'MultiBottleneckDFQDEnv'
     flow_params = dict(
         # name of the experiment
         exp_tag=args.exp_title,
@@ -211,8 +198,8 @@ def setup_flow_params(args):
 
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
-            warmup_steps=int(0 / args.sim_step),
-            sims_per_step=args.sims_per_step,
+            warmup_steps=0, #int(50 / args.sim_step), # TODO(@ev) put back
+            sims_per_step=2,
             horizon=args.horizon,
             clip_actions=False,
             additional_params=additional_env_params,
@@ -248,7 +235,7 @@ def setup_flow_params(args):
 
 def on_episode_end(info):
     env = info['env'].get_unwrapped()[0]
-    outflow_over_last_500 = env.k.vehicle.get_outflow_rate(int(500))
+    outflow_over_last_500 = env.k.vehicle.get_outflow_rate(int(500 / env.sim_step))
     inflow = env.inflow
     # round it to 100
     inflow = int(inflow / 100) * 100
@@ -257,15 +244,6 @@ def on_episode_end(info):
 
 
 def on_train_result(info):
-    """Store the mean score of the episode, and increment or decrement how many adversaries are on"""
-    result = info["result"]
-    trainer = info["trainer"]
-    trainer.workers.foreach_worker(
-        lambda ev: ev.foreach_env(
-            lambda env: env.set_iteration_num(result['training_iteration'])))
-
-
-def on_train_result_dqfd(info):
     trainer = info["trainer"]
     iteration = trainer._iteration
     num_steps_sampled = trainer.optimizer.num_steps_sampled
@@ -278,91 +256,24 @@ def on_train_result_dqfd(info):
 def setup_exps(args):
     rllib_params = setup_rllib_params(args)
     flow_params = setup_flow_params(args)
-    if args.dqfd:
-        alg_run = 'DQFD'
-        config = DQfD.DEFAULT_CONFIG.copy()
-        config['num_expert_steps'] = args.num_expert_steps
-        # Grid search things
-        if args.grid_search:
-            config['lr'] = tune.grid_search([5e-6, 5e-5, 5e-4])
-            config['n_step'] = tune.grid_search([1, 10, 50])
-            config['train_batch_size'] = tune.grid_search([32, 320])
-    else:
-        alg_run = 'PPO'
-        config = ppo.DEFAULT_CONFIG.copy()
-        config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
-
-        # if we have a centralized vf we can't use big batch sizes or we eat up all the system memory
-        if not args.centralized_vf:
-            config['sgd_minibatch_size'] = min(args.horizon * 10, 0.5 * config['train_batch_size'])
-        else:
-            config['sgd_minibatch_size'] = 128
-        if args.use_lstm:
-            config['vf_loss_coeff'] = args.vf_loss_coeff
-            # Grid search things
-        if args.grid_search:
-            config['num_sgd_iter'] = tune.grid_search([10, 30])
-            config['lr'] = tune.grid_search([5e-6, 5e-5, 5e-4])
-
-            # LSTM Things
-        if args.use_lstm and args.use_gru:
-            sys.exit("You should not specify both an LSTM and a GRU")
-        if args.use_lstm:
-            if args.grid_search:
-                config['model']["max_seq_len"] = tune.grid_search([10, 20])
-            else:
-                config['model']["max_seq_len"] = 20
-            config['model'].update({'fcnet_hiddens': []})
-            config['model']["lstm_cell_size"] = 64
-            config['model']['lstm_use_prev_action_reward'] = True
-        elif args.use_gru:
-            if args.grid_search:
-                config['model']["max_seq_len"] = tune.grid_search([20, 40])
-            else:
-                config['model']["max_seq_len"] = 20
-                config['model'].update({'fcnet_hiddens': []})
-            model_name = "GRU"
-            ModelCatalog.register_custom_model(model_name, GRU)
-            config['model']['custom_model'] = model_name
-            config['model']['custom_options'].update({"cell_size": 64, 'use_prev_action': True})
-        else:
-            config['model'].update({'fcnet_hiddens': [100, 50, 25]})
-            # model_name = "FeedForward"
-            # ModelCatalog.register_custom_model(model_name, FeedForward)
-            # config['model']['custom_model'] = model_name
-            # config['model']['custom_options'].update({'use_prev_action': True})
-
-            # model setup for the centralized case
-            # Set up model
-        if args.centralized_vf:
-            if args.use_lstm:
-                ModelCatalog.register_custom_model("cc_model", CentralizedCriticModelRNN)
-            else:
-                ModelCatalog.register_custom_model("cc_model", CentralizedCriticModel)
-            config['model']['custom_model'] = "cc_model"
-            config['model']['custom_options']['central_vf_size'] = args.central_vf_size
-            config['model']['custom_options']['max_num_agents'] = args.max_num_agents
-
-        if args.imitate:
-            config[
-                'kl_coeff'] = 20  # start with it high so we take smaller steps to start and don't just forget the imitation
-            config['model']['custom_options'].update({"imitation_weight": 1e0})
-            config['model']['custom_options'].update({"num_imitation_iters": args.num_imitation_iters})
-            config['model']['custom_options']['hard_negative_mining'] = args.hard_negative_mining
-            config["model"]["custom_options"]["final_imitation_weight"] = args.final_imitation_weight
-
+    alg_run = 'DQFD'
+    config = DQfD.DEFAULT_CONFIG.copy()
     config['num_workers'] = rllib_params['n_cpus']
-
-    config['gamma'] = 0.995  # discount rate
+    config['gamma'] = 0.999  # discount rate
     config['horizon'] = args.horizon
-    # config["batch_mode"] = "truncate_episodes"
-    # config["sample_batch_size"] = args.horizon
-    config["observation_filter"] = "MeanStdFilter"
+    config['num_expert_steps'] = args.num_expert_steps
+
+    # Grid search things
+    if args.grid_search:
+        config['lr'] = tune.grid_search([5e-6, 5e-5, 5e-4])
+        config['n_step'] = tune.grid_search([1, 10, 50])
+        config['train_batch_size'] = tune.grid_search([32, 320])
 
     # save the flow params for replay
     flow_json = json.dumps(
         flow_params, cls=FlowParamsEncoder, sort_keys=True, indent=4)
     config['env_config']['flow_params'] = flow_json
+    config['env_config']['run'] = alg_run
 
     create_env, env_name = make_create_env(params=flow_params, version=0)
 
@@ -391,53 +302,33 @@ def setup_exps(args):
 
 if __name__ == '__main__':
     parser = get_multiagent_bottleneck_parser()
+    parser.add_argument('--num_expert_steps', type=int, default=5e4, help='How many steps to let the expert take'
+                                                                          'before switching back to the actor')
+    parser.add_argument('--fingerprinting', action='store_true', default=False,
+                        help='Whether to add the iteration number to the inputs')
     args = parser.parse_args()
 
     alg_run, env_name, config = setup_exps(args)
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
-    elif args.local_mode:
-        ray.init(local_mode=True)
     else:
-        ray.init()
+        ray.init(local_mode=True)
     eastern = pytz.timezone('US/Eastern')
     date = datetime.now(tz=pytz.utc)
     date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
     s3_string = "s3://eugene.experiments/trb_bottleneck_paper/" \
                 + date + '/' + args.exp_title
     config['env'] = env_name
+    config['compress_observations'] = False
 
     # store custom metrics
-    if args.imitate:
-        config["callbacks"] = {"on_episode_end": tune.function(on_episode_end),
-                               "on_train_result": tune.function(on_train_result)}
-    elif args.dqfd:
-        config["callbacks"] = {"on_episode_end": tune.function(on_episode_end),
-                               "on_train_result": tune.function(on_train_result_dqfd)}
-    else:
-        config["callbacks"] = {"on_episode_end": tune.function(on_episode_end)}
-
-    if args.imitate and not args.centralized_vf:
-        from flow.agents.ImitationPPO import ImitationTrainer
-        alg_run = ImitationTrainer
-        run_name = "imitation_trainer"
-    elif args.imitate and args.centralized_vf:
-        alg_run = ImitationCentralizedTrainer
-        run_name = "imitation_central_trainer"
-    elif not args.imitate and args.centralized_vf:
-        alg_run = CCTrainer
-        run_name = "central_trainer"
-    elif args.dqfd:
-        alg_run = DQFDTrainer
-        run_name = "dqfd"
-    else:
-        run_name = alg_run
-    config['env_config']['run'] = run_name
+    config["callbacks"] = {"on_episode_end": tune.function(on_episode_end),
+                           "on_train_result": tune.function(on_train_result)}
 
     exp_dict = {
             'name': args.exp_title,
-            'run_or_experiment': alg_run,
-            'checkpoint_at_end': True,
+            'run_or_experiment': DQFDTrainer,
+            'checkpoint_freq': args.checkpoint_freq,
             'stop': {
                 'training_iteration': args.num_iters
             },
@@ -447,43 +338,4 @@ if __name__ == '__main__':
     if args.use_s3:
         exp_dict['upload_dir'] = s3_string
 
-    run(**exp_dict, queue_trials=False, raise_on_failed_trial=False)
-
-    # Now we add code to loop through the results and create scores of the results
-    if args.create_inflow_graph:
-        output_path = os.path.join(os.path.join(os.path.expanduser('~/bottleneck_results'), date), args.exp_title)
-        if not os.path.exists(output_path):
-            try:
-                os.makedirs(output_path)
-            except OSError as exc:
-                if exc.errno != errno.EEXIST:
-                    raise
-        for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
-            if "checkpoint" in dirpath and dirpath.split('/')[-3] == args.exp_title:
-                # grab the experiment name
-                folder = os.path.dirname(dirpath)
-                tune_name = folder.split("/")[-1]
-                checkpoint_path = os.path.dirname(dirpath)
-
-                ray.shutdown()
-                if args.local_mode:
-                    ray.init(local_mode=True)
-                else:
-                    ray.init()
-
-                run_bottleneck_results(400, 3500, 100, args.num_test_trials, output_path, args.exp_title, checkpoint_path,
-                                       gen_emission=False, render_mode='no_render', checkpoint_num=dirpath.split('_')[-1],
-                                       horizon=args.horizon, end_len=500)
-
-                if args.use_s3:
-                    # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
-                    for i in range(4):
-                        try:
-                            p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                             "s3://eugene.experiments/trb_bottleneck_paper/graphs/{}/{}/{}".format(date,
-                                                                                                                              args.exp_title,
-                                                                                                                              tune_name)).split(
-                                ' '))
-                            p1.wait(50)
-                        except Exception as e:
-                            print('This is the error ', e)
+    run(**exp_dict, queue_trials=False)
