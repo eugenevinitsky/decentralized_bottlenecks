@@ -11,6 +11,7 @@ from traci.exceptions import TraCIException
 
 from ray.rllib.env import MultiAgentEnv
 
+from flow.controllers.rlcontroller import RLController
 from flow.envs.base_env import Env
 from flow.utils.exceptions import FatalFlowError
 
@@ -50,6 +51,7 @@ class MultiEnv(MultiAgentEnv, Env):
         """
         self.step_counter += 1
         self.left_av_list = []
+        self.observed_rl_cars.update(self.k.vehicle.get_rl_ids())
         for _ in range(self.env_params.sims_per_step):
             self.time_counter += 1
 
@@ -93,9 +95,12 @@ class MultiEnv(MultiAgentEnv, Env):
             self.additional_command()
 
             # advance the simulation in the simulator by one step
-            self.k.simulation.simulation_step()
-            left_avs = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if veh_id in self.k.vehicle.get_arrived_ids()]
+
+            left_cars = self.k.vehicle.get_arrived_ids()
+            left_avs = [veh_id for veh_id in left_cars if veh_id in self.observed_rl_cars]
             self.left_av_list.extend(left_avs)
+            self.left_av_time_dict.update({left_av: self.time_counter * self.sim_params.sim_step for left_av in left_avs})
+            self.k.simulation.simulation_step()
 
             # store new observations in the vehicles and traffic lights class
             self.k.update(reset=False)
@@ -163,6 +168,9 @@ class MultiEnv(MultiAgentEnv, Env):
             the initial observation of the space. The initial reward is assumed
             to be zero.
         """
+
+        self.observed_rl_cars = set()
+        self.left_av_time_dict = {}
         # set rendering to true
         self.num_resets += 1
         if self.num_resets > 0 and self.should_render:

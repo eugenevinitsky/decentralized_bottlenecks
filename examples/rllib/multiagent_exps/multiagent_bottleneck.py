@@ -297,9 +297,11 @@ def setup_exps(args):
             config['lr'] = tune.grid_search([5e-6, 5e-5, 5e-4])
             config['n_step'] = tune.grid_search([1, 5, 10])
             config['train_batch_size'] = tune.grid_search([32])
+            config['reserved_frac'] = tune.grid_search([0.1, 0.3])
     else:
         alg_run = 'PPO'
         config = ppo.DEFAULT_CONFIG.copy()
+        config['num_workers'] = rllib_params['n_cpus']
         config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
 
         # if we have a centralized vf we can't use big batch sizes or we eat up all the system memory
@@ -360,8 +362,6 @@ def setup_exps(args):
             config['model']['custom_options'].update({"num_imitation_iters": args.num_imitation_iters})
             config['model']['custom_options']['hard_negative_mining'] = args.hard_negative_mining
             config["model"]["custom_options"]["final_imitation_weight"] = args.final_imitation_weight
-
-    config['num_workers'] = rllib_params['n_cpus']
 
     config['gamma'] = 0.995  # discount rate
     config['horizon'] = args.horizon

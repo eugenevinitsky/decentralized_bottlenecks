@@ -125,7 +125,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         # action space is speed and velocity of leading and following
         # vehicles for all of the avs
         add_params = self.env_params.additional_params
-        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) == '2']
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if (self.k.vehicle.get_edge(veh_id) == '2'
+                                                                       and self.k.vehicle.get_position(veh_id) > 200)]
 
         if add_params['centralized_obs']:
             state = self.get_centralized_state()
@@ -163,9 +164,17 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                         rl_id in rl_ids}
 
         # Go through the human drivers and add zeros if the vehicles have left as a final observation
-        left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
-                              in self.left_av_list}
-        veh_info.update(left_vehicles_dict)
+        if int(self.time_counter / self.env_params.sims_per_step) == self.env_params.horizon:
+            if isinstance(self.observation_space, Box):
+                left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
+                                      in self.left_av_time_dict.keys()}
+            elif isinstance(self.observation_space, Dict):
+                num_obs = 0
+                for space in self.observation_space.spaces.values():
+                    num_obs += space.shape[0]
+                left_vehicles_dict = {veh_id: np.zeros(num_obs) for veh_id
+                                      in self.left_av_time_dict.keys()}
+            veh_info.update(left_vehicles_dict)
 
         if isinstance(self.observation_space, Box):
             veh_info = {key: np.clip(value, a_min=self.observation_space.low[0:value.shape[0]],
@@ -265,7 +274,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
 
         if self.env_params.evaluate:
-            if self.time_counter == self.env_params.horizon:
+            if int(self.time_counter/self.env_params.sims_per_step) == self.env_params.horizon:
                 reward = self.k.vehicle.get_outflow_rate(500)
                 return reward
             else:
@@ -275,7 +284,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         # reward is the mean AV speed
         # reward is the outflow over "num_sample_seconds" seconds
         reward = self.k.vehicle.get_outflow_rate(
-            add_params["num_sample_seconds"]) / 2000.0 - \
+            add_params["num_sample_seconds"]) * self.env_params.sims_per_step / 2000.0 - \
                  self.env_params.additional_params["life_penalty"]
         if add_params["congest_penalty"]:
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
@@ -283,14 +292,19 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 penalty = (num_vehs - 30 * self.scaling) / 10.0
                 reward -= penalty
 
-        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) == '2']
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if (self.k.vehicle.get_edge(veh_id) == '2'
+                                                                       and self.k.vehicle.get_position(veh_id) > 200)]
         reward_dict = {rl_id: reward for rl_id in rl_ids}
         if add_params["speed_reward"]:
             reward_dict = {rl_id: reward + (self.k.vehicle.get_speed(rl_id) / 10) for rl_id, reward in reward_dict.items()}
-        # If a vehicle has left, just make sure to return a reward for it
-        left_vehicles_dict = {veh_id: 0 for veh_id
-                              in self.k.vehicle.get_arrived_ids() if veh_id in self.left_av_list}
-        reward_dict.update(left_vehicles_dict)
+
+        # Return the outflow since the vehicle left
+        print(self.time_counter)
+        if int(self.time_counter/self.env_params.sims_per_step) == self.env_params.horizon:
+            end_time = self.env_params.horizon * self.sim_params.sim_step
+            left_vehicles_dict = {veh_id: self.k.vehicle.get_outflow_rate(end_time - exit_time) / 2000.0
+                                  for veh_id, exit_time in self.left_av_time_dict.items()}
+            reward_dict.update(left_vehicles_dict)
         return reward_dict
 
     def reset(self, new_inflow_rate=None):
@@ -546,22 +560,26 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
         self.update_curr_rl_vehicles()
 
         for key, value in state_dict.items():
-            controller = self.curr_rl_vehicles[key]['controller']
-            if self.k.vehicle.get_speed(key) <= 0.2:
-                self.curr_rl_vehicles[key]['time_since_stopped'] += 1.0
+            # this could be the fake final state for vehicles that have left the system
+            if key in self.k.vehicle.get_ids():
+                controller = self.curr_rl_vehicles[key]['controller']
+                if self.k.vehicle.get_speed(key) <= 0.2:
+                    self.curr_rl_vehicles[key]['time_since_stopped'] += 1.0
+                else:
+                    self.curr_rl_vehicles[key]['time_since_stopped'] = 0.0
+
+                accel = controller.get_accel(self)
+                if accel is None:
+                    accel = -np.abs(self.action_space.low[0])
+
+                duration = controller.duration
+
+                state_dict[key] = {"a_obs": np.concatenate((value, [self.curr_rl_vehicles[key]['time_since_stopped'] / self.env_params.horizon,
+                                                                  duration / 100.0])),
+                                   "expert_action": np.array([np.clip(accel, a_min=self.action_space.low[0],
+                                                                      a_max=self.action_space.high[0])])}
             else:
-                self.curr_rl_vehicles[key]['time_since_stopped'] = 0.0
-
-            accel = controller.get_accel(self)
-            if accel is None:
-                accel = -np.abs(self.action_space.low[0])
-
-            duration = controller.duration
-
-            state_dict[key] = {"a_obs": np.concatenate((value, [self.curr_rl_vehicles[key]['time_since_stopped'] / self.env_params.horizon,
-                                                              duration / 100.0])),
-                               "expert_action": np.array([np.clip(accel, a_min=self.action_space.low[0],
-                                                                  a_max=self.action_space.high[0])])}
+                state_dict[key] = {"a_obs": value[:-1], "expert_action": np.array([0.0])}
         return state_dict
 
     def _apply_rl_actions(self, rl_actions):
@@ -664,30 +682,31 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
         # iterate through the RL vehicles and find what the other agent would have done
         self.update_curr_rl_vehicles()
         for key, value in state_dict.items():
-            controller = self.curr_rl_vehicles[key]['controller']
-            if self.k.vehicle.get_speed(key) <= 0.2:
-                self.curr_rl_vehicles[key]['time_since_stopped'] += 1.0
-            else:
-                self.curr_rl_vehicles[key]['time_since_stopped'] = 0.0
-
-            duration = controller.duration
-            concat_list = np.concatenate((value, [self.curr_rl_vehicles[key]['time_since_stopped'] / self.env_params.horizon,
-                                    duration / 100.0]))
-
-            if self.fingerprinting:
-                # Since we only either are totally exploring or not exploring at all, lets just put a one in here for now
-                if self.num_steps_sampled < self.num_expert_steps:
-                    concat_list = np.concatenate((concat_list, [self.num_steps_sampled / 1e5, 1.0]))
+            if key in self.k.vehicle.get_ids():
+                controller = self.curr_rl_vehicles[key]['controller']
+                if self.k.vehicle.get_speed(key) <= 0.2:
+                    self.curr_rl_vehicles[key]['time_since_stopped'] += 1.0
                 else:
-                    concat_list = np.concatenate((concat_list, [self.num_steps_sampled / 1e5, 0.0]))
-            accel = controller.get_accel(self)
-            if not accel:
-                accel = -np.abs(self.action_values[0])
-            expert_action = int(self.find_nearest_idx(self.action_values, accel))
-            concat_list = np.concatenate((concat_list, [expert_action]))
+                    self.curr_rl_vehicles[key]['time_since_stopped'] = 0.0
 
-            value = np.clip(concat_list, a_min=self.observation_space.low, a_max=self.observation_space.high)
-            state_dict[key] = value
+                duration = controller.duration
+                concat_list = np.concatenate((value, [self.curr_rl_vehicles[key]['time_since_stopped'] / self.env_params.horizon,
+                                        duration / 100.0]))
+
+                if self.fingerprinting:
+                    # Since we only either are totally exploring or not exploring at all, lets just put a one in here for now
+                    if self.num_steps_sampled < self.num_expert_steps:
+                        concat_list = np.concatenate((concat_list, [self.num_steps_sampled / 1e5, 1.0]))
+                    else:
+                        concat_list = np.concatenate((concat_list, [self.num_steps_sampled / 1e5, 0.0]))
+                accel = controller.get_accel(self)
+                if not accel:
+                    accel = -np.abs(self.action_values[0])
+                expert_action = int(self.find_nearest_idx(self.action_values, accel))
+                concat_list = np.concatenate((concat_list, [expert_action]))
+
+                value = np.clip(concat_list, a_min=self.observation_space.low, a_max=self.observation_space.high)
+                state_dict[key] = value
 
         return state_dict
 
