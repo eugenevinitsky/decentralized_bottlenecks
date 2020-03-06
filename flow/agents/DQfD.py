@@ -7,8 +7,7 @@ import logging
 import collections
 
 import ray
-from ray.rllib.optimizers.replay_buffer import ReplayBuffer, \
-    PrioritizedReplayBufferWithExperts
+from ray.rllib.optimizers.replay_buffer import PrioritizedReplayBufferWithExperts
 from ray.rllib.optimizers.policy_optimizer import PolicyOptimizer
 from ray.rllib.policy.sample_batch import SampleBatch, \
     MultiAgentBatch
@@ -55,7 +54,8 @@ class DQfDOptimizer(SyncReplayOptimizer):
                  num_expert_steps=1e2,
                  sample_batch_size=4,
                  before_learn_on_batch=None,
-                 synchronize_sampling=False):
+                 synchronize_sampling=False,
+                 reserved_frac=0.1):
         """Initialize an sync replay optimizer.
 
         Arguments:
@@ -78,6 +78,7 @@ class DQfDOptimizer(SyncReplayOptimizer):
                 the sampled batch to learn on
             synchronize_sampling (bool): whether to sample the experiences for
                 all policies with the same indices (used in MADDPG).
+            reserved_frac (float): the percentage of the buffer reserved for the expert
         """
         PolicyOptimizer.__init__(self, workers)
 
@@ -107,7 +108,7 @@ class DQfDOptimizer(SyncReplayOptimizer):
         # TODO(@evinitsky) make this work without prioritized replay
         def new_buffer():
             return PrioritizedReplayBufferWithExperts(
-                buffer_size, alpha=prioritized_replay_alpha)
+                buffer_size, alpha=prioritized_replay_alpha, reserved_frac=reserved_frac)
 
         self.replay_buffers = collections.defaultdict(new_buffer)
 
@@ -196,6 +197,7 @@ def make_optimizer(workers, config):
         train_batch_size=config["train_batch_size"],
         num_expert_steps=config["num_expert_steps"],
         sample_batch_size=config["sample_batch_size"],
+        reserved_frac=config["reserved_frac"],
         **config["optimizer"])
 
 GenericOffPolicyTrainer = build_trainer(
@@ -214,6 +216,7 @@ GenericOffPolicyTrainer = build_trainer(
 
 new_config = deepcopy(DEFAULT_CONFIG)
 new_config["num_expert_steps"] = 5e4
+new_config["reserved_frac"] = .1
 
 DQFDTrainer = GenericOffPolicyTrainer.with_updates(
     name="DQFD", default_policy=DQNTFPolicy, default_config=new_config)

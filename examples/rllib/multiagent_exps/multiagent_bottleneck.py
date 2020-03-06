@@ -153,6 +153,13 @@ def setup_flow_params(args):
         'num_imitation_iters': args.num_imitation_iters,
     }
 
+    if args.dqfd:
+        additional_env_params.update({
+            "num_expert_steps": args.num_expert_steps,
+            "action_discretization": 5,
+            "fingerprinting": args.fingerprinting
+        })
+
     # percentage of flow coming out of each lane
     inflow = InFlows()
     if not np.isclose(args.av_frac, 1.0):
@@ -186,6 +193,8 @@ def setup_flow_params(args):
 
     if args.imitate:
         env_name = 'MultiBottleneckImitationEnv'
+    elif args.dqfd:
+        env_name = 'MultiBottleneckDFQDEnv'
     else:
         env_name = 'MultiBottleneckEnv'
     flow_params = dict(
@@ -282,6 +291,7 @@ def setup_exps(args):
         alg_run = 'DQFD'
         config = DQfD.DEFAULT_CONFIG.copy()
         config['num_expert_steps'] = args.num_expert_steps
+        config['compress_observations'] = False
         # Grid search things
         if args.grid_search:
             config['lr'] = tune.grid_search([5e-6, 5e-5, 5e-4])

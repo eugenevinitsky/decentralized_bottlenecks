@@ -168,7 +168,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         veh_info.update(left_vehicles_dict)
 
         if isinstance(self.observation_space, Box):
-            veh_info = {key: np.clip(value, a_min=self.observation_space.low, a_max=self.observation_space.high) for
+            veh_info = {key: np.clip(value, a_min=self.observation_space.low[0:value.shape[0]],
+                                     a_max=self.observation_space.high[0:value.shape[0]]) for
                         key, value in veh_info.items()}
         elif isinstance(self.observation_space, Dict):
             # TODO(@evinitsky) this is bad subclassing and will break if the obs space isn't uniform
@@ -619,6 +620,8 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
 
     def _apply_rl_actions(self, rl_actions):
 
+        # iterate through the RL vehicles and find what the other agent would have done
+        self.update_curr_rl_vehicles()
         if rl_actions:
             if self.num_steps_sampled < self.num_expert_steps:
                 id_list = []
@@ -626,15 +629,13 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
                 for key, value in rl_actions.items():
 
                     # a vehicle may have left since we got the state
-                    if key not in self.k.vehicle.get_arrived_ids():
+                    if key not in self.k.vehicle.get_arrived_ids() and key in self.k.vehicle.get_rl_ids():
                         controller = self.curr_rl_vehicles[key]['controller']
                         accel = controller.get_accel(self)
-
-                        if accel is None:
-                            accel = self.action_values[0]
-
                         id_list.append(key)
-                        action_list.append(self.find_nearest(self.action_values, accel))
+                        if not accel:
+                            accel = -np.abs(self.action_space.low[0])
+                        action_list.append(accel)
                 self.k.vehicle.apply_acceleration(id_list, action_list)
             else:
                 action_list = [(id, self.action_values[action]) for id, action in rl_actions.items()]
@@ -644,8 +645,8 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
 
     @property
     def observation_space(self):
-        # Extra keys "time since stop", duration, whether you are first in the queue
-        num_obs = 32
+        # Extra keys "time since stop", duration, whether you are first in the queue, acceleration
+        num_obs = super().observation_space.low.shape[0] + 3
         if self.fingerprinting:
             num_obs += 2
 
@@ -653,98 +654,46 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
             self.num_past_actions = 100
             num_obs += self.num_past_actions
 
-        if self.env_params.additional_params.get('aggregate_info'):
-            num_obs += 6
-
         new_obs = Box(low=-3.0, high=3.0, shape=(num_obs,), dtype=np.float32)
         # new_obs = Box(low=-3.0, high=3.0, shape=(obs.shape[0],), dtype=np.float32)
         return new_obs
 
     def get_state(self, rl_actions=None):
-        add_params = self.env_params.additional_params
-        if add_params['centralized_obs']:
-            rl_ids = self.k.vehicle.get_rl_ids()
-            state = self.get_centralized_state()
-            veh_info = {rl_id: np.concatenate((state, self.veh_statistics(rl_id))) for rl_id in rl_ids}
-        else:
-            if self.env_params.additional_params.get('communicate', False):
-                veh_info = {rl_id: np.concatenate((self.state_util(rl_id),
-                                                   self.veh_statistics(rl_id),
-                                                   self.get_signal(rl_id,
-                                                                   rl_actions)
-                                                   )
-                                                  )
-                            for rl_id in self.k.vehicle.get_rl_ids()}
-            else:
-                veh_info = {rl_id: np.concatenate((self.state_util(rl_id),
-                                                   self.veh_statistics(rl_id)))
-                            for rl_id in self.k.vehicle.get_rl_ids()}
-            if self.env_params.additional_params.get('aggregate_info'):
-                agg_statistics = self.aggregate_statistics()
-                veh_info = {rl_id: np.concatenate((val, agg_statistics))
-                            for rl_id, val in veh_info.items()}
-
-        if self.env_params.additional_params.get('keep_past_actions', False):
-            # update the actions history with the most recent actions
-            for rl_id in self.k.vehicle.get_rl_ids():
-                agent_past_dict, num_steps = self.past_actions_dict[rl_id]
-                if rl_actions and rl_id in rl_actions.keys():
-                    agent_past_dict[num_steps] = rl_actions[rl_id] / self.action_values[-1]
-                num_steps += 1
-                num_steps %= self.num_past_actions
-                self.past_actions_dict[rl_id] = [agent_past_dict, num_steps]
-            actions_history = {rl_id: self.past_actions_dict[rl_id][0] for rl_id in self.k.vehicle.get_rl_ids()}
-            veh_info = {rl_id: np.concatenate((actions_history[rl_id], veh_info[rl_id])) for
-                        rl_id in self.k.vehicle.get_rl_ids()}
-
-        # Go through the human drivers and add zeros if the vehicles have left as a final observation
-        left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
-                              in self.k.vehicle.get_arrived_ids() if veh_id in self.k.vehicle.get_rl_ids()}
-        veh_info.update(left_vehicles_dict)
+        state_dict = super().get_state(rl_actions)
 
         # iterate through the RL vehicles and find what the other agent would have done
         self.update_curr_rl_vehicles()
-
-        state_dict = {}
-        for key, value in veh_info.items():
+        for key, value in state_dict.items():
             controller = self.curr_rl_vehicles[key]['controller']
-            accel = controller.get_accel(self)
-            if accel is None:
-                accel = self.action_values[0]
-
-            veh_stop_time = controller.stop_time
-            if controller.is_waiting_to_go:
-                time_since_stop = self.time_counter - veh_stop_time
+            if self.k.vehicle.get_speed(key) <= 0.2:
+                self.curr_rl_vehicles[key]['time_since_stopped'] += 1.0
             else:
-                time_since_stop = 0.0
-            duration = controller.duration
-            # if len(self.waiting_queue) > 0:
-            #     first_in_queue = 1 if self.waiting_queue[0] == key else 0
-            # else:
-            #     first_in_queue = 0
+                self.curr_rl_vehicles[key]['time_since_stopped'] = 0.0
 
-            # concat_list = [time_since_stop / self.env_params.horizon, duration / 100.0, first_in_queue]
-            concat_list = [time_since_stop / self.env_params.horizon, duration / 100.0]
+            duration = controller.duration
+            concat_list = np.concatenate((value, [self.curr_rl_vehicles[key]['time_since_stopped'] / self.env_params.horizon,
+                                    duration / 100.0]))
 
             if self.fingerprinting:
                 # Since we only either are totally exploring or not exploring at all, lets just put a one in here for now
                 if self.num_steps_sampled < self.num_expert_steps:
-                    concat_list.extend([self.num_steps_sampled / 1e5, 1.0])
+                    concat_list = np.concatenate((concat_list, [self.num_steps_sampled / 1e5, 1.0]))
                 else:
-                    concat_list.extend([self.num_steps_sampled / 1e5, 0.0])
-            value = np.concatenate((value, concat_list))
+                    concat_list = np.concatenate((concat_list, [self.num_steps_sampled / 1e5, 0.0]))
+            accel = controller.get_accel(self)
+            if not accel:
+                accel = -np.abs(self.action_values[0])
             expert_action = int(self.find_nearest_idx(self.action_values, accel))
-            value = np.concatenate((value, [expert_action]))
+            concat_list = np.concatenate((concat_list, [expert_action]))
 
-            value = np.clip(value, a_min=self.observation_space.low, a_max=self.observation_space.high)
+            value = np.clip(concat_list, a_min=self.observation_space.low, a_max=self.observation_space.high)
             state_dict[key] = value
 
         return state_dict
 
     def reset(self, new_inflow_rate=None):
-        self.curr_rl_vehicles = {}
-        self.waiting_queue = []
 
+        self.curr_rl_vehicles = {}
         self.update_curr_rl_vehicles()
 
         state_dict = super().reset(new_inflow_rate)
