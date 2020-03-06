@@ -7,7 +7,7 @@ import logging
 import collections
 
 import ray
-from ray.rllib.optimizers.replay_buffer import PrioritizedReplayBufferWithExperts
+from flow.agents.buffers import PrioritizedReplayBufferWithExperts
 from ray.rllib.optimizers.policy_optimizer import PolicyOptimizer
 from ray.rllib.policy.sample_batch import SampleBatch, \
     MultiAgentBatch

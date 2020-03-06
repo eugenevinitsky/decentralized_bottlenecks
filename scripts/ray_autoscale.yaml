@@ -9,11 +9,7 @@ min_workers: 2 #<NUM WORKERS IN CLUSTER>
 
 # The maximum number of workers nodes to launch in addition to the head
 # node. This takes precedence over min_workers.
-<<<<<<< HEAD
 max_workers: 0
-=======
-max_workers: 2
->>>>>>> dqfd
 
 # The initial number of worker nodes to launch in addition to the head
 # node. When the cluster is first brought up (or when it is refreshed with a
@@ -38,7 +34,6 @@ provider:
 # How Ray will authenticate with newly launched nodes.
 auth:
     ssh_user: ubuntu
-    ssh_private_key: /Users/eugenevinitsky/.ssh/MyKeyPair.pem
 # By default Ray creates a new private keypair, but you can also use your own.
 # If you do so, make sure to also set "KeyName" in the head and worker node
 # configurations below.
@@ -49,12 +44,7 @@ auth:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 head_node:
-<<<<<<< HEAD
-    KeyName: MyKeyPair
     InstanceType: m4.10xlarge # c4.4xlarge
-=======
-    InstanceType: c4.4xlarge # c4.4xlarge
->>>>>>> dqfd
     ImageId: ami-0c047f3ddd3939b30  # Flow AMI (Ubuntu)
     KeyName: MyKeyPair
     InstanceMarketOptions:
@@ -75,7 +65,6 @@ head_node:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 worker_nodes:
-    KeyName: MyKeyPair
     InstanceType: c4.8xlarge
     ImageId: ami-0c047f3ddd3939b30 # Flow AMI (Ubuntu)
     KeyName: MyKeyPair
@@ -95,8 +84,6 @@ setup_commands:
     # set up ray by pip installing and copying over rllib and tune folder
     - pip install --upgrade pyzmq notebook
     - pip install -r ~/flow/requirements.txt
-    - pip install ray==0.7.7
-    - pip install tensorflow==1.15.0
     - python ~/flow/scripts/replace_rnn_sequence.py
     - pip install boto3==1.10.45  # 1.4.8 adds InstanceMarketOptions
     - pip install awscli==1.16.309
