@@ -299,7 +299,6 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             reward_dict = {rl_id: reward + (self.k.vehicle.get_speed(rl_id) / 10) for rl_id, reward in reward_dict.items()}
 
         # Return the outflow since the vehicle left
-        print(self.time_counter)
         if int(self.time_counter/self.env_params.sims_per_step) == self.env_params.horizon:
             end_time = self.env_params.horizon * self.sim_params.sim_step
             left_vehicles_dict = {veh_id: self.k.vehicle.get_outflow_rate(end_time - exit_time) / 2000.0
