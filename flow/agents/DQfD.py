@@ -6,6 +6,7 @@ from copy import deepcopy
 import logging
 import collections
 
+import numpy as np
 import ray
 from flow.agents.buffers import PrioritizedReplayBufferWithExperts
 from ray.rllib.optimizers.policy_optimizer import PolicyOptimizer
@@ -182,6 +183,40 @@ def update_worker_iter(trainer):
     trainer.cur_exp_vals = exp_vals
 
 
+def add_terminal_reward(policy,
+                        sample_batch,
+                        other_agent_batches=None,
+                        episode=None):
+    """Postprocess the final reward to include the fnial outflow"""
+
+    net_outflow = 0.0
+    if episode is not None:
+        outflow = np.array(episode.user_data['outflow']) / 2000.0
+        final_time = sample_batch['t'][-1]
+        net_outflow = sum(outflow[final_time:])
+    # This is a hack because we are never returning done correctly so we just check if we have a time equal to the horizon
+    # if we do, we clearly never completed
+    if 't' in sample_batch.keys():
+        completed = (sample_batch['t'][-1] < policy.horizon - 1)
+    else:
+        completed = False
+    if completed:
+        if policy.terminal_reward:
+            last_r = net_outflow
+        else:
+            last_r = 0.0
+    else:
+        next_state = []
+        for i in range(policy.num_state_tensors()):
+            next_state.append([sample_batch["state_out_{}".format(i)][-1]])
+        last_r = policy._value(sample_batch[SampleBatch.NEXT_OBS][-1],
+                               sample_batch[SampleBatch.ACTIONS][-1],
+                               sample_batch[SampleBatch.REWARDS][-1],
+                               *next_state)
+    sample_batch['rewards'][-1] += last_r
+    return sample_batch
+
+
 def make_optimizer(workers, config):
     return DQfDOptimizer(
         workers,
@@ -220,22 +255,3 @@ new_config["reserved_frac"] = .1
 
 DQFDTrainer = GenericOffPolicyTrainer.with_updates(
     name="DQFD", default_policy=DQNTFPolicy, default_config=new_config)
-
-# GenericOffPolicyTrainer = build_trainer(
-#     name="GenericOffPolicyAlgorithm",
-#     default_policy=None,
-#     default_config=DEFAULT_CONFIG,
-#     validate_config=check_config_and_setup_param_noise,
-#     get_initial_state=get_initial_state,
-#     make_policy_optimizer=make_optimizer,
-#     before_init=setup_exploration,
-#     before_train_step=update_worker_explorations,
-#     after_optimizer_step=update_target_if_needed,
-#     after_train_result=add_trainer_metrics,
-#     collect_metrics_fn=collect_metrics,
-#     before_evaluate_fn=disable_exploration)
-#
-# DQNTrainer = GenericOffPolicyTrainer.with_updates(
-#     name="DQN", default_policy=DQNTFPolicy, default_config=DEFAULT_CONFIG)
-#
-# SimpleQTrainer = DQNTrainer.with_updates(default_policy=SimpleQPolicy)

@@ -253,7 +253,6 @@ def centralized_critic_postprocessing(policy,
 
     # hack to catch the fact that we are never done
     if 't' in sample_batch.keys():
-        print(sample_batch['t'][-1])
         completed = (sample_batch['t'][-1] < policy.horizon - 1)
     else:
         completed = False
