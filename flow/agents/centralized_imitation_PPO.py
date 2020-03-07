@@ -14,6 +14,7 @@ from ray.rllib.utils.explained_variance import explained_variance
 from ray.rllib.evaluation.postprocessing import Postprocessing
 import tensorflow as tf
 
+from flow.agents.custom_ppo import AttributeMixin
 from flow.agents.ImitationPPO import update_kl, ImitationLearningRateSchedule, imitation_loss, loss_stats
 from flow.agents.centralized_PPO import CentralizedValueMixin, \
     centralized_critic_postprocessing, loss_with_central_critic
@@ -29,6 +30,7 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
 
 
 def setup_mixins(policy, obs_space, action_space, config):
+    AttributeMixin.__init__(policy, config)
     KLCoeffMixin.__init__(policy, config)
     EntropyCoeffSchedule.__init__(policy, config["entropy_coeff"],
                                   config["entropy_coeff_schedule"])

@@ -25,6 +25,7 @@ from ray.rllib.models.tf.fcnet_v2 import FullyConnectedNetwork
 from ray.rllib.utils.explained_variance import explained_variance
 from ray.rllib.utils import try_import_tf
 
+from flow.agents.custom_ppo import AttributeMixin
 from flow.agents.ImitationPPO import PPOLoss
 
 tf = try_import_tf()
@@ -250,14 +251,29 @@ def centralized_critic_postprocessing(policy,
         # TODO(evinitsky) put in the right shape. Will break if actions aren't 1
         sample_batch[SampleBatch.VF_PREDS] = np.zeros(1, dtype=np.float32)
 
-    completed = sample_batch["dones"][-1]
+    # hack to catch the fact that we are never done
+    if 't' in sample_batch.keys():
+        print(sample_batch['t'][-1])
+        completed = (sample_batch['t'][-1] < policy.horizon - 1)
+    else:
+        completed = False
+
     if not completed and policy.loss_initialized():
         next_state = []
         for i in range(policy.num_state_tensors()):
             next_state.append([sample_batch["state_out_{}".format(i)][-1]])
         last_r = policy.compute_central_vf(sample_batch[CENTRAL_OBS][-1][np.newaxis, ...])[0]
     else:
-        last_r = 0.0
+        net_outflow = 0.0
+        if episode is not None:
+            outflow = np.array(episode.user_data['outflow']) / 2000.0
+            final_time = sample_batch['t'][-1]
+            net_outflow = sum(outflow[final_time:])
+        # TODO(@evinitsky) we are never done for some reason
+        if completed and policy.terminal_reward:
+                last_r = net_outflow
+        else:
+            last_r = 0.0
     train_batch = compute_advantages(
         sample_batch,
         last_r,
@@ -366,6 +382,7 @@ def new_ppo_surrogate_loss(policy, model, dist_class, train_batch):
 
 def setup_mixins(policy, obs_space, action_space, config):
     # copied from PPO
+    AttributeMixin.__init__(policy, config)
     KLCoeffMixin.__init__(policy, config)
     EntropyCoeffSchedule.__init__(policy, config["entropy_coeff"],
                                   config["entropy_coeff_schedule"])

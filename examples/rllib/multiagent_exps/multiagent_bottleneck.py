@@ -19,6 +19,7 @@ from ray.rllib.models import ModelCatalog
 from ray.tune import run
 from ray.tune.registry import register_env
 
+from flow.agents.custom_ppo import CustomPPOTrainer
 from flow.agents.centralized_PPO import CentralizedCriticModel, CentralizedCriticModelRNN
 from flow.agents.centralized_PPO import CCTrainer
 from flow.agents.centralized_imitation_PPO import ImitationCentralizedTrainer
@@ -255,6 +256,11 @@ def setup_flow_params(args):
     return flow_params
 
 
+def on_episode_start(info):
+    episode = info["episode"]
+    episode.user_data["outflow"] = []
+
+
 def on_episode_end(info):
     env = info['env'].get_unwrapped()[0]
     outflow_over_last_500 = env.k.vehicle.get_outflow_rate(int(500))
@@ -263,6 +269,13 @@ def on_episode_end(info):
     inflow = int(inflow / 100) * 100
     episode = info["episode"]
     episode.custom_metrics["net_outflow_{}".format(inflow)] = outflow_over_last_500
+
+
+def on_episode_step(info):
+    episode = info["episode"]
+    env = info['env'].get_unwrapped()[0]
+    outflow = env.k.vehicle.get_outflow_rate(int(env.sim_step * env.env_params.sims_per_step))
+    episode.user_data["outflow"].append(outflow)
 
 
 def on_train_result(info):
@@ -368,6 +381,8 @@ def setup_exps(args):
     # config["batch_mode"] = "truncate_episodes"
     # config["sample_batch_size"] = args.horizon
     config["observation_filter"] = "MeanStdFilter"
+    config['model']['custom_options']['terminal_reward'] = args.terminal_reward
+    config['model']['custom_options']['horizon'] = args.horizon
 
     # save the flow params for replay
     flow_json = json.dumps(
@@ -420,12 +435,18 @@ if __name__ == '__main__':
     # store custom metrics
     if args.imitate:
         config["callbacks"] = {"on_episode_end": tune.function(on_episode_end),
+                               "on_episode_start": tune.function(on_episode_start),
+                               "on_episode_step": tune.function(on_episode_step),
                                "on_train_result": tune.function(on_train_result)}
     elif args.dqfd:
         config["callbacks"] = {"on_episode_end": tune.function(on_episode_end),
+                               "on_episode_start": tune.function(on_episode_start),
+                               "on_episode_step": tune.function(on_episode_step),
                                "on_train_result": tune.function(on_train_result_dqfd)}
     else:
-        config["callbacks"] = {"on_episode_end": tune.function(on_episode_end)}
+        config["callbacks"] = {"on_episode_end": tune.function(on_episode_end),
+                               "on_episode_start": tune.function(on_episode_start),
+                               "on_episode_step": tune.function(on_episode_step),}
 
     if args.imitate and not args.centralized_vf:
         from flow.agents.ImitationPPO import ImitationTrainer
@@ -441,7 +462,9 @@ if __name__ == '__main__':
         alg_run = DQFDTrainer
         run_name = "dqfd"
     else:
-        run_name = alg_run
+        alg_run = CustomPPOTrainer
+        run_name = "ppo_custom"
+
     config['env_config']['run'] = run_name
 
     exp_dict = {

@@ -67,6 +67,7 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument('--central_vf_size', type=int, default=64, help='The number of hidden units in '
                                                                         'the value function')
     parser.add_argument('--max_num_agents', type=int, default=120, help='The maximum number of agents we could ever have')
+    parser.add_argument('--terminal_reward', action='store_true', default=False)
 
     # dqfd arguments
     parser.add_argument('--dqfd', action='store_true', default=False,

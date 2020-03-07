@@ -14,6 +14,8 @@ from ray.rllib.agents.ppo.ppo_policy import kl_and_loss_stats
 from ray.rllib.agents.ppo.ppo import DEFAULT_CONFIG
 import tensorflow as tf
 
+from flow.agents.custom_ppo import postprocess_ppo_gae
+
 BEHAVIOUR_LOGITS = "behaviour_logits"
 
 def imitation_loss(policy, model, dist_class, train_batch):
@@ -255,6 +257,7 @@ ImitationPolicy = PPOTFPolicy.with_updates(
     name="ImitationPolicy",
     before_loss_init=setup_mixins,
     stats_fn=loss_stats,
+    postprocess_fn=postprocess_ppo_gae,
     grad_stats_fn=grad_stats,
     loss_fn=new_ppo_surrogate_loss,
     mixins=[

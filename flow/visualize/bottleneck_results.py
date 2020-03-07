@@ -81,6 +81,9 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
     elif config_run == "dqfd":
         from flow.agents.DQfD import DQFDTrainer
         agent_cls = DQFDTrainer
+    elif config_run == "ppo_custom":
+        from flow.agents.custom_ppo import CustomPPOTrainer
+        agent_cls = CustomPPOTrainer
     else:
         agent_cls = get_agent_class(config_run)
 

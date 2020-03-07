@@ -125,8 +125,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         # action space is speed and velocity of leading and following
         # vehicles for all of the avs
         add_params = self.env_params.additional_params
-        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if (self.k.vehicle.get_edge(veh_id) == '2'
-                                                                       and self.k.vehicle.get_position(veh_id) > 200)]
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) == '2']
 
         if add_params['centralized_obs']:
             state = self.get_centralized_state()
@@ -164,17 +163,17 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                         rl_id in rl_ids}
 
         # Go through the human drivers and add zeros if the vehicles have left as a final observation
-        if int(self.time_counter / self.env_params.sims_per_step) == self.env_params.horizon:
-            if isinstance(self.observation_space, Box):
-                left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
-                                      in self.left_av_time_dict.keys()}
-            elif isinstance(self.observation_space, Dict):
-                num_obs = 0
-                for space in self.observation_space.spaces.values():
-                    num_obs += space.shape[0]
-                left_vehicles_dict = {veh_id: np.zeros(num_obs) for veh_id
-                                      in self.left_av_time_dict.keys()}
-            veh_info.update(left_vehicles_dict)
+        # if int(self.time_counter / self.env_params.sims_per_step) == self.env_params.horizon:
+        #     if isinstance(self.observation_space, Box):
+        #         left_vehicles_dict = {veh_id: np.zeros(self.observation_space.shape[0]) for veh_id
+        #                               in self.left_av_time_dict.keys()}
+        #     elif isinstance(self.observation_space, Dict):
+        #         num_obs = 0
+        #         for space in self.observation_space.spaces.values():
+        #             num_obs += space.shape[0]
+        #         left_vehicles_dict = {veh_id: np.zeros(num_obs) for veh_id
+        #                               in self.left_av_time_dict.keys()}
+        #     veh_info.update(left_vehicles_dict)
 
         if isinstance(self.observation_space, Box):
             veh_info = {key: np.clip(value, a_min=self.observation_space.low[0:value.shape[0]],
@@ -292,18 +291,17 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 penalty = (num_vehs - 30 * self.scaling) / 10.0
                 reward -= penalty
 
-        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if (self.k.vehicle.get_edge(veh_id) == '2'
-                                                                       and self.k.vehicle.get_position(veh_id) > 200)]
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) == '2']
         reward_dict = {rl_id: reward for rl_id in rl_ids}
         if add_params["speed_reward"]:
             reward_dict = {rl_id: reward + (self.k.vehicle.get_speed(rl_id) / 10) for rl_id, reward in reward_dict.items()}
 
-        # Return the outflow since the vehicle left
-        if int(self.time_counter/self.env_params.sims_per_step) == self.env_params.horizon:
-            end_time = self.env_params.horizon * self.sim_params.sim_step
-            left_vehicles_dict = {veh_id: self.k.vehicle.get_outflow_rate(end_time - exit_time) / 2000.0
-                                  for veh_id, exit_time in self.left_av_time_dict.items()}
-            reward_dict.update(left_vehicles_dict)
+        # # Return the outflow since the vehicle left
+        # if int(self.time_counter/self.env_params.sims_per_step) == self.env_params.horizon:
+        #     end_time = self.env_params.horizon * self.sim_params.sim_step
+        #     left_vehicles_dict = {veh_id: self.k.vehicle.get_outflow_rate(end_time - exit_time) / 2000.0
+        #                           for veh_id, exit_time in self.left_av_time_dict.items()}
+        #     reward_dict.update(left_vehicles_dict)
         return reward_dict
 
     def reset(self, new_inflow_rate=None):

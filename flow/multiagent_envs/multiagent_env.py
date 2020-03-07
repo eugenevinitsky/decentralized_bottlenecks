@@ -122,6 +122,7 @@ class MultiEnv(MultiAgentEnv, Env):
             self.render()
 
         states = self.get_state(rl_actions)
+        # TODO(@evinitsky) this is ALWAYS FALSE. If its arrived we never return a state
         done = {key: key in self.k.vehicle.get_arrived_ids()
                 for key in states.keys()}
         if crash:
@@ -141,7 +142,10 @@ class MultiEnv(MultiAgentEnv, Env):
             done['__all__'] = False
         else:
             done['__all__'] = False
-        infos = {key: {} for key in states.keys()}
+        infos = {key: {'id': key} for key in states.keys()}
+        # infos = {
+        #     key: {"outflow": self.k.vehicle.get_outflow_rate(self.env_params.sims_per_step * self.sim_step) / 2000.0}
+        #     for key in self.left_av_time_dict.keys()}
 
         # compute the reward
         if self.env_params.clip_actions:

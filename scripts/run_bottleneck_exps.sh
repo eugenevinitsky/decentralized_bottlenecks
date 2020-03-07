@@ -1111,13 +1111,13 @@
 ray exec ray_autoscale.yaml \
 " python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py dqfd_pen0_f0p4_nofinger_i2400 --num_iters 20 --av_frac 0.4 \
 --num_samples 1 --rollout_scale_factor 1.0 --grid_search --use_s3 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
---dqfd --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 1 --num_expert_steps 50000" \
+--dqfd --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 10 --num_expert_steps 50000" \
 --start --stop --cluster-name ev_dqfd2 --tmux
 
 ray exec ray_autoscale.yaml \
 " python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py dqfd_pen0_f0p4_finger_i2400 --num_iters 20 --av_frac 0.4 \
 --num_samples 1 --rollout_scale_factor 1.0 --grid_search --use_s3 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
---dqfd --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 1 --num_expert_steps 50000 --fingerprinting" \
+--dqfd --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 10 --num_expert_steps 50000 --fingerprinting" \
 --start --stop --cluster-name ev_dqfd3 --tmux
 
 #ray exec ray_autoscale.yaml \
