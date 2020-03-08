@@ -376,7 +376,7 @@ def setup_exps(args):
             config['model']['custom_options']['hard_negative_mining'] = args.hard_negative_mining
             config["model"]["custom_options"]["final_imitation_weight"] = args.final_imitation_weight
 
-    config['gamma'] = 0.995  # discount rate
+    config['gamma'] = 0.99  # discount rate
     config['horizon'] = args.horizon
     # config["batch_mode"] = "truncate_episodes"
     # config["sample_batch_size"] = args.horizon
@@ -470,7 +470,7 @@ if __name__ == '__main__':
     exp_dict = {
             'name': args.exp_title,
             'run_or_experiment': alg_run,
-            'checkpoint_at_end': True,
+            'checkpoint_freq': args.checkpoint_freq,
             'stop': {
                 'training_iteration': args.num_iters
             },
@@ -492,7 +492,7 @@ if __name__ == '__main__':
                 if exc.errno != errno.EEXIST:
                     raise
         for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
-            if "checkpoint" in dirpath and dirpath.split('/')[-3] == args.exp_title:
+            if "checkpoint_{}".format(args.checkpoint_freq) in dirpath and dirpath.split('/')[-3] == args.exp_title:
                 # grab the experiment name
                 folder = os.path.dirname(dirpath)
                 tune_name = folder.split("/")[-1]

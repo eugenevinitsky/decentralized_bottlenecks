@@ -1143,13 +1143,13 @@
 ####################################################################################################################################################
 ## 3/07/20 exps
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 0pen_i2400 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 0pen_i2400_trial2 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
 --num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 2.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
 --multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 10 --terminal_reward" \
 --start --stop --cluster-name ev_2pen_1 --tmux
 
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 0pen_i2400_cvf --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 0pen_i2400_cvf_trial2 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
 --num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 2.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
 --multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 10 --centralized_vf --max_num_agents 200 --terminal_reward" \
 --start --stop --cluster-name ev_2pen_2 --tmux
