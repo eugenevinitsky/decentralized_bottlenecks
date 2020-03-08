@@ -326,7 +326,7 @@ def setup_exps(args):
             config['vf_loss_coeff'] = args.vf_loss_coeff
             # Grid search things
         if args.grid_search:
-            config['num_sgd_iter'] = tune.grid_search([10, 30])
+            config['num_sgd_iter'] = tune.grid_search([10])
             config['lr'] = tune.grid_search([5e-6, 5e-5, 5e-4])
 
             # LSTM Things
