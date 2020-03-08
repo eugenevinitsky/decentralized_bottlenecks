@@ -263,7 +263,7 @@ def on_episode_start(info):
 
 def on_episode_end(info):
     env = info['env'].get_unwrapped()[0]
-    total_outflow = env.k.vehicle.get_outflow_rate(10000)
+    total_outflow = env.k.vehicle.get_outflow_rate(500)
     inflow = env.inflow
     # round it to 100
     inflow = int(inflow / 100) * 100
@@ -380,7 +380,7 @@ def setup_exps(args):
     config['horizon'] = args.horizon
     # config["batch_mode"] = "truncate_episodes"
     # config["sample_batch_size"] = args.horizon
-    config["observation_filter"] = "MeanStdFilter"
+    # config["observation_filter"] = "MeanStdFilter"
     config['model']['custom_options']['terminal_reward'] = args.terminal_reward
     config['model']['custom_options']['horizon'] = args.horizon
 

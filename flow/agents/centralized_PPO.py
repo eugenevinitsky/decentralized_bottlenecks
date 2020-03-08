@@ -268,11 +268,9 @@ def centralized_critic_postprocessing(policy,
             outflow = np.array(episode.user_data['outflow']) / 2000.0
             final_time = sample_batch['t'][-1]
             net_outflow = sum(outflow[final_time:])
-        # TODO(@evinitsky) we are never done for some reason
-        if completed and policy.terminal_reward:
-                last_r = net_outflow
-        else:
-            last_r = 0.0
+        if policy.terminal_reward:
+            sample_batch["rewards"][-1] += net_outflow
+        last_r = 0.0
     train_batch = compute_advantages(
         sample_batch,
         last_r,
@@ -399,11 +397,29 @@ def central_vf_stats(policy, train_batch, grads):
             policy.central_value_function),
     }
 
+def kl_and_loss_stats(policy, train_batch):
+    print(train_batch["rewards"])
+    return {
+        "cur_kl_coeff": tf.cast(policy.kl_coeff, tf.float64),
+        "cur_lr": tf.cast(policy.cur_lr, tf.float64),
+        "total_loss": policy.loss_obj.loss,
+        "policy_loss": policy.loss_obj.mean_policy_loss,
+        "vf_loss": policy.loss_obj.mean_vf_loss,
+        "vf_explained_var": explained_variance(
+            train_batch[Postprocessing.VALUE_TARGETS],
+            policy.model.value_function()),
+        "vf_preds": train_batch[Postprocessing.VALUE_TARGETS],
+        "kl": policy.loss_obj.mean_kl,
+        "entropy": policy.loss_obj.mean_entropy,
+        "entropy_coeff": tf.cast(policy.entropy_coeff, tf.float64),
+        "avg_rew": train_batch["rewards"][-1]
+    }
 
 CCPPO = PPOTFPolicy.with_updates(
     name="CCPPO",
     postprocess_fn=centralized_critic_postprocessing,
     loss_fn=new_ppo_surrogate_loss,
+    stats_fn=kl_and_loss_stats,
     before_loss_init=setup_mixins,
     grad_stats_fn=central_vf_stats,
     mixins=[

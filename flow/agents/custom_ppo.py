@@ -161,9 +161,11 @@ def kl_and_loss_stats(policy, train_batch):
         "vf_explained_var": explained_variance(
             train_batch[Postprocessing.VALUE_TARGETS],
             policy.model.value_function()),
+        "vf_preds": train_batch[Postprocessing.VALUE_TARGETS],
         "kl": policy.loss_obj.mean_kl,
         "entropy": policy.loss_obj.mean_entropy,
         "entropy_coeff": tf.cast(policy.entropy_coeff, tf.float64),
+        "avg_rew": train_batch["rewards"][-1]
     }
 
 
@@ -194,9 +196,8 @@ def postprocess_ppo_gae(policy,
         completed = False
     if completed:
         if policy.terminal_reward:
-            last_r = net_outflow
-        else:
-            last_r = 0.0
+            sample_batch['rewards'][-1] += net_outflow
+        last_r = 0.0
     else:
         next_state = []
         for i in range(policy.num_state_tensors()):
