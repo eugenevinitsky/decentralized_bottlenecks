@@ -309,8 +309,6 @@ CustomPPOTFPolicy = build_tf_policy(
         ValueNetworkMixin
     ])
 
-CustomPPOTrainer = PPOTrainer.with_updates(name="CustomPPOTrainer", default_policy=CustomPPOTFPolicy)
-
 from ray.rllib.agents.trainer_template import build_trainer
 from ray.rllib.agents.ppo.ppo import choose_policy_optimizer, DEFAULT_CONFIG, validate_config, update_kl, \
     warn_about_bad_reward_scales

@@ -263,12 +263,12 @@ def on_episode_start(info):
 
 def on_episode_end(info):
     env = info['env'].get_unwrapped()[0]
-    outflow_over_last_500 = env.k.vehicle.get_outflow_rate(int(500))
+    total_outflow = env.k.vehicle.get_outflow_rate(10000)
     inflow = env.inflow
     # round it to 100
     inflow = int(inflow / 100) * 100
     episode = info["episode"]
-    episode.custom_metrics["net_outflow_{}".format(inflow)] = outflow_over_last_500
+    episode.custom_metrics["net_outflow_{}".format(inflow)] = total_outflow
 
 
 def on_episode_step(info):
@@ -319,7 +319,7 @@ def setup_exps(args):
 
         # if we have a centralized vf we can't use big batch sizes or we eat up all the system memory
         if not args.centralized_vf:
-            config['sgd_minibatch_size'] = min(args.horizon * 10, 0.5 * config['train_batch_size'])
+            config['sgd_minibatch_size'] = min(args.horizon * 10, 0.2 * config['train_batch_size'])
         else:
             config['sgd_minibatch_size'] = 128
         if args.use_lstm:

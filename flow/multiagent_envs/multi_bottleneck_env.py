@@ -91,14 +91,14 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             if self.env_params.additional_params['communicate']:
                 # eight possible signals if above
                 if self.env_params.additional_params.get('aggregate_info'):
-                    num_obs = 6 * MAX_LANES * self.scaling + 20
+                    num_obs = 6 * MAX_LANES * self.scaling + 22
                 else:
-                    num_obs = 6 * MAX_LANES * self.scaling + 14
+                    num_obs = 6 * MAX_LANES * self.scaling + 16
             else:
                 if self.env_params.additional_params.get('aggregate_info'):
-                    num_obs = 6 * MAX_LANES * self.scaling + 12
+                    num_obs = 6 * MAX_LANES * self.scaling + 14
                 else:
-                    num_obs = 6 * MAX_LANES * self.scaling + 6
+                    num_obs = 6 * MAX_LANES * self.scaling + 8
 
         # TODO(@evinitsky) eventually remove the get once backwards compatibility is no longer needed
         if self.env_params.additional_params.get('keep_past_actions', False):
@@ -124,6 +124,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         """See class definition."""
         # action space is speed and velocity of leading and following
         # vehicles for all of the avs
+        self.update_curr_rl_vehicles()
         add_params = self.env_params.additional_params
         rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) == '2']
 
@@ -255,6 +256,18 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                                mean_speed_norm, mean_rl_speed, [outflow],
                                [self.inflow]))
 
+    def update_curr_rl_vehicles(self):
+        self.curr_rl_vehicles.update({rl_id: {'time_since_stopped': 0.0,}
+                                              for rl_id in self.k.vehicle.get_rl_ids()
+                                      if rl_id not in self.curr_rl_vehicles.keys()})
+
+        for key in self.curr_rl_vehicles.keys():
+            if key in self.k.vehicle.get_rl_ids():
+                if self.k.vehicle.get_speed(key) <= 0.2:
+                    self.curr_rl_vehicles[key]['time_since_stopped'] += 1.0
+                else:
+                    self.curr_rl_vehicles[key]['time_since_stopped'] = 0.0
+
     def _apply_rl_actions(self, rl_actions):
         """
         Per-vehicle accelerations
@@ -282,9 +295,12 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         add_params = self.env_params.additional_params
         # reward is the mean AV speed
         # reward is the outflow over "num_sample_seconds" seconds
-        reward = self.k.vehicle.get_outflow_rate(
-            add_params["num_sample_seconds"]) * self.env_params.sims_per_step / 2000.0 - \
-                 self.env_params.additional_params["life_penalty"]
+        reward = 0.0
+        if add_params["num_sample_seconds"] > 0.0:
+            reward = self.k.vehicle.get_outflow_rate(
+                add_params["num_sample_seconds"]) * self.env_params.sims_per_step / 2000.0
+
+        reward -= np.abs(self.env_params.additional_params["life_penalty"])
         if add_params["congest_penalty"]:
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
             if num_vehs > 30 * self.scaling:
@@ -305,6 +321,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         return reward_dict
 
     def reset(self, new_inflow_rate=None):
+        self.curr_rl_vehicles = {}
+        self.update_curr_rl_vehicles()
 
         # dict tracking past actions
         if self.env_params.additional_params.get('keep_past_actions', False):
@@ -439,7 +457,9 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             edge_id = - 1 / 10.0
         # an absolute position used to make it easier to sort the vehicles for the centralized value function
         absolute_pos = self.k.vehicle.get_x_by_id(rl_id) / 1000.0
-        return np.array([absolute_pos, speed, edge_id, lane, headway, position])
+        return np.array([absolute_pos, speed, edge_id, lane, headway, position,
+                         self.curr_rl_vehicles[rl_id]['time_since_stopped'] / self.env_params.horizon,
+                         self.time_counter / (self.env_params.sims_per_step * self.env_params.horizon)])
 
     def state_util(self, rl_id):
         ''' Returns an array of headway, tailway, leader speed, follower speed
