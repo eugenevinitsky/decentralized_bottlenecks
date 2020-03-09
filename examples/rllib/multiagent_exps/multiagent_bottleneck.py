@@ -324,7 +324,7 @@ def setup_exps(args):
         if not args.centralized_vf:
             config['sgd_minibatch_size'] = min(args.horizon * 10, 0.2 * config['train_batch_size'])
         else:
-            config['sgd_minibatch_size'] = 128
+            config['sgd_minibatch_size'] = 1280
         if args.use_lstm:
             config['vf_loss_coeff'] = args.vf_loss_coeff
             # Grid search things
