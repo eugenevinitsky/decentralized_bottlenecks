@@ -152,6 +152,9 @@ def setup_flow_params(args):
         "q_init": q_init, #
         "feedback_coeff": 1, #
         'num_imitation_iters': args.num_imitation_iters,
+
+        # parameters from imitation
+        "simple_env": args.simple_env
     }
 
     if args.dqfd:
@@ -328,6 +331,8 @@ def setup_exps(args):
         if args.grid_search:
             config['num_sgd_iter'] = tune.grid_search([10])
             config['lr'] = tune.grid_search([5e-6, 5e-5, 5e-4])
+        else:
+            config['num_sgd_iter'] = 100
 
             # LSTM Things
         if args.use_lstm and args.use_gru:

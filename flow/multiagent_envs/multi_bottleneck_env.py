@@ -113,12 +113,12 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         """See class definition."""
         if self.env_params.additional_params['communicate']:
             accel = Box(
-                low=-3.0, high=3.0, shape=(1,), dtype=np.float32)
+                low=-20.0, high=3.0, shape=(1,), dtype=np.float32)
             communicate = Discrete(2)
             return Tuple((accel, communicate))
         else:
             return Box(
-                low=-3.0, high=3.0, shape=(1,), dtype=np.float32)
+                low=-20.0, high=3.0, shape=(1,), dtype=np.float32)
 
     def get_state(self, rl_actions=None):
         """See class definition."""
@@ -538,6 +538,7 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
         super().__init__(env_params, sim_params, scenario, simulator)
         self.iter_num = 0
         self.num_imitation_iters = env_params.additional_params.get("num_imitation_iters")
+        self.simple_env = env_params.additional_params.get("simple_env")
 
     def init_decentral_controller(self, rl_id):
         return FakeDecentralizedALINEAController(rl_id, stop_edge="2", stop_pos=310,
@@ -556,10 +557,14 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
 
     @property
     def observation_space(self):
-        obs = super().observation_space
-        # Extra keys "time since stop", duration
-        new_obs = Box(low=-3.0, high=3.0, shape=(obs.shape[0] + 2,), dtype=np.float32)
-        # new_obs = Box(low=-3.0, high=3.0, shape=(obs.shape[0],), dtype=np.float32)
+        if self.simple_env:
+            # abs_position duration, time since stopped, number of vehicles in the bottleneck
+            new_obs = Box(low=-3.0, high=3.0, shape=(4,), dtype=np.float32)
+        else:
+            obs = super().observation_space
+            # Extra keys "time since stop", duration
+            new_obs = Box(low=-3.0, high=3.0, shape=(obs.shape[0] + 2,), dtype=np.float32)
+            # new_obs = Box(low=-3.0, high=3.0, shape=(obs.shape[0],), dtype=np.float32)
         return Dict({"a_obs": new_obs, "expert_action": self.action_space})
 
     def reset(self, new_inflow_rate=None):
@@ -571,32 +576,55 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
         return state_dict
 
     def get_state(self, rl_actions=None):
-        state_dict = super().get_state(rl_actions)
-
         # iterate through the RL vehicles and find what the other agent would have done
         self.update_curr_rl_vehicles()
-
-        for key, value in state_dict.items():
-            # this could be the fake final state for vehicles that have left the system
-            if key in self.k.vehicle.get_ids():
-                controller = self.curr_rl_vehicles[key]['controller']
-                if self.k.vehicle.get_speed(key) <= 0.2:
-                    self.curr_rl_vehicles[key]['time_since_stopped'] += 1.0
+        if self.simple_env:
+            state_dict = {}
+            rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) == '2']
+            congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
+            for rl_id in rl_ids:
+                controller = self.curr_rl_vehicles[rl_id]['controller']
+                if self.k.vehicle.get_speed(rl_id) <= 0.2:
+                    self.curr_rl_vehicles[rl_id]['time_since_stopped'] += 1.0
                 else:
-                    self.curr_rl_vehicles[key]['time_since_stopped'] = 0.0
+                    self.curr_rl_vehicles[rl_id]['time_since_stopped'] = 0.0
 
                 accel = controller.get_accel(self)
                 if accel is None:
                     accel = -np.abs(self.action_space.low[0])
-
                 duration = controller.duration
+                abs_position = self.k.vehicle.get_x_by_id(rl_id)
+                state_dict[rl_id] = {"a_obs": np.array([abs_position / 1000.0,
+                                                      self.curr_rl_vehicles[rl_id]['time_since_stopped'] / self.env_params.horizon,
+                                                      duration / 100.0,
+                                                      congest_number]),
+                                       "expert_action": np.array([np.clip(accel, a_min=self.action_space.low[0],
+                                                                          a_max=self.action_space.high[0])])}
 
-                state_dict[key] = {"a_obs": np.concatenate((value, [self.curr_rl_vehicles[key]['time_since_stopped'] / self.env_params.horizon,
-                                                                  duration / 100.0])),
-                                   "expert_action": np.array([np.clip(accel, a_min=self.action_space.low[0],
-                                                                      a_max=self.action_space.high[0])])}
-            else:
-                state_dict[key] = {"a_obs": value[:-1], "expert_action": np.array([0.0])}
+        else:
+            state_dict = super().get_state(rl_actions)
+
+            for key, value in state_dict.items():
+                # this could be the fake final state for vehicles that have left the system
+                if key in self.k.vehicle.get_ids():
+                    controller = self.curr_rl_vehicles[key]['controller']
+                    if self.k.vehicle.get_speed(key) <= 0.2:
+                        self.curr_rl_vehicles[key]['time_since_stopped'] += 1.0
+                    else:
+                        self.curr_rl_vehicles[key]['time_since_stopped'] = 0.0
+
+                    accel = controller.get_accel(self)
+                    if accel is None:
+                        accel = -np.abs(self.action_space.low[0])
+
+                    duration = controller.duration
+
+                    state_dict[key] = {"a_obs": np.concatenate((value, [self.curr_rl_vehicles[key]['time_since_stopped'] / self.env_params.horizon,
+                                                                      duration / 100.0])),
+                                       "expert_action": np.array([np.clip(accel, a_min=self.action_space.low[0],
+                                                                          a_max=self.action_space.high[0])])}
+                else:
+                    state_dict[key] = {"a_obs": value[:-1], "expert_action": np.array([0.0])}
         return state_dict
 
     def _apply_rl_actions(self, rl_actions):
