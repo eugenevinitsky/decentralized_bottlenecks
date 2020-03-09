@@ -374,6 +374,7 @@ def setup_exps(args):
             config['model']['custom_options'].update({"imitation_weight": 1e0})
             config['model']['custom_options'].update({"num_imitation_iters": args.num_imitation_iters})
             config['model']['custom_options']['hard_negative_mining'] = args.hard_negative_mining
+            config['model']['custom_options']['mining_frac'] = args.mining_frac
             config["model"]["custom_options"]["final_imitation_weight"] = args.final_imitation_weight
 
     config['gamma'] = 0.99  # discount rate

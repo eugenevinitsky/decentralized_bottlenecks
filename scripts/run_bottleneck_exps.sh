@@ -1166,30 +1166,44 @@
 #--multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 10 --centralized_vf --max_num_agents 200 --terminal_reward --num_sample_seconds 0.0" \
 #--start --stop --cluster-name ev_2pen_4 --tmux
 
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 0pen_i2400_no_out_rew_true --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
---num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 2.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
---multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 10 --terminal_reward --num_sample_seconds 0.0" \
---start --stop --cluster-name ev_2pen_5 --tmux
-
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 0pen_i2400_no_out_rew_truecv --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
---num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 2.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
---multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 10 --centralized_vf --max_num_agents 200 --terminal_reward --num_sample_seconds 0.0" \
---start --stop --cluster-name ev_2pen_6 --tmux
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 0pen_i2400_no_out_rew_true --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 2.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
+#--multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 10 --terminal_reward --num_sample_seconds 0.0" \
+#--start --stop --cluster-name ev_2pen_5 --tmux
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 0pen_i2400_no_out_rew_truecv --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 2.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
+#--multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 10 --centralized_vf --max_num_agents 200 --terminal_reward --num_sample_seconds 0.0" \
+#--start --stop --cluster-name ev_2pen_6 --tmux
 
 ####################################################################################################################################################
 ## 3/08/20 exps
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 0pen_i2400_imitate_term_f0p01 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
---num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 2.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
---multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 10 --centralized_vf --max_num_agents 200 \
---terminal_reward --num_sample_seconds 0.0 --imitate --num_imitation_iters 10 --final_imitation_weight 0.01" \
---start --stop --cluster-name ev_2pen_7 --tmux
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 0pen_i2400_imitate_term_f0p01 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 2.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
+#--multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 10 --centralized_vf --max_num_agents 200 \
+#--terminal_reward --num_sample_seconds 0.0 --imitate --num_imitation_iters 10 --final_imitation_weight 0.01" \
+#--start --stop --cluster-name ev_2pen_7 --tmux
+
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 0pen_i2400_imitate_term_f0p1 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 2.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
+#--multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 10 --centralized_vf --max_num_agents 200 \
+#--terminal_reward --num_sample_seconds 0.0 --imitate --num_imitation_iters 10 --final_imitation_weight 0.1" \
+#--start --stop --cluster-name ev_2pen_8 --tmux
+
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 0pen_i2400_imitate_term_f1p0 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 2.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
+#--multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 10 --centralized_vf --max_num_agents 200 \
+#--terminal_reward --num_sample_seconds 0.0 --imitate --num_imitation_iters 0 --final_imitation_weight 1.0" \
+#--start --stop --cluster-name ev_2pen_8 --tmux
 
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 0pen_i2400_imitate_term_f0p1 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py 0pen_i2400_imitate_term_f1p0_hard --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
 --num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 2.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
 --multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 10 --centralized_vf --max_num_agents 200 \
---terminal_reward --num_sample_seconds 0.0 --imitate --num_imitation_iters 10 --final_imitation_weight 0.1" \
---start --stop --cluster-name ev_2pen_8 --tmux
+--terminal_reward --num_sample_seconds 0.0 --imitate --num_imitation_iters 0 --final_imitation_weight 1.0 --hard_negative_mining --mining_frac 0.05" \
+--start --stop --cluster-name ev_2pen_9 --tmux

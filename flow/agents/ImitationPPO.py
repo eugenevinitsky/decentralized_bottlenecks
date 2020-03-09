@@ -36,7 +36,8 @@ def imitation_loss(policy, model, dist_class, train_batch):
         # negative sign makes values that are really negative be selected in the top k
         masked_logp = -tf.boolean_mask(action_dist.logp(expert_tensor), mask)
         top_loss, _ = tf.math.top_k(masked_logp,
-                                    int(policy.config['sgd_minibatch_size'] / 10))  # todo make this an actual 10%
+                                    int(policy.config['sgd_minibatch_size'] *
+                                        policy.config['model']['custom_options']["mining_frac"]))  # todo make this an actual 10%
         imitation_loss = tf.reduce_mean(top_loss)
 
     else:
