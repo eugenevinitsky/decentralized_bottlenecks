@@ -558,8 +558,8 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
     @property
     def observation_space(self):
         if self.simple_env:
-            # abs_position duration, time since stopped, number of vehicles in the bottleneck
-            new_obs = Box(low=-3.0, high=3.0, shape=(4,), dtype=np.float32)
+            # abs_position duration, time since stopped, number of vehicles in the bottleneck, speed, lead speed, headway
+            new_obs = Box(low=-3.0, high=3.0, shape=(7,), dtype=np.float32)
         else:
             obs = super().observation_space
             # Extra keys "time since stop", duration
@@ -594,10 +594,22 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
                     accel = -np.abs(self.action_space.low[0])
                 duration = controller.duration
                 abs_position = self.k.vehicle.get_x_by_id(rl_id)
+                # if rl_actions and rl_id in rl_actions.keys():
+                #     print('RL ', rl_actions[rl_id])
+                #     print('Expert ', accel)
+                speed = self.k.vehicle.get_speed(rl_id)
+                lead_id = self.k.vehicle.get_leader(rl_id)
+                lead_speed = self.k.vehicle.get_speed(lead_id)
+                if lead_speed == -1001:
+                    lead_speed = -10
+                headway = self.k.vehicle.get_headway(rl_id)
                 state_dict[rl_id] = {"a_obs": np.array([abs_position / 1000.0,
                                                       self.curr_rl_vehicles[rl_id]['time_since_stopped'] / self.env_params.horizon,
                                                       duration / 100.0,
-                                                      congest_number]),
+                                                      congest_number,
+                                                      speed / 50.0,
+                                                      lead_speed / 50.0,
+                                                       headway / 1000.0]),
                                        "expert_action": np.array([np.clip(accel, a_min=self.action_space.low[0],
                                                                           a_max=self.action_space.high[0])])}
 
