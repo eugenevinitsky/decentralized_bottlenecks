@@ -234,10 +234,16 @@ def loss_stats(policy, train_batch):
                   'imitation_loss': policy.imitation_weight * policy.imitation_loss})
     return stats
 
+class AttributeMixin(object):
+    def __init__(self, config):
+        self.terminal_reward = config['model']['custom_options']['terminal_reward']
+        self.horizon = config['model']['custom_options']['horizon']
+
 
 def setup_mixins(policy, obs_space, action_space, config):
     ValueNetworkMixin.__init__(policy, obs_space, action_space, config)
     KLCoeffMixin.__init__(policy, config)
+    AttributeMixin.__init__(policy, config)
     EntropyCoeffSchedule.__init__(policy, config["entropy_coeff"],
                                   config["entropy_coeff_schedule"])
     LearningRateSchedule.__init__(policy, config["lr"], config["lr_schedule"])
@@ -263,7 +269,7 @@ ImitationPolicy = PPOTFPolicy.with_updates(
     loss_fn=new_ppo_surrogate_loss,
     mixins=[
         LearningRateSchedule, EntropyCoeffSchedule, KLCoeffMixin,
-        ValueNetworkMixin, ImitationLearningRateSchedule
+        ValueNetworkMixin, ImitationLearningRateSchedule, AttributeMixin
     ])
 
 ImitationTrainer = PPOTrainer.with_updates(name="ImitationPPOTrainer", default_policy=ImitationPolicy,

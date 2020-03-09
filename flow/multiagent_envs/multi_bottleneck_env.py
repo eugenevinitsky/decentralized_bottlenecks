@@ -113,12 +113,12 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         """See class definition."""
         if self.env_params.additional_params['communicate']:
             accel = Box(
-                low=-20.0, high=3.0, shape=(1,), dtype=np.float32)
+                low=-5.0 * self.env_params.sims_per_step, high=3.0, shape=(1,), dtype=np.float32)
             communicate = Discrete(2)
             return Tuple((accel, communicate))
         else:
             return Box(
-                low=-20.0, high=3.0, shape=(1,), dtype=np.float32)
+                low=-5.0 * self.env_params.sims_per_step, high=3.0, shape=(1,), dtype=np.float32)
 
     def get_state(self, rl_actions=None):
         """See class definition."""
@@ -590,10 +590,11 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
                     self.curr_rl_vehicles[rl_id]['time_since_stopped'] = 0.0
 
                 accel = controller.get_accel(self)
+
                 if accel is None:
                     accel = -np.abs(self.action_space.low[0])
                 duration = controller.duration
-                abs_position = self.k.vehicle.get_x_by_id(rl_id)
+                abs_position = self.k.vehicle.get_position(rl_id)
                 # if rl_actions and rl_id in rl_actions.keys():
                 #     print('RL ', rl_actions[rl_id])
                 #     print('Expert ', accel)

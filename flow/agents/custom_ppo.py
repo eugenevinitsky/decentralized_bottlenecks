@@ -307,7 +307,7 @@ CustomPPOTFPolicy = build_tf_policy(
     before_loss_init=setup_mixins,
     mixins=[
         LearningRateSchedule, EntropyCoeffSchedule, KLCoeffMixin,
-        ValueNetworkMixin
+        ValueNetworkMixin, AttributeMixin
     ])
 
 from ray.rllib.agents.trainer_template import build_trainer

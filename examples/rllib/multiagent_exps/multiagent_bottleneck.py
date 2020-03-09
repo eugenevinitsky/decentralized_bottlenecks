@@ -332,7 +332,7 @@ def setup_exps(args):
             config['num_sgd_iter'] = tune.grid_search([10])
             config['lr'] = tune.grid_search([5e-6, 5e-5, 5e-4])
         else:
-            config['num_sgd_iter'] = 100
+            config['num_sgd_iter'] = 30
 
             # LSTM Things
         if args.use_lstm and args.use_gru:
