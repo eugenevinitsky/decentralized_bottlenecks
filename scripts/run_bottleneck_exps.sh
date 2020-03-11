@@ -1271,17 +1271,33 @@
 ## 3/10/20 exps
 
 # Idea here is to try making the imitation weight of the same magnitude as the policy loss
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_im_term_f0p001_hard_senv_iter10_e0p01 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
+#--multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 1 --centralized_vf --max_num_agents 200 \
+#--terminal_reward --num_sample_seconds 0.0 --imitate --num_imitation_iters 10 --final_imitation_weight 0.001 --hard_negative_mining --mining_frac 0.1 --simple_env --entropy_coeff 0.01" \
+#--start --stop --cluster-name ev_0pen_8 --tmux
+#
+## Idea here is to try making the imitation weight of the 10% magnitude as the policy loss
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_im_term_f0p0001_hard_senv_iter10_e0p01 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
+#--multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 1 --centralized_vf --max_num_agents 200 \
+#--terminal_reward --num_sample_seconds 0.0 --imitate --num_imitation_iters 10 --final_imitation_weight 0.0001 --hard_negative_mining --mining_frac 0.1 --simple_env --entropy_coeff 0.01" \
+#--start --stop --cluster-name ev_0pen_9 --tmux
+
+# Idea here is to try making the imitation weight of the same magnitude as the policy loss
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_im_term_f0p001_hard_senv_iter10_e0p01 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_im_term_f0p001_hard_senv_iter10_e0p1 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
 --num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
 --multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 1 --centralized_vf --max_num_agents 200 \
---terminal_reward --num_sample_seconds 0.0 --imitate --num_imitation_iters 10 --final_imitation_weight 0.001 --hard_negative_mining --mining_frac 0.1 --simple_env --entropy_coeff 0.01" \
---start --stop --cluster-name ev_0pen_8 --tmux
+--terminal_reward --num_sample_seconds 0.0 --imitate --num_imitation_iters 10 --final_imitation_weight 0.001 --hard_negative_mining --mining_frac 0.1 --simple_env --entropy_coeff 0.1" \
+--start --stop --cluster-name ev_0pen_10 --tmux
 
 # Idea here is to try making the imitation weight of the 10% magnitude as the policy loss
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_im_term_f0p0001_hard_senv_iter10_e0p01 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_im_term_f0p0001_hard_senv_iter10_e0p1 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
 --num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 1.0 --horizon 2000 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
 --multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 1 --centralized_vf --max_num_agents 200 \
---terminal_reward --num_sample_seconds 0.0 --imitate --num_imitation_iters 10 --final_imitation_weight 0.0001 --hard_negative_mining --mining_frac 0.1 --simple_env --entropy_coeff 0.01" \
---start --stop --cluster-name ev_0pen_9 --tmux
+--terminal_reward --num_sample_seconds 0.0 --imitate --num_imitation_iters 10 --final_imitation_weight 0.0001 --hard_negative_mining --mining_frac 0.1 --simple_env --entropy_coeff 0.1" \
+--start --stop --cluster-name ev_0pen_11 --tmux

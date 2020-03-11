@@ -263,7 +263,6 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
             k += 1
             obs = next_obs
 
-        print('mean error was ', np.mean(mean_error))
         vehicles = env.unwrapped.k.vehicle
         outflow = vehicles.get_outflow_rate(500)
         final_outflows.append(outflow)
