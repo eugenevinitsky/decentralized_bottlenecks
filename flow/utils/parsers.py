@@ -20,6 +20,7 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument('--rollout_scale_factor', type=float, default=1.0, help='the total number of rollouts is'
                                                                                 'args.n_cpus * rollout_scale_factor')
     parser.add_argument("--vf_loss_coeff", type=float, default=.0001, help='coeff of the vf loss')
+    parser.add_argument("--entropy_coeff", type=float, default=0.0)
     
     # arguments for flow
     parser.add_argument('--sims_per_step', type=int, default=1, help='How many steps to take per action')

@@ -234,6 +234,7 @@ def loss_stats(policy, train_batch):
                   'imitation_loss': policy.imitation_weight * policy.imitation_loss})
     return stats
 
+
 class AttributeMixin(object):
     def __init__(self, config):
         self.terminal_reward = config['model']['custom_options']['terminal_reward']

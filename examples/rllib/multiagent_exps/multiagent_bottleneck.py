@@ -319,6 +319,7 @@ def setup_exps(args):
         config = ppo.DEFAULT_CONFIG.copy()
         config['num_workers'] = rllib_params['n_cpus']
         config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
+        config["entropy_coeff"] = args.entropy_coeff
 
         # if we have a centralized vf we can't use big batch sizes or we eat up all the system memory
         if not args.centralized_vf:
