@@ -53,10 +53,10 @@ head_node:
         SpotOptions:
             MaxPrice: "1.0"
 ## You can provision additional disk space with a conf as follows
-#    BlockDeviceMappings:
-#        - DeviceName: /dev/sda1
-#          Ebs:
-#              VolumeSize: 120
+    BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+              VolumeSize: 120
 
     # Additional options in the boto docs.
 
@@ -107,4 +107,4 @@ worker_start_ray_commands:
       ray start
       --redis-address=$RAY_HEAD_IP:6379
       --object-manager-port=8076
-#      --object-store-memory=120000000000
+      --object-store-memory=80000000000
