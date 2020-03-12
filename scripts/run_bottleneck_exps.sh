@@ -1322,3 +1322,26 @@ ray exec ray_autoscale.yaml \
 --multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 2 --centralized_vf --max_num_agents 200 \
 --terminal_reward --num_sample_seconds 0.0 --imitate --num_imitation_iters 10 --final_imitation_weight 0.0001 --hard_negative_mining --mining_frac 0.1 --entropy_coeff 0.01" \
 --start --stop --cluster-name ev_0pen_11 --tmux
+
+####################################################################################################################################################
+## 3/12/20 exps
+
+# rerun of 3/11 experiments but with bigger sgd batchsizes for speed
+
+# minor entropy bonus to allow the policies to actually learn something
+
+# Idea here is to try making the imitation weight of the same magnitude as the policy loss
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_im_term_f0p001_hard_iter10_e0p01 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+--num_samples 1 --grid_search --n_cpus 6 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
+--multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 2 --centralized_vf --max_num_agents 200 \
+--terminal_reward --num_sample_seconds 0.0 --imitate --num_imitation_iters 10 --final_imitation_weight 0.001 --hard_negative_mining --mining_frac 0.1 --entropy_coeff 0.01" \
+--start --stop --cluster-name ev_0pen_10 --tmux
+
+# Idea here is to try making the imitation weight of the 10% magnitude as the policy loss
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_im_term_f0p0001_hard_iter10_e0p01 --num_iters 450 --checkpoint_freq 50 --av_frac 0.4 \
+--num_samples 1 --grid_search --n_cpus 6 --use_s3 --rollout_scale_factor 1.0 --horizon 1000 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
+--multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 2 --centralized_vf --max_num_agents 200 \
+--terminal_reward --num_sample_seconds 0.0 --imitate --num_imitation_iters 10 --final_imitation_weight 0.0001 --hard_negative_mining --mining_frac 0.1 --entropy_coeff 0.01" \
+--start --stop --cluster-name ev_0pen_11 --tmux
