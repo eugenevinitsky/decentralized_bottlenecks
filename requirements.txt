@@ -20,3 +20,4 @@ tensorflow==1.15.0
 tensorflow-probability==0.7.0
 pandas
 opencv-python
+lz4
