@@ -7,14 +7,13 @@ import argparse
 from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.utils import try_import_tf
 
-from ray.rllib.agents.ppo.ppo import PPOTrainer
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
 from ray.rllib.agents.ppo.ppo_policy import LearningRateSchedule, EntropyCoeffSchedule, KLCoeffMixin
 from ray.rllib.utils.explained_variance import explained_variance
 from ray.rllib.evaluation.postprocessing import Postprocessing
 import tensorflow as tf
 
-from flow.agents.custom_ppo import AttributeMixin
+from flow.agents.custom_ppo import AttributeMixin, CustomPPOTrainer
 from flow.agents.ImitationPPO import update_kl, ImitationLearningRateSchedule, imitation_loss, loss_stats
 from flow.agents.centralized_PPO import CentralizedValueMixin, \
     centralized_critic_postprocessing, loss_with_central_critic
@@ -63,6 +62,6 @@ ImitationCentralizedPolicy = PPOTFPolicy.with_updates(
         CentralizedValueMixin, ImitationLearningRateSchedule
     ])
 
-ImitationCentralizedTrainer = PPOTrainer.with_updates(name="ImitationCentralizedPPOTrainer",
+ImitationCentralizedTrainer = CustomPPOTrainer.with_updates(name="ImitationCentralizedPPOTrainer",
                                                       default_policy=ImitationCentralizedPolicy,
                                                       after_optimizer_step=update_kl)

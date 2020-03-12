@@ -310,8 +310,29 @@ CustomPPOTFPolicy = build_tf_policy(
         ValueNetworkMixin, AttributeMixin
     ])
 
+def validate_config(config):
+    if config["entropy_coeff"] < 0:
+        raise DeprecationWarning("entropy_coeff must be >= 0")
+    if isinstance(config["entropy_coeff"], int):
+        config["entropy_coeff"] = float(config["entropy_coeff"])
+    if config["batch_mode"] == "truncate_episodes" and not config["use_gae"]:
+        raise ValueError(
+            "Episode truncation is not supported without a value "
+            "function. Consider setting batch_mode=complete_episodes.")
+    if config["multiagent"]["policies"] and not config["simple_optimizer"]:
+        logger.info(
+            "In multi-agent mode, policies will be optimized sequentially "
+            "by the multi-GPU optimizer. Consider setting "
+            "simple_optimizer=True if this doesn't work for you.")
+    if config["simple_optimizer"]:
+        logger.warning(
+            "Using the simple minibatch optimizer. This will significantly "
+            "reduce performance, consider simple_optimizer=False.")
+    elif tf and tf.executing_eagerly():
+        config["simple_optimizer"] = True  # multi-gpu not supported
+
 from ray.rllib.agents.trainer_template import build_trainer
-from ray.rllib.agents.ppo.ppo import choose_policy_optimizer, DEFAULT_CONFIG, validate_config, update_kl, \
+from ray.rllib.agents.ppo.ppo import choose_policy_optimizer, DEFAULT_CONFIG, update_kl, \
     warn_about_bad_reward_scales
 CustomPPOTrainer = build_trainer(
     name="CustomPPOTrainer",

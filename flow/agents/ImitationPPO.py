@@ -1,6 +1,5 @@
 from copy import deepcopy
 
-from ray.rllib.agents.ppo.ppo import PPOTrainer
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy
 from ray.rllib.agents.ppo.ppo_policy import LearningRateSchedule, EntropyCoeffSchedule, KLCoeffMixin, ValueNetworkMixin
 from ray.rllib.utils.annotations import override, DeveloperAPI
@@ -14,7 +13,7 @@ from ray.rllib.agents.ppo.ppo_policy import kl_and_loss_stats
 from ray.rllib.agents.ppo.ppo import DEFAULT_CONFIG
 import tensorflow as tf
 
-from flow.agents.custom_ppo import postprocess_ppo_gae
+from flow.agents.custom_ppo import postprocess_ppo_gae, CustomPPOTrainer
 
 BEHAVIOUR_LOGITS = "behaviour_logits"
 
@@ -273,5 +272,5 @@ ImitationPolicy = PPOTFPolicy.with_updates(
         ValueNetworkMixin, ImitationLearningRateSchedule, AttributeMixin
     ])
 
-ImitationTrainer = PPOTrainer.with_updates(name="ImitationPPOTrainer", default_policy=ImitationPolicy,
+ImitationTrainer = CustomPPOTrainer.with_updates(name="ImitationPPOTrainer", default_policy=ImitationPolicy,
                                            after_optimizer_step=update_kl)
