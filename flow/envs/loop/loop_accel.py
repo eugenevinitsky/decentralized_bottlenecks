@@ -1,7 +1,7 @@
 """Environment for training the acceleration behavior of vehicles in a loop."""
 
 from flow.core import rewards
-from flow.envs.base_env import Env
+from flow.envs.base import Env
 
 from gym.spaces.box import Box
 
@@ -56,7 +56,7 @@ class AccelEnv(Env):
         vehicles collide into one another.
     """
 
-    def __init__(self, env_params, sim_params, scenario, simulator='traci'):
+    def __init__(self, env_params, sim_params, network, simulator='traci'):
         for p in ADDITIONAL_ENV_PARAMS.keys():
             if p not in env_params.additional_params:
                 raise KeyError(
@@ -67,7 +67,7 @@ class AccelEnv(Env):
         self.prev_pos = dict()
         self.absolute_position = dict()
 
-        super().__init__(env_params, sim_params, scenario, simulator)
+        super().__init__(env_params, sim_params, network, simulator)
 
     @property
     def action_space(self):

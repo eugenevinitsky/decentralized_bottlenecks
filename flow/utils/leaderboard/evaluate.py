@@ -3,7 +3,7 @@ Evaluation utility methods for testing the performance of controllers.
 
 This file contains a method to perform the evaluation on all benchmarks in
 flow/benchmarks, as well as method for importing neural network controllers
-from rllab and rllib.
+from rllib.
 """
 
 from flow.core.experiment import Experiment
@@ -11,6 +11,7 @@ from flow.core.params import InitialConfig
 from flow.core.params import TrafficLightParams
 from flow.utils.rllib import get_flow_params, get_rllib_config
 from flow.utils.registry import make_create_env
+from flow.utils.exceptions import FatalFlowError
 
 from flow.benchmarks.grid0 import flow_params as grid0
 from flow.benchmarks.grid1 import flow_params as grid1
@@ -28,7 +29,6 @@ import ray
 from ray.rllib.agent import get_agent_class
 from ray.tune.registry import get_registry, register_env
 import numpy as np
-import joblib
 
 # number of simulations to execute when computing performance scores
 NUM_RUNS = 10
@@ -54,32 +54,32 @@ def evaluate_policy(benchmark, _get_actions, _get_states=None):
 
     Parameters
     ----------
-        benchmark : str
-            name of the benchmark, must be printed as it is in the
-            benchmarks folder; otherwise a ValueError will be raised
-        _get_actions : method
-            the mapping from states to actions for the RL agent(s)
-        _get_states : method, optional
-            a mapping from the environment object in Flow to some state, which
-            overrides the _get_states method of the environment. Note that the
-            same cannot be done for the actions.
+    benchmark : str
+        name of the benchmark, must be printed as it is in the
+        benchmarks folder; otherwise a FatalFlowError will be raised
+    _get_actions : method
+        the mapping from states to actions for the RL agent(s)
+    _get_states : method, optional
+        a mapping from the environment object in Flow to some state, which
+        overrides the _get_states method of the environment. Note that the
+        same cannot be done for the actions.
 
     Returns
     -------
-        float
-            mean of the evaluation return of the benchmark from NUM_RUNS number
-            of simulations
-        float
-            standard deviation of the evaluation return of the benchmark from
-            NUM_RUNS number of simulations
+    float
+        mean of the evaluation return of the benchmark from NUM_RUNS number
+        of simulations
+    float
+        standard deviation of the evaluation return of the benchmark from
+        NUM_RUNS number of simulations
 
     Raises
     ------
-        ValueError
-            If the specified benchmark is not available.
+    flow.utils.exceptions.FatalFlowError
+        If the specified benchmark is not available.
     """
     if benchmark not in AVAILABLE_BENCHMARKS.keys():
-        raise ValueError(
+        raise FatalFlowError(
             "benchmark {} is not available. Check spelling?".format(benchmark))
 
     # get the flow params from the benchmark
@@ -94,14 +94,14 @@ def evaluate_policy(benchmark, _get_actions, _get_states=None):
     initial_config = flow_params.get("initial", InitialConfig())
     traffic_lights = flow_params.get("tls", TrafficLightParams())
 
-    # import the environment and scenario classes
+    # import the environment and network classes
     module = __import__("flow.envs", fromlist=[flow_params["env_name"]])
     env_class = getattr(module, flow_params["env_name"])
-    module = __import__("flow.scenarios", fromlist=[flow_params["scenario"]])
-    scenario_class = getattr(module, flow_params["scenario"])
+    module = __import__("flow.networks", fromlist=[flow_params["network"]])
+    network_class = getattr(module, flow_params["network"])
 
-    # recreate the scenario and environment
-    scenario = scenario_class(
+    # recreate the network and environment
+    network = network_class(
         name=exp_tag,
         vehicles=vehicles,
         net_params=net_params,
@@ -119,49 +119,61 @@ def evaluate_policy(benchmark, _get_actions, _get_states=None):
         env_class = _env_class
 
     env = env_class(
-        env_params=env_params, sim_params=sim_params, scenario=scenario)
+        env_params=env_params, sim_params=sim_params, network=network)
 
-    # create a Experiment object with the "rl_actions" method as
-    # described in the inputs. Note that the state may not be that which is
+    flow_params = dict(
+        # name of the experiment
+        exp_tag=exp_tag,
+
+        # name of the flow environment the experiment is running on
+        env_name=env_class,
+
+        # name of the network class the experiment is running on
+        network=network_class,
+
+        # simulator that is used by the experiment
+        simulator='traci',
+
+        # sumo-related parameters (see flow.core.params.SumoParams)
+        sim=sim_params,
+
+        # environment related parameters (see flow.core.params.EnvParams)
+        env=env_params,
+
+        # network-related parameters (see flow.core.params.NetParams and the
+        # network's documentation or ADDITIONAL_NET_PARAMS component)
+        net=net_params,
+
+        # vehicles to be placed in the network at the start of a rollout (see
+        # flow.core.params.VehicleParams)
+        veh=vehicles,
+
+        # parameters specifying the positioning of vehicles upon initialization/
+        # reset (see flow.core.params.InitialConfig)
+        initial=initial_config,
+
+        # traffic lights to be introduced to specific nodes (see
+        # flow.core.params.TrafficLightParams)
+        tls=traffic_lights,
+    )
+
+    # number of time steps
+    flow_params['env'].horizon = env.env_params.horizon
+
+    # create a Experiment object. Note that the state may not be that which is
     # specified by the environment.
-    exp = Experiment(env=env)
+    exp = Experiment(flow_params)
+    exp.env = env
+
+    exp = Experiment(flow_params)
+    exp.env = env
 
     # run the experiment and return the reward
     res = exp.run(
         num_runs=NUM_RUNS,
-        num_steps=env.env_params.horizon,
         rl_actions=_get_actions)
 
     return np.mean(res["returns"]), np.std(res["returns"])
-
-
-def get_compute_action_rllab(path_to_pkl):
-    """Collect the compute_action method from rllab's pkl files.
-
-    Parameters
-    ----------
-        path_to_pkl : str
-            pkl file created by rllab that contains the policy information
-
-    Returns
-    -------
-        method
-            the compute_action method from the algorithm along with the trained
-            parameters
-    """
-    # get the agent/policy
-    data = joblib.load(path_to_pkl)
-    agent = data['policy']
-
-    # restore the trained parameters
-    agent.restore()
-
-    # the compute action return an action and an info_dict, so modify to just
-    # return the action
-    def compute_action(state):
-        return agent.compute_action(state)[0]
-
-    return compute_action
 
 
 def get_compute_action_rllib(path_to_dir, checkpoint_num, alg):
@@ -169,19 +181,19 @@ def get_compute_action_rllib(path_to_dir, checkpoint_num, alg):
 
     Parameters
     ----------
-        path_to_dir : str
-            RLlib directory containing training results
-        checkpoint_num : int
-            checkpoint number / training iteration of the learned policy
-        alg : str
-            name of the RLlib algorithm that was used during the training
-            procedure
+    path_to_dir : str
+        RLlib directory containing training results
+    checkpoint_num : int
+        checkpoint number / training iteration of the learned policy
+    alg : str
+        name of the RLlib algorithm that was used during the training
+        procedure
 
     Returns
     -------
-        method
-            the compute_action method from the algorithm along with the trained
-            parameters
+    method
+        the compute_action method from the algorithm along with the trained
+        parameters
     """
     # collect the configuration information from the RLlib checkpoint
     result_dir = path_to_dir if path_to_dir[-1] != '/' else path_to_dir[:-1]

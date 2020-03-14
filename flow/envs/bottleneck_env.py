@@ -17,7 +17,7 @@ import numpy as np
 from gym.spaces.box import Box
 
 from flow.core import rewards
-from flow.envs.base_env import Env
+from flow.envs.base import Env
 
 MAX_LANES = 4  # base number of largest number of lanes in the network
 EDGE_LIST = ["1", "2", "3", "4", "5"]  # Edge 1 is before the toll booth
@@ -85,7 +85,7 @@ PERIOD = 10.0
 
 
 class BottleneckEnv(Env):
-    def __init__(self, env_params, sim_params, scenario, simulator='traci'):
+    def __init__(self, env_params, sim_params, network, simulator='traci'):
         """Environment used as a simplified representation of the toll booth
         portion of the bay bridge. Contains ramp meters, and a toll both.
 
@@ -100,10 +100,10 @@ class BottleneckEnv(Env):
                 raise KeyError(
                     'Environment parameter "{}" not supplied'.format(p))
 
-        super().__init__(env_params, sim_params, scenario, simulator)
+        super().__init__(env_params, sim_params, network, simulator)
         env_add_params = self.env_params.additional_params
         # tells how scaled the number of lanes are
-        self.scaling = scenario.net_params.additional_params.get("scaling")
+        self.scaling = network.net_params.additional_params.get("scaling")
         self.edge_dict = defaultdict(list)
         self.cars_waiting_for_toll = dict()
         self.cars_before_ramp = dict()

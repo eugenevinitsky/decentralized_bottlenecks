@@ -2,8 +2,10 @@
 In this example, the actions are accelerations for all of the agents.
 The agents all share a single model.
 """
+from datetime import datetime
 import json
 
+import pytz
 import ray
 import ray.rllib.agents.ppo as ppo
 from ray import tune
@@ -23,7 +25,7 @@ from flow.controllers import RLController, ContinuousRouter, \
 # time horizon of a single rollout
 HORIZON = 2000
 # number of parallel workers
-N_CPUS = 14
+N_CPUS = 1
 # number of rollouts per training iteration
 N_ROLLOUTS = 2*N_CPUS
 
@@ -75,7 +77,7 @@ additional_env_params = {
     'lane_change_duration': 5,
     'max_accel': 3,
     'max_decel': 3,
-    'inflow_range': [800, 2000],
+    'inflow_range': [800, 3000],
     'start_inflow': flow_rate,
     'congest_penalty': False,
     'communicate': False,
@@ -174,12 +176,12 @@ def setup_exps():
     config['model'].update({'fcnet_hiddens': [100, 50, 25]})
     config['clip_actions'] = False
     config['horizon'] = HORIZON
-    config['use_centralized_vf'] = tune.grid_search([True, False])
+    # config['use_centralized_vf'] = tune.grid_search([True, False])
     config['simple_optimizer'] = True
 
     # Grid search things
-    config['lr'] = tune.grid_search([5e-4, 5e-5])
-    config['num_sgd_iter'] = tune.grid_search([10, 30])
+    # config['lr'] = tune.grid_search([5e-4, 5e-5])
+    # config['num_sgd_iter'] = tune.grid_search([10, 30])
 
     # LSTM Things
     # config['model']['use_lstm'] = True
@@ -217,10 +219,26 @@ def setup_exps():
     return alg_run, env_name, config
 
 
+def on_episode_end(info):
+    import ipdb; ipdb.set_trace()
+    env = info['env'].get_unwrapped()[0]
+    total_outflow = env.k.vehicle.get_outflow_rate(500)
+    inflow = env.inflow
+    # round it to 100
+    inflow = int(inflow / 100) * 100
+    episode = info["episode"]
+    episode.custom_metrics["net_outflow_{}".format(inflow)] = total_outflow
+
+
 if __name__ == '__main__':
     alg_run, env_name, config = setup_exps()
-    ray.init(redis_address='localhost:6379')
-    # ray.init(num_cpus=4, redirect_output=False)
+    # ray.init(redis_address='localhost:6379')
+    ray.init(num_cpus=4, redirect_output=False)
+    eastern = pytz.timezone('US/Eastern')
+    date = datetime.now(tz=pytz.utc)
+    date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
+    s3_string = "s3://eugene.experiments/old_bottleneck_test/" \
+                + date + '/' + flow_params["exp_tag"]
     run_experiments({
         flow_params["exp_tag"]: {
             'run': alg_run,
@@ -230,8 +248,10 @@ if __name__ == '__main__':
                 'training_iteration': 500
             },
             'config': config,
-            'upload_dir': "s3://eugene.experiments/itsc_bottleneck_paper"
-                          "/1-16-2019/MultiDecentralObsBottleneck",
-            'num_samples': 3
+            # 'upload_dir': s3_string
+            'num_samples': 1,
+            # "callbacks": {
+            #     "on_episode_end": tune.function(on_episode_end),
+            # },
         },
     })

@@ -1,6 +1,6 @@
 """Environment for training cooperative merging behaviors in a loop merge."""
 
-from flow.envs.base_env import Env
+from flow.envs.base import Env
 from flow.core import rewards
 from gym.spaces.box import Box
 import numpy as np

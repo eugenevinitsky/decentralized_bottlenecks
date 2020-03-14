@@ -5,7 +5,7 @@ from flow.core.params import SumoParams, EnvParams, NetParams, InitialConfig, \
 from flow.core.params import VehicleParams
 from flow.core.params import TrafficLightParams
 
-from flow.scenarios.bottleneck import BottleneckScenario
+from flow.networks.bottleneck import BottleneckNetwork
 from flow.controllers import SimLaneChangeController, ContinuousRouter
 from flow.envs.bottleneck_env import BottleneckEnv
 from flow.core.experiment import Experiment
@@ -17,13 +17,13 @@ SCALING = 1
 DISABLE_TB = True
 # If set to False, ALINEA will control the ramp meter
 DISABLE_RAMP_METER = True
-INFLOW = 1800
+INFLOW = 2400
 
 
 class BottleneckDensityExperiment(Experiment):
 
-    def __init__(self, env, inflow=INFLOW):
-        super().__init__(env)
+    def __init__(self, flow_params, inflow=INFLOW):
+        super().__init__(flow_params)
         self.inflow = inflow
 
     def run(self, num_runs, num_steps, end_len=500, rl_actions=None, convert_to_csv=False):
@@ -119,7 +119,7 @@ class BottleneckDensityExperiment(Experiment):
 
 
 def bottleneck_example(flow_rate, horizon, restart_instance=False,
-                       render=None):
+                       render=False):
     """
     Perform a simulation of vehicles on a bottleneck.
 
@@ -140,46 +140,24 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
         A non-rl experiment demonstrating the performance of human-driven
         vehicles on a bottleneck.
     """
-    if render is None:
-        render = False
-
-    sim_params = SumoParams(
-        sim_step=0.5,
-        render=render,
-        overtake_right=False,
-        restart_instance=restart_instance)
-
     vehicles = VehicleParams()
-
     vehicles.add(
         veh_id="human",
         lane_change_controller=(SimLaneChangeController, {}),
         routing_controller=(ContinuousRouter, {}),
         car_following_params=SumoCarFollowingParams(
-            speed_mode=9,
+            speed_mode=25,
         ),
         lane_change_params=SumoLaneChangeParams(
-            lane_change_mode=0,
+            lane_change_mode=1621,
         ),
         num_vehicles=1)
-
-    additional_env_params = {
-        "target_velocity": 40,
-        "max_accel": 3,
-        "max_decel": 3,
-        "lane_change_duration": 5,
-        "add_rl_if_exit": False,
-        "disable_tb": DISABLE_TB,
-        "disable_ramp_metering": DISABLE_RAMP_METER
-    }
-    env_params = EnvParams(
-        horizon=horizon, additional_params=additional_env_params)
 
     inflow = InFlows()
     inflow.add(
         veh_type="human",
         edge="1",
-        vehsPerHour=flow_rate,
+        vehsPerHour=INFLOW,
         departLane="random",
         departSpeed=10)
 
@@ -189,32 +167,75 @@ def bottleneck_example(flow_rate, horizon, restart_instance=False,
     if not DISABLE_RAMP_METER:
         traffic_lights.add(node_id="3")
 
-    additional_net_params = {"scaling": SCALING, "speed_limit": 23}
-    net_params = NetParams(
-        inflows=inflow,
-        no_internal_links=False,
-        additional_params=additional_net_params)
+    flow_params = dict(
+        # name of the experiment
+        exp_tag='bay_bridge_toll',
 
-    initial_config = InitialConfig(
-        spacing="random",
-        min_gap=5,
-        lanes_distribution=float("inf"),
-        edges_distribution=["2", "3", "4", "5"])
+        # name of the flow environment the experiment is running on
+        env_name=BottleneckEnv,
 
-    scenario = BottleneckScenario(
-        name="bay_bridge_toll",
-        vehicles=vehicles,
-        net_params=net_params,
-        initial_config=initial_config,
-        traffic_lights=traffic_lights)
+        # name of the network class the experiment is running on
+        network=BottleneckNetwork,
 
-    env = BottleneckEnv(env_params, sim_params, scenario)
+        # simulator that is used by the experiment
+        simulator='traci',
 
-    return BottleneckDensityExperiment(env, flow_rate)
+        # sumo-related parameters (see flow.core.params.SumoParams)
+        sim=SumoParams(
+            sim_step=0.5,
+            render=render,
+            overtake_right=False,
+            restart_instance=False
+        ),
+
+        # environment related parameters (see flow.core.params.EnvParams)
+        env=EnvParams(
+            horizon=horizon,
+            additional_params={
+                "target_velocity": 40,
+                "max_accel": 1,
+                "max_decel": 1,
+                "lane_change_duration": 5,
+                "add_rl_if_exit": False,
+                "disable_tb": DISABLE_TB,
+                "disable_ramp_metering": DISABLE_RAMP_METER
+            }
+        ),
+
+        # network-related parameters (see flow.core.params.NetParams and the
+        # network's documentation or ADDITIONAL_NET_PARAMS component)
+        net=NetParams(
+            inflows=inflow,
+            additional_params={
+                "scaling": SCALING,
+                "speed_limit": 23
+            }
+        ),
+
+        # vehicles to be placed in the network at the start of a rollout (see
+        # flow.core.params.VehicleParams)
+        veh=vehicles,
+
+        # parameters specifying the positioning of vehicles upon initialization/
+        # reset (see flow.core.params.InitialConfig)
+        initial=InitialConfig(
+            spacing="random",
+            min_gap=5,
+            lanes_distribution=float("inf"),
+            edges_distribution=["2", "3", "4", "5"]
+        ),
+
+        # traffic lights to be introduced to specific nodes (see
+        # flow.core.params.TrafficLightParams)
+        tls=traffic_lights,
+    )
+
+    return BottleneckDensityExperiment(flow_params)
 
 
 if __name__ == '__main__':
     # import the experiment variable
     # inflow, number of steps, binary
-    exp = bottleneck_example(INFLOW, 1000, render=True)
-    exp.run(5, 1000)
+    HORIZON = 1000
+    exp = bottleneck_example(INFLOW, HORIZON, render=True)
+    exp.run(5, HORIZON)
