@@ -111,7 +111,7 @@ def make_create_env(params, version=0, render=None):
             if params['env_name'] in single_agent_envs:
                 env_loc = 'flow.envs'
             else:
-                env_loc = 'flow.envs.multiagent'
+                env_loc = 'flow.multiagent_envs'
             entry_point = env_loc + ':{}'.format(params["env_name"])
         else:
             entry_point = params["env_name"].__module__ + ':' + params["env_name"].__name__

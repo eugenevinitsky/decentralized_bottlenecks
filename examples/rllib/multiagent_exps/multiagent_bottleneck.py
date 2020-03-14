@@ -21,6 +21,8 @@ from flow.core.params import TrafficLightParams
 from flow.core.params import VehicleParams
 from flow.controllers import RLController, ContinuousRouter, \
     SimLaneChangeController
+from flow.multiagent_envs.multi_bottleneck_env import MultiBottleneckEnv
+from flow.networks.bottleneck import BottleneckNetwork
 
 # time horizon of a single rollout
 HORIZON = 2000
@@ -34,6 +36,7 @@ NUM_LANES = 4 * SCALING  # number of lanes in the widest highway
 DISABLE_TB = True
 DISABLE_RAMP_METER = True
 AV_FRAC = 0.10
+LC_MODE = 0
 
 vehicles = VehicleParams()
 vehicles.add(
@@ -44,7 +47,7 @@ vehicles.add(
                             speed_mode=9,
                         ),
     lane_change_params=SumoLaneChangeParams(
-                            lane_change_mode=0,
+                            lane_change_mode=LC_MODE,
                         ),
     num_vehicles=1 * SCALING)
 vehicles.add(
@@ -56,7 +59,7 @@ vehicles.add(
         speed_mode=9,
     ),
     lane_change_params=SumoLaneChangeParams(
-        lane_change_mode=0,
+        lane_change_mode=LC_MODE,
     ),
     num_vehicles=1 * SCALING)
 
@@ -81,7 +84,9 @@ additional_env_params = {
     'start_inflow': flow_rate,
     'congest_penalty': False,
     'communicate': False,
-    "centralized_obs": False
+    "centralized_obs": False,
+    "av_frac": AV_FRAC,
+    "lc_mode": LC_MODE
 }
 
 # percentage of flow coming out of each lane
@@ -108,7 +113,6 @@ if not DISABLE_RAMP_METER:
 additional_net_params = {'scaling': SCALING, "speed_limit": 23.0}
 net_params = NetParams(
     inflows=inflow,
-    no_internal_links=False,
     additional_params=additional_net_params)
 
 flow_params = dict(
@@ -116,10 +120,10 @@ flow_params = dict(
     exp_tag='MultiDecentralObsBottleneck',
 
     # name of the flow environment the experiment is running on
-    env_name='MultiBottleneckEnv',
+    env_name=MultiBottleneckEnv,
 
     # name of the scenario class the experiment is running on
-    scenario='BottleneckScenario',
+    network=BottleneckNetwork,
 
     # simulator that is used by the experiment
     simulator='traci',
@@ -127,7 +131,7 @@ flow_params = dict(
     # sumo-related parameters (see flow.core.params.SumoParams)
     sim=SumoParams(
         sim_step=0.5,
-        render=False,
+        render=True,
         print_warnings=False,
         restart_instance=True,
     ),
@@ -144,7 +148,6 @@ flow_params = dict(
     # scenario's documentation or ADDITIONAL_NET_PARAMS component)
     net=NetParams(
         inflows=inflow,
-        no_internal_links=False,
         additional_params=additional_net_params,
     ),
 
@@ -233,7 +236,7 @@ def on_episode_end(info):
 if __name__ == '__main__':
     alg_run, env_name, config = setup_exps()
     # ray.init(redis_address='localhost:6379')
-    ray.init(num_cpus=4, redirect_output=False)
+    ray.init(num_cpus=2, redirect_output=False)
     eastern = pytz.timezone('US/Eastern')
     date = datetime.now(tz=pytz.utc)
     date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
