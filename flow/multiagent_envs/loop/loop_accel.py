@@ -3,7 +3,7 @@
 import numpy as np
 from flow.core import rewards
 from flow.envs.loop.loop_accel import AccelEnv
-from flow.multiagent_envs.multiagent_env import MultiEnv
+from flow.multiagent_envs.base import MultiEnv
 
 
 class MultiAgentAccelEnv(AccelEnv, MultiEnv):

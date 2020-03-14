@@ -3,11 +3,12 @@ Environments for training vehicles to reduce capacity drops in a bottleneck.
 This environment was used in:
 TODO(ak): add paper after it has been published.
 """
+from copy import deepcopy
 
 from flow.controllers.rlcontroller import RLController
 from flow.controllers.routing_controllers import ContinuousRouter
 from flow.controllers.lane_change_controllers import SimLaneChangeController
-from flow.multiagent_envs.multiagent_env import MultiEnv
+from flow.multiagent_envs.base import MultiEnv
 from flow.envs.bottleneck_env import DesiredVelocityEnv
 from flow.core.params import InFlows, NetParams, VehicleParams, \
     SumoCarFollowingParams, SumoLaneChangeParams
@@ -67,7 +68,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             # Last element is the outflow and inflow
             for segment in self.obs_segments:
                 num_obs += 4 * segment[1] * \
-                           self.k.scenario.num_lanes(segment[0])
+                           self.k.network.num_lanes(segment[0])
             num_obs += 2
             return Box(low=0.0, high=1.0, shape=(num_obs,), dtype=np.float32)
         else:
@@ -133,7 +134,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         rl_speeds_list = []
         NUM_VEHICLE_NORM = 20
         for i, edge in enumerate(EDGE_LIST):
-            num_lanes = self.k.scenario.num_lanes(edge)
+            num_lanes = self.k.network.num_lanes(edge)
             num_vehicles = np.zeros((self.num_obs_segments[i], num_lanes))
             num_rl_vehicles = np.zeros((self.num_obs_segments[i], num_lanes))
             vehicle_speeds = np.zeros((self.num_obs_segments[i], num_lanes))
@@ -235,63 +236,88 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             print('THE FLOW RATE IS: ', flow_rate)
             for _ in range(100):
                 try:
-                    net_params = self.scenario.net_params
-                    add_params = net_params.additional_params
+                    vehicles = VehicleParams()
+                    if not np.isclose(add_params.get("av_frac"), 1):
+                        vehicles.add(
+                            veh_id="human",
+                            lane_change_controller=(SimLaneChangeController, {}),
+                            routing_controller=(ContinuousRouter, {}),
+                            car_following_params=SumoCarFollowingParams(
+                                speed_mode=9,
+                            ),
+                            lane_change_params=SumoLaneChangeParams(
+                                lane_change_mode=add_params.get("lc_mode"),
+                            ),
+                            num_vehicles=1 * self.scaling)
+                        vehicles.add(
+                            veh_id="av",
+                            acceleration_controller=(RLController, {}),
+                            lane_change_controller=(SimLaneChangeController, {}),
+                            routing_controller=(ContinuousRouter, {}),
+                            car_following_params=SumoCarFollowingParams(
+                                speed_mode=9,
+                            ),
+                            lane_change_params=SumoLaneChangeParams(
+                                lane_change_mode=0,
+                            ),
+                            num_vehicles=1 * self.scaling)
+                    else:
+                        vehicles.add(
+                            veh_id="av",
+                            acceleration_controller=(RLController, {}),
+                            lane_change_controller=(SimLaneChangeController, {}),
+                            routing_controller=(ContinuousRouter, {}),
+                            car_following_params=SumoCarFollowingParams(
+                                speed_mode=9,
+                            ),
+                            lane_change_params=SumoLaneChangeParams(
+                                lane_change_mode=add_params.get("lc_mode"),
+                            ),
+                            num_vehicles=1 * self.scaling)
+
                     inflow = InFlows()
-                    inflow.add(
-                        veh_type="av",
-                        edge="1",
-                        vehs_per_hour=flow_rate * .1,
-                        departLane="random",
-                        departSpeed=10.0)
-                    inflow.add(
-                        veh_type="human",
-                        edge="1",
-                        vehs_per_hour=flow_rate * .9,
-                        departLane="random",
-                        departSpeed=10.0)
+                    if not np.isclose(add_params.get("av_frac"), 1.0):
+                        inflow.add(
+                            veh_type="av",
+                            edge="1",
+                            vehs_per_hour=flow_rate * add_params.get("av_frac"),
+                            departLane="random",
+                            departSpeed=23.0)
+                        inflow.add(
+                            veh_type="human",
+                            edge="1",
+                            vehs_per_hour=flow_rate * (1 - add_params.get("av_frac")),
+                            departLane="random",
+                            departSpeed=23.0)
+                    else:
+                        inflow.add(
+                            veh_type="av",
+                            edge="1",
+                            vehs_per_hour=flow_rate,
+                            departLane="random",
+                            departSpeed=23.0)
 
                     additional_net_params = {
                         "scaling": self.scaling,
-                        "speed_limit": self.scenario.net_params.
-                        additional_params['speed_limit']
+                        "speed_limit": self.network.net_params.
+                            additional_params['speed_limit']
                     }
                     net_params = NetParams(
                         inflows=inflow,
-                        no_internal_links=False,
                         additional_params=additional_net_params)
 
-                    vehicles = VehicleParams()
-                    vehicles.add(
-                        veh_id="human",
-                        lane_change_controller=(SimLaneChangeController, {}),
-                        routing_controller=(ContinuousRouter, {}),
-                        car_following_params=SumoCarFollowingParams(
-                            speed_mode=9,
-                        ),
-                        lane_change_params=SumoLaneChangeParams(
-                            lane_change_mode=0,
-                        ),
-                        num_vehicles=1 * self.scaling)
-                    vehicles.add(
-                        veh_id="av",
-                        acceleration_controller=(RLController, {}),
-                        lane_change_controller=(SimLaneChangeController, {}),
-                        routing_controller=(ContinuousRouter, {}),
-                        car_following_params=SumoCarFollowingParams(
-                            speed_mode=9,
-                        ),
-                        lane_change_params=SumoLaneChangeParams(
-                            lane_change_mode=0,
-                        ),
-                        num_vehicles=1 * self.scaling)
+                    self.network = self.network.__class__(
+                        self.network.orig_name, vehicles,
+                        net_params, self.network.initial_config)
+                    self.k.vehicle = deepcopy(self.initial_vehicles)
+                    self.k.vehicle.kernel_api = self.k.kernel_api
+                    self.k.vehicle.master_kernel = self.k
 
-                    self.scenario = self.scenario.__class__(
-                        self.scenario.orig_name, self.scenario.vehicles,
-                        net_params, self.scenario.initial_config)
+                    # restart the sumo instance
                     self.restart_simulation(
                         sim_params=self.sim_params,
                         render=self.sim_params.render)
+
                     observation = super().reset()
 
                     # reset the timer to zero
