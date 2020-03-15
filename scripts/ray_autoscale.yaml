@@ -78,7 +78,7 @@ setup_commands:
     - cd flow && python setup.py develop
     # set up ray by pip installing and copying over rllib and tune folder
     - pip install --upgrade pyzmq notebook
-    - pip install ray==0.6.3
+    - pip install ray==0.6.1
     - pip install lz4
     - pip install pytz
     - git clone https://github.com/flow-project/ray.git
