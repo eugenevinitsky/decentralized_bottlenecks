@@ -138,7 +138,7 @@ def setup_exps(args):
 
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
-            warmup_steps=40,
+            warmup_steps=0,
             sims_per_step=1,
             horizon=HORIZON,
             additional_params=additional_env_params,
