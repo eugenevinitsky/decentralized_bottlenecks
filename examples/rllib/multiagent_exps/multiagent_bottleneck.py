@@ -2,6 +2,7 @@
 In this example, the actions are accelerations for all of the agents.
 The agents all share a single model.
 """
+from copy import deepcopy
 from datetime import datetime
 import json
 
@@ -23,173 +24,177 @@ from flow.controllers import RLController, ContinuousRouter, \
     SimLaneChangeController
 from flow.multiagent_envs.multi_bottleneck_env import MultiBottleneckEnv
 from flow.networks.bottleneck import BottleneckNetwork
+from flow.utils.parsers import get_multiagent_bottleneck_parser
 
-# time horizon of a single rollout
-HORIZON = 2000
-# number of parallel workers
-N_CPUS = 1
-# number of rollouts per training iteration
-N_ROLLOUTS = 2*N_CPUS
+def setup_exps(args):
 
-SCALING = 1
-NUM_LANES = 4 * SCALING  # number of lanes in the widest highway
-DISABLE_TB = True
-DISABLE_RAMP_METER = True
-AV_FRAC = 0.10
-LC_MODE = 0
+    # time horizon of a single rollout
+    HORIZON = args.horizon
+    # number of parallel workers
+    N_CPUS = args.num_cpus
+    # number of rollouts per training iteration
+    N_ROLLOUTS = args.num_cpus * args.rollout_scale_factor
 
-vehicles = VehicleParams()
-vehicles.add(
-    veh_id='human',
-    lane_change_controller=(SimLaneChangeController, {}),
-    routing_controller=(ContinuousRouter, {}),
-    car_following_params=SumoCarFollowingParams(
-                            speed_mode=9,
-                        ),
-    lane_change_params=SumoLaneChangeParams(
-                            lane_change_mode=LC_MODE,
-                        ),
-    num_vehicles=1 * SCALING)
-vehicles.add(
-    veh_id='av',
-    acceleration_controller=(RLController, {}),
-    lane_change_controller=(SimLaneChangeController, {}),
-    routing_controller=(ContinuousRouter, {}),
-    car_following_params=SumoCarFollowingParams(
-        speed_mode=9,
-    ),
-    lane_change_params=SumoLaneChangeParams(
-        lane_change_mode=LC_MODE,
-    ),
-    num_vehicles=1 * SCALING)
+    SCALING = 1
+    DISABLE_TB = True
+    DISABLE_RAMP_METER = True
+    AV_FRAC = args.av_frac
+    LC_MODE = args.lc_on
 
-# flow rate
-flow_rate = 1900 * SCALING
+    vehicles = VehicleParams()
+    vehicles.add(
+        veh_id='human',
+        lane_change_controller=(SimLaneChangeController, {}),
+        routing_controller=(ContinuousRouter, {}),
+        car_following_params=SumoCarFollowingParams(
+                                speed_mode=9,
+                            ),
+        lane_change_params=SumoLaneChangeParams(
+                                lane_change_mode=LC_MODE,
+                            ),
+        num_vehicles=1 * SCALING)
+    vehicles.add(
+        veh_id='av',
+        acceleration_controller=(RLController, {}),
+        lane_change_controller=(SimLaneChangeController, {}),
+        routing_controller=(ContinuousRouter, {}),
+        car_following_params=SumoCarFollowingParams(
+            speed_mode=9,
+        ),
+        lane_change_params=SumoLaneChangeParams(
+            lane_change_mode=LC_MODE,
+        ),
+        num_vehicles=1 * SCALING)
 
-controlled_segments = [('1', 1, False), ('2', 2, True), ('3', 2, True),
-                       ('4', 2, True), ('5', 1, False)]
-num_observed_segments = [('1', 1), ('2', 3), ('3', 3), ('4', 3), ('5', 1)]
-additional_env_params = {
-    'target_velocity': 40,
-    'disable_tb': True,
-    'disable_ramp_metering': True,
-    'controlled_segments': controlled_segments,
-    'symmetric': False,
-    'observed_segments': num_observed_segments,
-    'reset_inflow': True,
-    'lane_change_duration': 5,
-    'max_accel': 3,
-    'max_decel': 3,
-    'inflow_range': [800, 3000],
-    'start_inflow': flow_rate,
-    'congest_penalty': False,
-    'communicate': False,
-    "centralized_obs": False,
-    "av_frac": AV_FRAC,
-    "lc_mode": LC_MODE
-}
+    # flow rate
+    flow_rate = 1900 * SCALING
 
-# percentage of flow coming out of each lane
-inflow = InFlows()
-inflow.add(
-    veh_type='human',
-    edge='1',
-    vehs_per_hour=flow_rate * (1 - AV_FRAC),
-    departLane='random',
-    departSpeed=10.0)
-inflow.add(
-    veh_type='av',
-    edge='1',
-    vehs_per_hour=flow_rate * AV_FRAC,
-    departLane='random',
-    departSpeed=10.0)
+    controlled_segments = [('1', 1, False), ('2', 2, True), ('3', 2, True),
+                           ('4', 2, True), ('5', 1, False)]
+    num_observed_segments = [('1', 1), ('2', 3), ('3', 3), ('4', 3), ('5', 1)]
+    additional_env_params = {
+        'target_velocity': 40,
+        'disable_tb': True,
+        'disable_ramp_metering': True,
+        'controlled_segments': controlled_segments,
+        'symmetric': False,
+        'observed_segments': num_observed_segments,
+        'reset_inflow': True,
+        'lane_change_duration': 5,
+        'max_accel': 3,
+        'max_decel': 3,
+        'inflow_range': [args.low_inflow, args.high_inflow],
+        'start_inflow': flow_rate,
+        'congest_penalty': args.congest_penalty,
+        'communicate': args.communicate,
+        "centralized_obs": args.central_obs,
+        "av_frac": AV_FRAC,
+        "lc_mode": LC_MODE
+    }
 
-traffic_lights = TrafficLightParams()
-if not DISABLE_TB:
-    traffic_lights.add(node_id='2')
-if not DISABLE_RAMP_METER:
-    traffic_lights.add(node_id='3')
+    # percentage of flow coming out of each lane
+    inflow = InFlows()
+    inflow.add(
+        veh_type='human',
+        edge='1',
+        vehs_per_hour=flow_rate * (1 - AV_FRAC),
+        departLane='random',
+        departSpeed=10.0)
+    inflow.add(
+        veh_type='av',
+        edge='1',
+        vehs_per_hour=flow_rate * AV_FRAC,
+        departLane='random',
+        departSpeed=10.0)
 
-additional_net_params = {'scaling': SCALING, "speed_limit": 23.0}
-net_params = NetParams(
-    inflows=inflow,
-    additional_params=additional_net_params)
+    traffic_lights = TrafficLightParams()
+    if not DISABLE_TB:
+        traffic_lights.add(node_id='2')
+    if not DISABLE_RAMP_METER:
+        traffic_lights.add(node_id='3')
 
-flow_params = dict(
-    # name of the experiment
-    exp_tag='MultiDecentralObsBottleneck',
+    additional_net_params = {'scaling': SCALING, "speed_limit": 23.0}
 
-    # name of the flow environment the experiment is running on
-    env_name=MultiBottleneckEnv,
+    flow_params = dict(
+        # name of the experiment
+        exp_tag='MultiDecentralObsBottleneck',
 
-    # name of the scenario class the experiment is running on
-    network=BottleneckNetwork,
+        # name of the flow environment the experiment is running on
+        env_name=MultiBottleneckEnv,
 
-    # simulator that is used by the experiment
-    simulator='traci',
+        # name of the scenario class the experiment is running on
+        network=BottleneckNetwork,
 
-    # sumo-related parameters (see flow.core.params.SumoParams)
-    sim=SumoParams(
-        sim_step=0.5,
-        render=True,
-        print_warnings=False,
-        restart_instance=True,
-    ),
+        # simulator that is used by the experiment
+        simulator='traci',
 
-    # environment related parameters (see flow.core.params.EnvParams)
-    env=EnvParams(
-        warmup_steps=40,
-        sims_per_step=1,
-        horizon=HORIZON,
-        additional_params=additional_env_params,
-    ),
+        # sumo-related parameters (see flow.core.params.SumoParams)
+        sim=SumoParams(
+            sim_step=0.5,
+            render=args.render,
+            print_warnings=False,
+            restart_instance=True,
+        ),
 
-    # network-related parameters (see flow.core.params.NetParams and the
-    # scenario's documentation or ADDITIONAL_NET_PARAMS component)
-    net=NetParams(
-        inflows=inflow,
-        additional_params=additional_net_params,
-    ),
+        # environment related parameters (see flow.core.params.EnvParams)
+        env=EnvParams(
+            warmup_steps=40,
+            sims_per_step=1,
+            horizon=HORIZON,
+            additional_params=additional_env_params,
+        ),
 
-    # vehicles to be placed in the network at the start of a rollout (see
-    # flow.core.vehicles.Vehicles)
-    veh=vehicles,
+        # network-related parameters (see flow.core.params.NetParams and the
+        # scenario's documentation or ADDITIONAL_NET_PARAMS component)
+        net=NetParams(
+            inflows=inflow,
+            additional_params=additional_net_params,
+        ),
 
-    # parameters specifying the positioning of vehicles upon initialization/
-    # reset (see flow.core.params.InitialConfig)
-    initial=InitialConfig(
-        spacing='uniform',
-        min_gap=5,
-        lanes_distribution=float('inf'),
-        edges_distribution=['2', '3', '4', '5'],
-    ),
+        # vehicles to be placed in the network at the start of a rollout (see
+        # flow.core.vehicles.Vehicles)
+        veh=vehicles,
 
-    # traffic lights to be introduced to specific nodes (see
-    # flow.core.traffic_lights.TrafficLights)
-    tls=traffic_lights,
-)
+        # parameters specifying the positioning of vehicles upon initialization/
+        # reset (see flow.core.params.InitialConfig)
+        initial=InitialConfig(
+            spacing='uniform',
+            min_gap=5,
+            lanes_distribution=float('inf'),
+            edges_distribution=['2', '3', '4', '5'],
+        ),
 
+        # traffic lights to be introduced to specific nodes (see
+        # flow.core.traffic_lights.TrafficLights)
+        tls=traffic_lights,
+    )
 
-def setup_exps():
     alg_run = 'PPO'
-    config = ppo.DEFAULT_CONFIG.copy()
+    config = deepcopy(ppo.DEFAULT_CONFIG)
     config['num_workers'] = N_CPUS
     config['train_batch_size'] = HORIZON * N_ROLLOUTS
     config['gamma'] = 0.999  # discount rate
     config['model'].update({'fcnet_hiddens': [100, 50, 25]})
     config['clip_actions'] = False
     config['horizon'] = HORIZON
-    # config['use_centralized_vf'] = tune.grid_search([True, False])
     config['simple_optimizer'] = True
 
+    if args.centralized_vf:
+        config['use_centralized_vf'] = True
+
     # Grid search things
-    # config['lr'] = tune.grid_search([5e-4, 5e-5])
-    # config['num_sgd_iter'] = tune.grid_search([10, 30])
+    if args.grid_search:
+        config['lr'] = tune.grid_search([5e-4, 5e-5])
+        config['num_sgd_iter'] = tune.grid_search([10, 30])
+        if args.centralized_vf:
+            config['use_centralized_vf'] = tune.grid_search([True, False])
 
     # LSTM Things
-    # config['model']['use_lstm'] = True
-    # config['model']["max_seq_len"] = tune.grid_search([5, 10])
-    # config['model']["lstm_cell_size"] = 256
+    if args.use_lstm:
+        config['model']['use_lstm'] = True
+        if args.grid_search:
+            config['model']["max_seq_len"] = tune.grid_search([5, 10])
+        config['model']["lstm_cell_size"] = 256
 
     # save the flow params for replay
     flow_json = json.dumps(
@@ -219,42 +224,61 @@ def setup_exps():
             "policies_to_train": ["av"]
         }
     })
-    return alg_run, env_name, config
+    return alg_run, env_name, config, flow_params
 
 
 def on_episode_end(info):
-    import ipdb; ipdb.set_trace()
-    env = info['env'].get_unwrapped()[0]
-    total_outflow = env.k.vehicle.get_outflow_rate(500)
-    inflow = env.inflow
-    # round it to 100
-    inflow = int(inflow / 100) * 100
-    episode = info["episode"]
-    episode.custom_metrics["net_outflow_{}".format(inflow)] = total_outflow
+    print(info.keys())
+    if 'env' in info:
+        env = info['env'].get_unwrapped()[0]
+        total_outflow = env.k.vehicle.get_outflow_rate(500)
+        inflow = env.inflow
+        # round it to 100
+        inflow = int(inflow / 100) * 100
+        episode = info["episode"]
+        episode.custom_metrics["net_outflow_{}".format(inflow)] = total_outflow
 
 
 if __name__ == '__main__':
-    alg_run, env_name, config = setup_exps()
-    # ray.init(redis_address='localhost:6379')
-    ray.init(num_cpus=2, redirect_output=False)
+    parser = get_multiagent_bottleneck_parser()
+    args = parser.parse_args()
+    alg_run, env_name, config, flow_params = setup_exps(args)
+    config["callbacks"] = {
+        "on_episode_end": on_episode_end
+    }
+    if args.multi_node:
+        ray.init(redis_address='localhost:6379')
+    else:
+        ray.init(num_cpus=args.num_cpus + 1, redirect_output=False)
     eastern = pytz.timezone('US/Eastern')
     date = datetime.now(tz=pytz.utc)
     date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
     s3_string = "s3://eugene.experiments/old_bottleneck_test/" \
-                + date + '/' + flow_params["exp_tag"]
-    run_experiments({
-        flow_params["exp_tag"]: {
-            'run': alg_run,
-            'env': env_name,
-            'checkpoint_freq': 50,
-            'stop': {
-                'training_iteration': 500
+                + date + '/' + args.exp_title
+    if args.use_s3:
+        run_experiments({
+            args.exp_title: {
+                'run': alg_run,
+                'env': env_name,
+                'checkpoint_freq': args.checkpoint_freq,
+                'stop': {
+                    'training_iteration': args.num_iters
+                },
+                'config': config,
+                'upload_dir': s3_string,
+                'num_samples': args.num_samples,
             },
-            'config': config,
-            # 'upload_dir': s3_string
-            'num_samples': 1,
-            # "callbacks": {
-            #     "on_episode_end": tune.function(on_episode_end),
-            # },
-        },
-    })
+        })
+    else:
+        run_experiments({
+            args.exp_title: {
+                'run': alg_run,
+                'env': env_name,
+                'checkpoint_freq': args.checkpoint_freq,
+                'stop': {
+                    'training_iteration': args.num_iters
+                },
+                'config': config,
+                'num_samples': args.num_samples,
+            },
+        })
