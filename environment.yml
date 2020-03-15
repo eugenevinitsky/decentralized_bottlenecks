@@ -12,7 +12,7 @@ dependencies:
     - cloudpickle==0.5.3
     - opencv
     - setuptools==39.1.0
-    - ray==0.6.1
+    - ray==0.6.3
     - pip:
         - gym==0.10.5
         - pyprind==2.11.2
