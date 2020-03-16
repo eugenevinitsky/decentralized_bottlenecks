@@ -132,7 +132,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         num_rl_vehicles_list = []
         vehicle_speeds_list = []
         rl_speeds_list = []
-        NUM_VEHICLE_NORM = 20
+        NUM_VEHICLE_NORM = 1000
         for i, edge in enumerate(EDGE_LIST):
             num_lanes = self.k.network.num_lanes(edge)
             num_vehicles = np.zeros((self.num_obs_segments[i], num_lanes))
@@ -182,8 +182,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         outflow = np.asarray(
             self.k.vehicle.get_outflow_rate(20 * self.sim_step) / 2000.0)
         return np.concatenate((num_vehicles_list, num_rl_vehicles_list,
-                               mean_speed_norm, mean_rl_speed, [outflow],
-                               [self.inflow]))
+                               mean_speed_norm, mean_rl_speed, [outflow / 1000.0],
+                               [self.inflow / 1000.0]))
 
     def _apply_rl_actions(self, rl_actions):
         """
@@ -367,7 +367,11 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         lane_leader_speed = veh.get_lane_leaders_speed(rl_id).copy()
         lane_follower_speed = veh.get_lane_followers_speed(rl_id).copy()
         leader_ids = veh.get_lane_leaders(rl_id).copy()
+        # for leader_id in leader_ids:
+        #     self.k.vehicle.set_observed(leader_id)
         follower_ids = veh.get_lane_followers(rl_id).copy()
+        # for follower_id in follower_ids:
+        #     self.k.vehicle.set_observed(follower_id)
         rl_ids = self.k.vehicle.get_rl_ids()
         is_leader_rl = [1 if l_id in rl_ids else 0 for l_id in leader_ids]
         is_follow_rl = [1 if f_id in rl_ids else 0 for f_id in follower_ids]
