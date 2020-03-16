@@ -70,15 +70,15 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 num_obs += 4 * segment[1] * \
                            self.k.network.num_lanes(segment[0])
             num_obs += 2
-            return Box(low=0.0, high=1.0, shape=(num_obs,), dtype=np.float32)
+            return Box(low=0.0, high=10.0, shape=(num_obs,), dtype=np.float32)
         else:
             if self.env_params.additional_params.get('communicate', False):
                 # eight possible signals if above
-                return Box(low=-1.0, high=1.0,
+                return Box(low=-10.0, high=10.0,
                            shape=(6 * MAX_LANES * self.scaling + 17,),
                            dtype=np.float32)
             else:
-                return Box(low=-1.0, high=1.0,
+                return Box(low=-10.0, high=10.0,
                            shape=(6 * MAX_LANES * self.scaling + 9,),
                            dtype=np.float32)
 

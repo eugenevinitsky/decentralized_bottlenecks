@@ -10,7 +10,6 @@ import pytz
 import ray
 import ray.rllib.agents.ppo as ppo
 from ray import tune
-from ray.rllib.agents.ppo.ppo_policy_graph import PPOPolicyGraph
 from ray.tune import run_experiments
 from ray.tune.registry import register_env
 
@@ -212,7 +211,7 @@ def setup_exps(args):
     act_space = test_env.action_space
 
     # Setup PG with an ensemble of `num_policies` different policy graphs
-    policy_graphs = {'av': (PPOPolicyGraph, obs_space, act_space, {})}
+    policy_graphs = {'av': (None, obs_space, act_space, {})}
 
     def policy_mapping_fn(agent_id):
         return 'av'
@@ -249,7 +248,7 @@ if __name__ == '__main__':
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:
-        ray.init(num_cpus=args.num_cpus + 1, redirect_output=False)
+        ray.init(num_cpus=args.num_cpus + 1)
     eastern = pytz.timezone('US/Eastern')
     date = datetime.now(tz=pytz.utc)
     date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
