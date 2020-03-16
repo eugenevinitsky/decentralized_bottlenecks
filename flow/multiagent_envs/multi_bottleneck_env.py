@@ -214,17 +214,17 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             else:
                 return 0
 
-        if rl_actions:
-            reward = -1
-            add_params = self.env_params.additional_params
-            if add_params["congest_penalty"]:
-                num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
-                if num_vehs > 30*self.scaling:
-                    penalty = (num_vehs - 30*self.scaling)/10.0
-                    reward -= penalty
-            return {rl_id: reward for rl_id in self.k.vehicle.get_rl_ids()}
-        else:
-            return {}
+        # if rl_actions:
+        reward = -1
+        add_params = self.env_params.additional_params
+        if add_params["congest_penalty"]:
+            num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
+            if num_vehs > 30*self.scaling:
+                penalty = (num_vehs - 30*self.scaling)/10.0
+                reward -= penalty
+        return {rl_id: reward for rl_id in self.k.vehicle.get_rl_ids()}
+        # else:
+        #     return {}
 
     def reset(self, new_inflow_rate=None):
         add_params = self.env_params.additional_params

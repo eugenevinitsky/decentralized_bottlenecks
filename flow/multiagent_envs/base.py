@@ -110,7 +110,7 @@ class MultiEnv(MultiAgentEnv, Env):
                 for key in states.keys()}
         if crash or (self.time_counter >= self.env_params.sims_per_step *
                      (self.env_params.warmup_steps + self.env_params.horizon)):
-            done['__all__'] = False
+            done['__all__'] = True
         else:
             done['__all__'] = False
         infos = {key: {} for key in states.keys()}
