@@ -717,6 +717,11 @@ class DesiredVelocityEnv(BottleneckEnv):
         # inflow to keep track of for observations
         self.inflow = add_env_params["start_inflow"]
 
+        # curriculum learning iteration tracker
+        self.curr_iter = 0
+        self.num_curr_iters = add_env_params["num_curr_iters"]
+        self.curriculum = add_env_params["curriculum"]
+
     @property
     def observation_space(self):
         """See class definition."""

@@ -25,13 +25,17 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument('--centralized_vf', action='store_true', default=False,
                         help='If true, use a centralized value function')
     parser.add_argument('--render', action='store_true', help='Show sumo-gui of results')
+    parser.add_argument('--curriculum', action='store_true', help='If true, anneal the av_frac and inflow over '
+                                                                  'num_curr_iter steps')
+    parser.add_argument("--num_curr_iters", type=int, default=100, help='How many steps to run curriculum over')
+
 
 
     # arguments for flow
     parser.add_argument('--sims_per_step', type=int, default=1, help='How many steps to take per action')
     parser.add_argument('--horizon', type=int, default=2000, help='Horizon of the environment')
     parser.add_argument('--sim_step', type=float, default=0.5, help='dt of a timestep')
-    parser.add_argument('--low_inflow', type=int, default=1800, help='the lowest inflow to sample from')
+    parser.add_argument('--low_inflow', type=int, default=800, help='the lowest inflow to sample from')
     parser.add_argument('--high_inflow', type=int, default=3000, help='the highest inflow to sample from')
     parser.add_argument('--av_frac', type=float, default=0.2, help='What fraction of the vehicles should be autonomous')
     parser.add_argument('--scaling', type=int, default=1, help='How many lane should we start with. Value of 1 -> 4, '

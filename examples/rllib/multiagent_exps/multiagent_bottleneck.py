@@ -88,7 +88,9 @@ def setup_exps(args):
         'communicate': args.communicate,
         "centralized_obs": args.central_obs,
         "av_frac": AV_FRAC,
-        "lc_mode": LC_MODE
+        "lc_mode": LC_MODE,
+        "num_curr_iters": args.num_curr_iters,
+        "curriculum": args.curriculum
     }
 
     # percentage of flow coming out of each lane
@@ -238,6 +240,14 @@ def on_episode_end(info):
         episode.custom_metrics["net_outflow_{}".format(inflow)] = total_outflow
 
 
+def on_train_result(info):
+    trainer = info["trainer"]
+
+    trainer.workers.foreach_worker(
+        lambda ev: ev.foreach_env(
+            lambda env: env.increase_curr_iter()))
+
+
 if __name__ == '__main__':
     parser = get_multiagent_bottleneck_parser()
     args = parser.parse_args()
@@ -245,6 +255,8 @@ if __name__ == '__main__':
     config["callbacks"] = {
         "on_episode_end": on_episode_end
     }
+    if args.curriculum:
+        config["callbacks"].update({"on_train_result": on_train_result})
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:

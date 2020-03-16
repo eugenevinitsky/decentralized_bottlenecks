@@ -228,13 +228,17 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
     def reset(self, new_inflow_rate=None):
         add_params = self.env_params.additional_params
+        curriculum_scaling = 1.0
+        if self.curriculum:
+            curriculum_scaling = self.curr_iter / self.num_curr_iters
         if add_params.get("reset_inflow"):
             inflow_range = add_params.get("inflow_range")
             if new_inflow_rate:
                 flow_rate = new_inflow_rate
             else:
+                high_inflow = min(inflow_range) + curriculum_scaling * (max(inflow_range) - min(inflow_range))
                 flow_rate = np.random.uniform(
-                    min(inflow_range), max(inflow_range)) * self.scaling
+                    min(inflow_range), high_inflow) * self.scaling
             self.inflow = flow_rate
             print('THE FLOW RATE IS: ', flow_rate)
             for _ in range(100):
@@ -283,7 +287,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                         inflow.add(
                             veh_type="av",
                             edge="1",
-                            vehs_per_hour=flow_rate * add_params.get("av_frac"),
+                            vehs_per_hour=flow_rate * add_params.get("av_frac") * max(curriculum_scaling, .01),
                             departLane="random",
                             departSpeed=23.0)
                         inflow.add(
@@ -344,7 +348,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         speed = self.k.vehicle.get_speed(rl_id)/100.0
         edge = self.k.vehicle.get_edge(rl_id)
         lane = (self.k.vehicle.get_lane(rl_id)+1)/10.0
-        if edge[0] != ':':
+        if len(edge) > 0 and edge[0] != ':':
             edge_id = int(self.k.vehicle.get_edge(rl_id))/10.0
         else:
             edge_id = - 1/10.0
@@ -418,3 +422,6 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             return signals
         else:
             return [-1/4.0 for _ in range(8)]
+
+    def increase_curr_iter(self):
+        self.curr_iter += 1
