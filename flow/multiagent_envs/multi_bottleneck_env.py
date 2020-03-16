@@ -230,7 +230,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         add_params = self.env_params.additional_params
         curriculum_scaling = 1.0
         if self.curriculum:
-            curriculum_scaling = self.curr_iter / self.num_curr_iters
+            curriculum_scaling = min(self.curr_iter / self.num_curr_iters, 1.0)
         if add_params.get("reset_inflow"):
             inflow_range = add_params.get("inflow_range")
             if new_inflow_rate:

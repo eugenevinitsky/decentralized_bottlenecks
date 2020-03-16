@@ -1,19 +1,20 @@
 name: old_flow
 
 dependencies:
-    - python==3.5.6
+    - python==3.6.8
     - numpy==1.14.0
     - scipy==1.1.0
     - lxml==4.2.4
     - six==1.11.0
     - path.py
+#     - pip>=18.0
     - python-dateutil==2.7.3
     - tensorflow==1.9.0
-    - cloudpickle==0.5.3
+#    - cloudpickle==0.5.3
     - opencv
     - setuptools==39.1.0
-    - ray==0.8.0
     - pip:
+        - ray==0.8.0
         - gym==0.10.5
         - pyprind==2.11.2
         - nose2==0.8.0
