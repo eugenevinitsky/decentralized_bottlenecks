@@ -28,8 +28,6 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument('--curriculum', action='store_true', help='If true, anneal the av_frac and inflow over '
                                                                   'num_curr_iter steps')
     parser.add_argument("--num_curr_iters", type=int, default=100, help='How many steps to run curriculum over')
-    parser.add_argument("--create_inflow_graph", action='store_true', default=False,
-                        help="Create graphs of inflow outflow once training is done.")
 
 
 

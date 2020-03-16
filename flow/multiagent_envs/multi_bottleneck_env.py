@@ -293,7 +293,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                         inflow.add(
                             veh_type="human",
                             edge="1",
-                            vehs_per_hour=flow_rate * (1 - add_params.get("av_frac")),
+                            vehs_per_hour=flow_rate * (1 - add_params.get("av_frac") * max(curriculum_scaling, .01)),
                             departLane="random",
                             departSpeed=23.0)
                     else:
