@@ -33,9 +33,13 @@ class PPOLoss(object):
                  clip_param=0.1,
                  vf_clip_param=0.1,
                  vf_loss_coeff=1.0,
-                 use_gae=True):
+                 use_gae=True,
+                 use_central_vf=False,
+                 central_value_fn=None,
+                 central_vf_preds=None,
+                 central_value_targets=None,
+                 ):
         """Constructs the loss for Proximal Policy Objective.
-
         Arguments:
             action_space: Environment observation space specification.
             value_targets (Placeholder): Placeholder for target values; used
@@ -59,6 +63,13 @@ class PPOLoss(object):
             vf_clip_param (float): Clip parameter for the value function
             vf_loss_coeff (float): Coefficient of the value function loss
             use_gae (bool): If true, use the Generalized Advantage Estimator.
+            use_central_vf (bool): If true, train a centralized value function
+            central_value_fn (Tensor): Current centralized value function
+                output Tensor.
+            central_vf_preds (Placeholder): Placeholder for central value
+                function output from previous model evaluation.
+            central_value_targets (Placeholder): Placeholder for central
+                value function target values; used for GA
         """
 
         def reduce_mean_valid(t):
@@ -91,6 +102,20 @@ class PPOLoss(object):
             loss = reduce_mean_valid(
                 -surrogate_loss + cur_kl_coeff * action_kl +
                 vf_loss_coeff * vf_loss - entropy_coeff * curr_entropy)
+
+            # TODO(ev) add a centralized value function loss
+            if use_central_vf:
+                central_vf_loss1 = tf.square(central_value_fn
+                                             - central_value_targets)
+                central_vf_clipped = central_vf_preds + tf.clip_by_value(
+                    central_value_fn - central_vf_preds, -vf_clip_param,
+                    vf_clip_param)
+                central_vf_loss2 = tf.square(central_vf_clipped -
+                                             central_value_targets)
+                central_vf_loss = tf.maximum(central_vf_loss1,
+                                             central_vf_loss2)
+                self.central_mean_vf_loss = reduce_mean_valid(central_vf_loss)
+                loss += reduce_mean_valid(vf_loss_coeff * central_vf_loss)
         else:
             self.mean_vf_loss = tf.constant(0.0)
             loss = reduce_mean_valid(-surrogate_loss +
