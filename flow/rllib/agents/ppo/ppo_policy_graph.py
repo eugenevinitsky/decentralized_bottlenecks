@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import logging
+import numpy as np
 import tensorflow as tf
 
 import ray
@@ -149,32 +150,53 @@ class PPOPolicyGraph(LearningRateSchedule, TFPolicyGraph):
 
         if existing_inputs:
             obs_ph, value_targets_ph, adv_ph, act_ph, \
-                logits_ph, vf_preds_ph, prev_actions_ph, prev_rewards_ph = \
+            logits_ph, vf_preds_ph, prev_actions_ph, prev_rewards_ph = \
                 existing_inputs[:8]
-            existing_state_in = existing_inputs[8:-1]
-            existing_seq_lens = existing_inputs[-1]
+            if self.config["use_centralized_vf"]:
+                central_obs_ph, central_value_targets_ph, \
+                central_vf_preds_ph = existing_inputs[8:11]
+                existing_state_in = existing_inputs[11:-1]
+                existing_seq_lens = existing_inputs[-1]
+            else:
+                existing_state_in = existing_inputs[8:-1]
+                existing_seq_lens = existing_inputs[-1]
         else:
             obs_ph = tf.placeholder(
                 tf.float32,
                 name="obs",
-                shape=(None, ) + observation_space.shape)
+                shape=(None,) + observation_space.shape)
+            if self.config["use_centralized_vf"]:
+                # TODO(ev) this assumes all observation spaces are the same
+                # import ipdb; ipdb.set_trace()
+                obs_shape = self.config["max_vf_agents"] * \
+                            np.product(observation_space.shape)
+                central_obs_ph = tf.placeholder(
+                    tf.float32,
+                    name="central_obs",
+                    shape=(None, obs_shape))
+                central_vf_preds_ph = tf.placeholder(
+                    tf.float32, name="central_vf_preds", shape=(None,))
+
+                central_value_targets_ph = tf.placeholder(
+                    tf.float32, name="central_value_targets", shape=(None,))
+
+                self.central_observations = central_obs_ph
+
             adv_ph = tf.placeholder(
-                tf.float32, name="advantages", shape=(None, ))
+                tf.float32, name="advantages", shape=(None,))
             act_ph = ModelCatalog.get_action_placeholder(action_space)
             logits_ph = tf.placeholder(
                 tf.float32, name="logits", shape=(None, logit_dim))
             vf_preds_ph = tf.placeholder(
-                tf.float32, name="vf_preds", shape=(None, ))
+                tf.float32, name="vf_preds", shape=(None,))
             value_targets_ph = tf.placeholder(
-                tf.float32, name="value_targets", shape=(None, ))
+                tf.float32, name="value_targets", shape=(None,))
             prev_actions_ph = ModelCatalog.get_action_placeholder(action_space)
             prev_rewards_ph = tf.placeholder(
                 tf.float32, [None], name="prev_reward")
             existing_state_in = None
             existing_seq_lens = None
         self.observations = obs_ph
-        self.prev_actions = prev_actions_ph
-        self.prev_rewards = prev_rewards_ph
 
         self.loss_in = [
             ("obs", obs_ph),
@@ -186,6 +208,14 @@ class PPOPolicyGraph(LearningRateSchedule, TFPolicyGraph):
             ("prev_actions", prev_actions_ph),
             ("prev_rewards", prev_rewards_ph),
         ]
+
+        if self.config["use_centralized_vf"]:
+            self.loss_in.append(("central_obs", central_obs_ph))
+            self.loss_in.append(("central_value_targets",
+                                 central_value_targets_ph))
+            self.loss_in.append(("central_vf_preds",
+                                 central_vf_preds_ph))
+
         self.model = ModelCatalog.get_model(
             {
                 "obs": obs_ph,
@@ -220,15 +250,9 @@ class PPOPolicyGraph(LearningRateSchedule, TFPolicyGraph):
                 # mean parameters and standard deviation parameters and
                 # do not make the standard deviations free variables.
                 vf_config["free_log_std"] = False
-                if vf_config["use_lstm"]:
-                    vf_config["use_lstm"] = False
-                    logger.warning(
-                        "It is not recommended to use a LSTM model with "
-                        "vf_share_layers=False (consider setting it to True). "
-                        "If you want to not share layers, you can implement "
-                        "a custom LSTM model that overrides the "
-                        "value_function() method.")
+                vf_config["use_lstm"] = False
                 with tf.variable_scope("value_function"):
+                    # FIXME(ev, kp) it is trying to evaluate this but can't
                     self.value_function = ModelCatalog.get_model({
                         "obs": obs_ph,
                         "prev_actions": prev_actions_ph,
@@ -236,6 +260,21 @@ class PPOPolicyGraph(LearningRateSchedule, TFPolicyGraph):
                         "is_training": self._get_is_training_placeholder(),
                     }, observation_space, action_space, 1, vf_config).outputs
                     self.value_function = tf.reshape(self.value_function, [-1])
+
+                # TODO(ev) should we change the scope?
+                if self.config["use_centralized_vf"]:
+                    with tf.variable_scope("central_value_function"):
+                        # TODO(ev) do we need to remove observation space
+                        # FIXME(ev) prev_actions_ph and prev_rewards must be extended
+                        self.central_value_function = ModelCatalog.get_model({
+                            "obs": central_obs_ph,
+                            "prev_actions": prev_actions_ph,
+                            "prev_rewards": prev_rewards_ph,
+                            "is_training": self._get_is_training_placeholder(),
+                        }, observation_space, action_space, 1, vf_config).outputs
+                        reshaped_val = tf.reshape(self.central_value_function,
+                                                  [-1])
+                        self.central_value_function = reshaped_val
         else:
             self.value_function = tf.zeros(shape=tf.shape(obs_ph)[:1])
 
@@ -246,22 +285,45 @@ class PPOPolicyGraph(LearningRateSchedule, TFPolicyGraph):
         else:
             mask = tf.ones_like(adv_ph, dtype=tf.bool)
 
-        self.loss_obj = PPOLoss(
-            action_space,
-            value_targets_ph,
-            adv_ph,
-            act_ph,
-            logits_ph,
-            vf_preds_ph,
-            curr_action_dist,
-            self.value_function,
-            self.kl_coeff,
-            mask,
-            entropy_coeff=self.config["entropy_coeff"],
-            clip_param=self.config["clip_param"],
-            vf_clip_param=self.config["vf_clip_param"],
-            vf_loss_coeff=self.config["vf_loss_coeff"],
-            use_gae=self.config["use_gae"])
+        if self.config["use_centralized_vf"]:
+            self.loss_obj = PPOLoss(
+                action_space,
+                value_targets_ph,
+                adv_ph,
+                act_ph,
+                logits_ph,
+                vf_preds_ph,
+                curr_action_dist,
+                self.value_function,
+                self.kl_coeff,
+                mask,
+                entropy_coeff=self.config["entropy_coeff"],
+                clip_param=self.config["clip_param"],
+                vf_clip_param=self.config["vf_clip_param"],
+                vf_loss_coeff=self.config["vf_loss_coeff"],
+                use_gae=self.config["use_gae"],
+                use_central_vf=True,
+                central_value_fn=self.central_value_function,
+                central_vf_preds=central_vf_preds_ph,
+                central_value_targets=central_value_targets_ph,
+            )
+        else:
+            self.loss_obj = PPOLoss(
+                action_space,
+                value_targets_ph,
+                adv_ph,
+                act_ph,
+                logits_ph,
+                vf_preds_ph,
+                curr_action_dist,
+                self.value_function,
+                self.kl_coeff,
+                mask,
+                entropy_coeff=self.config["entropy_coeff"],
+                clip_param=self.config["clip_param"],
+                vf_clip_param=self.config["vf_clip_param"],
+                vf_loss_coeff=self.config["vf_loss_coeff"],
+                use_gae=self.config["use_gae"])
 
         LearningRateSchedule.__init__(self, self.config["lr"],
                                       self.config["lr_schedule"])
@@ -318,15 +380,58 @@ class PPOPolicyGraph(LearningRateSchedule, TFPolicyGraph):
             next_state = []
             for i in range(len(self.model.state_in)):
                 next_state.append([sample_batch["state_out_{}".format(i)][-1]])
-            last_r = self._value(sample_batch["new_obs"][-1],
-                                 sample_batch["actions"][-1],
-                                 sample_batch["rewards"][-1], *next_state)
+            last_r = self._value(sample_batch["new_obs"][-1], *next_state)
+
+        # if needed, add a centralized value function to the sample batch
+        if self.config["use_centralized_vf"]:
+            # TODO(ev) do we need to sort this?
+            time_span = (sample_batch['t'][0], sample_batch['t'][-1])
+            other_agent_times = {agent_id:
+                                     (other_agent_batches[agent_id][1]["t"][0],
+                                      other_agent_batches[agent_id][1]["t"][-1])
+                                 for agent_id in other_agent_batches.keys()}
+            rel_agents = {agent_id: other_agent_time for agent_id,
+                                                         other_agent_time in
+                          other_agent_times.items()
+                          if self.time_overlap(time_span, other_agent_time)}
+            if len(rel_agents) > 0:
+                other_obs = {agent_id: other_agent_batches[agent_id][1]["obs"].copy()
+                             for agent_id in rel_agents.keys()}
+                padded_agent_obs = {agent_id:
+                                        self.overlap_and_pad_agent(time_span,
+                                                                   rel_agent_time,
+                                                                   other_obs[agent_id])
+                                    for agent_id,
+                                        rel_agent_time in rel_agents.items()}
+                central_obs_batch = np.hstack(
+                    [padded_obs for padded_obs in padded_agent_obs.values()])
+                central_obs_batch = np.hstack(
+                    (central_obs_batch, sample_batch["obs"]))
+            else:
+                central_obs_batch = sample_batch["obs"]
+            max_vf_agents = self.config["max_vf_agents"]
+            num_agents = len(rel_agents) + 1
+            if num_agents < max_vf_agents:
+                diff = max_vf_agents - num_agents
+                zero_pad = np.zeros((central_obs_batch.shape[0],
+                                     self.observation_space.shape[0] * diff))
+                central_obs_batch = np.hstack((central_obs_batch,
+                                               zero_pad))
+            elif num_agents > max_vf_agents:
+                print("Too many agents!")
+
+            # add the central obs and central critic value
+            sample_batch["central_obs"] = central_obs_batch
+            sample_batch["central_vf_preds"] = self.sess.run(
+                self.central_value_function,
+                feed_dict={self.central_observations: central_obs_batch})
         batch = compute_advantages(
             sample_batch,
             last_r,
             self.config["gamma"],
             self.config["lambda"],
-            use_gae=self.config["use_gae"])
+            use_gae=self.config["use_gae"],
+            use_centralized_vf=self.config["use_centralized_vf"])
         return batch
 
     @override(TFPolicyGraph)

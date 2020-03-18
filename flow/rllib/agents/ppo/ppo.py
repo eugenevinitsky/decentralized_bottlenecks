@@ -55,6 +55,11 @@ DEFAULT_CONFIG = with_common_config({
     # Uses the sync samples optimizer instead of the multi-gpu one. This does
     # not support minibatches.
     "simple_optimizer": False,
+    # Use a centralized value function
+    "use_centralized_vf": False,
+    # how many agents worth of observations to potentially pad the
+    # global observation with if agent number varies
+    "max_vf_agents": 100,
     # (Deprecated) Use the sampling behavior as of 0.6, which launches extra
     # sampling tasks for performance but can waste a large portion of samples.
     "straggler_mitigation": False,
