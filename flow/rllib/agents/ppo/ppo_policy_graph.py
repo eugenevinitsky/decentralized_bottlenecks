@@ -380,8 +380,9 @@ class PPOPolicyGraph(LearningRateSchedule, TFPolicyGraph):
             next_state = []
             for i in range(len(self.model.state_in)):
                 next_state.append([sample_batch["state_out_{}".format(i)][-1]])
-            last_r = self._value(sample_batch["new_obs"][-1], *next_state)
-
+            last_r = self._value(sample_batch["new_obs"][-1],
+                                 sample_batch["actions"][-1],
+                                 sample_batch["rewards"][-1], *next_state)
         # if needed, add a centralized value function to the sample batch
         if self.config["use_centralized_vf"]:
             # TODO(ev) do we need to sort this?
