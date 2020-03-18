@@ -12,6 +12,7 @@ import os
 import pytz
 import ray
 import ray.rllib.agents.ppo as ppo
+from ray.rllib.agents.ppo.ppo_policy_graph import PPOPolicyGraph
 from ray import tune
 from ray.tune import run_experiments
 from ray.tune.registry import register_env
@@ -217,7 +218,7 @@ def setup_exps(args):
     act_space = test_env.action_space
 
     # Setup PG with an ensemble of `num_policies` different policy graphs
-    policy_graphs = {'av': (None, obs_space, act_space, {})}
+    policy_graphs = {'av': (PPOPolicyGraph, obs_space, act_space, {})}
 
     def policy_mapping_fn(agent_id):
         return 'av'
@@ -257,10 +258,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     alg_run, env_name, config, flow_params = setup_exps(args)
     config["callbacks"] = {
-        "on_episode_end": on_episode_end
+        "on_episode_end": tune.function(on_episode_end)
     }
     if args.curriculum:
-        config["callbacks"].update({"on_train_result": on_train_result})
+        config["callbacks"].update({"on_train_result": tune.function(on_train_result)})
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:
