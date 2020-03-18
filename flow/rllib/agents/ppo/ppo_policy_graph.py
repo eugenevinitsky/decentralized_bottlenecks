@@ -197,6 +197,8 @@ class PPOPolicyGraph(LearningRateSchedule, TFPolicyGraph):
             existing_state_in = None
             existing_seq_lens = None
         self.observations = obs_ph
+        self.prev_actions = prev_actions_ph
+        self.prev_rewards = prev_rewards_ph
 
         self.loss_in = [
             ("obs", obs_ph),
