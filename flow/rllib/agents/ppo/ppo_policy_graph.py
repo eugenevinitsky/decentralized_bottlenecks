@@ -475,6 +475,65 @@ class PPOPolicyGraph(LearningRateSchedule, TFPolicyGraph):
         self.kl_coeff.load(self.kl_coeff_val, session=self.sess)
         return self.kl_coeff_val
 
+    def time_overlap(self, time_span, agent_time):
+        """Check if agent_time overlaps with time_span"""
+        if agent_time[0] <= time_span[1] and agent_time[1] >= time_span[0]:
+            return True
+        else:
+            return False
+
+    def overlap_and_pad_agent(self, time_span, agent_time, obs):
+        """take the part of obs that overlaps, pad to length time_span
+        Arguments:
+            time_span (tuple): tuple of the first and last time that the agent
+                of interest is in the system
+            agent_time (tuple): tuple of the first and last time that the
+                agent whose obs we are padding is in the system
+            obs (np.ndarray): observations of the agent whose time is
+                agent_time
+        """
+        assert self.time_overlap(time_span, agent_time)
+        # FIXME(ev) some of these conditions can be combined
+        # no padding needed
+        if agent_time[0] == time_span[0] and agent_time[1] == time_span[1]:
+            return obs
+        # agent enters before time_span starts and exits before time_span end
+        if agent_time[0] < time_span[0] and agent_time[1] < time_span[1]:
+            non_overlap_time = time_span[0] - agent_time[0]
+            missing_time = time_span[1] - agent_time[1]
+            overlap_obs = obs[non_overlap_time:]
+            padding = np.zeros((missing_time, obs.shape[1]))
+            return np.concatenate((overlap_obs, padding))
+        # agent enters after time_span starts and exits after time_span ends
+        elif agent_time[0] > time_span[0] and agent_time[1] > time_span[1]:
+            non_overlap_time = agent_time[1] - time_span[1]
+            overlap_obs = obs[:-non_overlap_time]
+            missing_time = agent_time[0] - time_span[0]
+            padding = np.zeros((missing_time, obs.shape[1]))
+            return np.concatenate((padding, overlap_obs))
+        # agent time is entirely contained in time_span
+        elif agent_time[0] >= time_span[0] and agent_time[1] <= time_span[1]:
+            missing_left = agent_time[0] - time_span[0]
+            missing_right = time_span[1] - agent_time[1]
+            obs_concat = obs
+            if missing_left > 0:
+                padding = np.zeros((missing_left, obs.shape[1]))
+                obs_concat = np.concatenate((padding, obs_concat))
+            if missing_right > 0:
+                padding = np.zeros((missing_right, obs.shape[1]))
+                obs_concat = np.concatenate((obs_concat, padding))
+            return obs_concat
+        # agent time totally contains time_span
+        elif agent_time[0] <= time_span[0] and agent_time[1] >= time_span[1]:
+            non_overlap_left = time_span[0] - agent_time[0]
+            non_overlap_right = agent_time[1] - time_span[1]
+            overlap_obs = obs
+            if non_overlap_left > 0:
+                overlap_obs = overlap_obs[non_overlap_left:]
+            if non_overlap_right > 0:
+                overlap_obs = overlap_obs[:-non_overlap_right]
+            return overlap_obs
+
     def _value(self, ob, prev_action, prev_reward, *args):
         feed_dict = {
             self.observations: [ob],
