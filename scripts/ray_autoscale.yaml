@@ -41,7 +41,7 @@ auth:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 head_node:
-    InstanceType: m4.4xlarge
+    InstanceType: m4.10xlarge
     ImageId: ami-0c047f3ddd3939b30 # Flow AMI (Ubuntu)
     KeyName: MyKeyPair
     InstanceMarketOptions:
@@ -57,7 +57,7 @@ head_node:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 worker_nodes:
-    InstanceType: m4.4xlarge
+    InstanceType: m4.10xlarge
     ImageId: ami-0c047f3ddd3939b30 # Flow AMI (Ubuntu)
     KeyName: MyKeyPair
 
@@ -78,7 +78,7 @@ setup_commands:
     - cd flow && python setup.py develop
     # set up ray by pip installing and copying over rllib and tune folder
     - pip install --upgrade pyzmq notebook
-    - pip install ray==0.8.0
+    - pip install ray==0.6.5
     - pip install lz4
     - pip install pytz
 #    - git clone https://github.com/flow-project/ray.git

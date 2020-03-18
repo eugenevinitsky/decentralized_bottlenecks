@@ -27,7 +27,7 @@ from flow.controllers import RLController, ContinuousRouter, \
 from flow.multiagent_envs.multi_bottleneck_env import MultiBottleneckEnv
 from flow.networks.bottleneck import BottleneckNetwork
 from flow.utils.parsers import get_multiagent_bottleneck_parser
-from flow.visualize.bottleneck_results import run_bottleneck_results
+# from flow.visualize.bottleneck_results import run_bottleneck_results
 
 def setup_exps(args):
 
@@ -179,7 +179,7 @@ def setup_exps(args):
     config['num_workers'] = N_CPUS
     config['train_batch_size'] = HORIZON * N_ROLLOUTS
     config['gamma'] = 0.999  # discount rate
-    config['model'].update({'fcnet_hiddens': [100, 50, 25]})
+    config['model'].update({'fcnet_hiddens': [64, 64]})
     config['clip_actions'] = False
     config['horizon'] = HORIZON
     config['simple_optimizer'] = True
@@ -299,43 +299,43 @@ if __name__ == '__main__':
         })
 
         # Now we add code to loop through the results and create scores of the results
-    if args.create_inflow_graph:
-        output_path = os.path.join(os.path.join(os.path.expanduser('~/bottleneck_results'), date), args.exp_title)
-        if not os.path.exists(output_path):
-            try:
-                os.makedirs(output_path)
-            except OSError as exc:
-                if exc.errno != errno.EEXIST:
-                    raise
-        for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
-            if "checkpoint_{}".format(args.checkpoint_freq) in dirpath and dirpath.split('/')[-3] == args.exp_title:
-                # grab the experiment name
-                folder = os.path.dirname(dirpath)
-                tune_name = folder.split("/")[-1]
-                checkpoint_path = os.path.dirname(dirpath)
-
-                ray.shutdown()
-                if args.local_mode:
-                    ray.init(local_mode=True)
-                else:
-                    ray.init()
-
-                run_bottleneck_results(400, 3500, 100, args.num_test_trials, output_path, args.exp_title,
-                                       checkpoint_path,
-                                       gen_emission=False, render_mode='no_render',
-                                       checkpoint_num=dirpath.split('_')[-1],
-                                       horizon=args.horizon, end_len=500)
-
-                if args.use_s3:
-                    # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
-                    for i in range(4):
-                        try:
-                            p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                             "s3://eugene.experiments/trb_bottleneck_paper/graphs/{}/{}/{}".format(
-                                                                                 date,
-                                                                                 args.exp_title,
-                                                                                 tune_name)).split(
-                                ' '))
-                            p1.wait(50)
-                        except Exception as e:
-                            print('This is the error ', e)
+    # if args.create_inflow_graph:
+    #     output_path = os.path.join(os.path.join(os.path.expanduser('~/bottleneck_results'), date), args.exp_title)
+    #     if not os.path.exists(output_path):
+    #         try:
+    #             os.makedirs(output_path)
+    #         except OSError as exc:
+    #             if exc.errno != errno.EEXIST:
+    #                 raise
+    #     for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
+    #         if "checkpoint_{}".format(args.checkpoint_freq) in dirpath and dirpath.split('/')[-3] == args.exp_title:
+    #             # grab the experiment name
+    #             folder = os.path.dirname(dirpath)
+    #             tune_name = folder.split("/")[-1]
+    #             checkpoint_path = os.path.dirname(dirpath)
+    #
+    #             ray.shutdown()
+    #             if args.local_mode:
+    #                 ray.init(local_mode=True)
+    #             else:
+    #                 ray.init()
+    #
+    #             run_bottleneck_results(400, 3500, 100, args.num_test_trials, output_path, args.exp_title,
+    #                                    checkpoint_path,
+    #                                    gen_emission=False, render_mode='no_render',
+    #                                    checkpoint_num=dirpath.split('_')[-1],
+    #                                    horizon=args.horizon, end_len=500)
+    #
+    #             if args.use_s3:
+    #                 # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
+    #                 for i in range(4):
+    #                     try:
+    #                         p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
+    #                                                                          "s3://eugene.experiments/trb_bottleneck_paper/graphs/{}/{}/{}".format(
+    #                                                                              date,
+    #                                                                              args.exp_title,
+    #                                                                              tune_name)).split(
+    #                             ' '))
+    #                         p1.wait(50)
+    #                     except Exception as e:
+    #                         print('This is the error ', e)

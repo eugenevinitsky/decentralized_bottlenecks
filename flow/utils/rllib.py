@@ -6,6 +6,7 @@ This includes: environment generation, serialization, and visualization.
 import json
 from copy import deepcopy
 import os
+import sys
 
 import flow.envs
 from flow.core.params import SumoLaneChangeParams, SumoCarFollowingParams, \

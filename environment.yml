@@ -14,7 +14,7 @@ dependencies:
     - opencv
     - setuptools==39.1.0
     - pip:
-        - ray==0.8.0
+        - ray==0.6.5
         - gym==0.10.5
         - pyprind==2.11.2
         - nose2==0.8.0

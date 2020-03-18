@@ -160,7 +160,7 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
         use_lstm = {DEFAULT_POLICY_ID: False}
 
     if hasattr(env, 'curr_iter'):
-        env.curr_iter = 2000
+        env.curr_iter = 50
 
     if render_mode == 'sumo_gui':
         env.sim_params.render = True  # set to True after initializing agent and env
