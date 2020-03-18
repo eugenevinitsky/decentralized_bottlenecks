@@ -64,7 +64,9 @@ DEFAULT_CONFIG = with_common_config({
     "replay_proportion": 0.0,
     # number of sample batches to store for replay. The number of transitions
     # saved total will be (replay_buffer_num_slots * sample_batch_size).
-    "replay_buffer_num_slots": 100,
+    "replay_buffer_num_slots": 0,
+    # max queue size for train batches feeding into the learner
+    "learner_queue_size": 16,
     # level of queuing for sampling.
     "max_sample_requests_in_flight_per_worker": 2,
     # max number of workers to broadcast one set of weights to
@@ -82,7 +84,7 @@ DEFAULT_CONFIG = with_common_config({
     "epsilon": 0.1,
     # balancing the three losses
     "vf_loss_coeff": 0.5,
-    "entropy_coeff": -0.01,
+    "entropy_coeff": 0.01,
 })
 # __sphinx_doc_end__
 # yapf: enable
@@ -100,10 +102,7 @@ class ImpalaAgent(Agent):
         for k in OPTIMIZER_SHARED_CONFIGS:
             if k not in self.config["optimizer"]:
                 self.config["optimizer"][k] = self.config[k]
-        if self.config["vtrace"]:
-            policy_cls = self._policy_graph
-        else:
-            policy_cls = A3CPolicyGraph
+        policy_cls = self._get_policy_graph()
         self.local_evaluator = self.make_local_evaluator(
             self.env_creator, policy_cls)
         self.remote_evaluators = self.make_remote_evaluators(
@@ -111,16 +110,25 @@ class ImpalaAgent(Agent):
         self.optimizer = AsyncSamplesOptimizer(self.local_evaluator,
                                                self.remote_evaluators,
                                                self.config["optimizer"])
+        if self.config["entropy_coeff"] < 0:
+            raise DeprecationWarning("entropy_coeff must be >= 0")
 
     @override(Agent)
     def _train(self):
         prev_steps = self.optimizer.num_steps_sampled
         start = time.time()
         self.optimizer.step()
-        while time.time() - start < self.config["min_iter_time_s"]:
+        while (time.time() - start < self.config["min_iter_time_s"]
+               or self.optimizer.num_steps_sampled == prev_steps):
             self.optimizer.step()
-        result = self.optimizer.collect_metrics(
-            self.config["collect_metrics_timeout"])
+        result = self.collect_metrics()
         result.update(timesteps_this_iter=self.optimizer.num_steps_sampled -
                       prev_steps)
         return result
+
+    def _get_policy_graph(self):
+        if self.config["vtrace"]:
+            policy_cls = self._policy_graph
+        else:
+            policy_cls = A3CPolicyGraph
+        return policy_cls

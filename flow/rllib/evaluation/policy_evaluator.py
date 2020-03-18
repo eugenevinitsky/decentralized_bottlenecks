@@ -8,10 +8,12 @@ import pickle
 import tensorflow as tf
 
 import ray
-from ray.rllib.env.async_vector_env import AsyncVectorEnv
 from ray.rllib.env.atari_wrappers import wrap_deepmind, is_atari
+from ray.rllib.env.base_env import BaseEnv
 from ray.rllib.env.env_context import EnvContext
+from ray.rllib.env.external_env import ExternalEnv
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
+from ray.rllib.env.vector_env import VectorEnv
 from ray.rllib.evaluation.interface import EvaluatorInterface
 from ray.rllib.evaluation.sample_batch import MultiAgentBatch, \
     DEFAULT_POLICY_ID
@@ -19,10 +21,12 @@ from ray.rllib.evaluation.sampler import AsyncSampler, SyncSampler
 from ray.rllib.evaluation.policy_graph import PolicyGraph
 from ray.rllib.evaluation.tf_policy_graph import TFPolicyGraph
 from ray.rllib.offline import NoopOutput, IOContext, OutputWriter, InputReader
+from ray.rllib.offline.is_estimator import ImportanceSamplingEstimator
+from ray.rllib.offline.wis_estimator import WeightedImportanceSamplingEstimator
 from ray.rllib.models import ModelCatalog
 from ray.rllib.models.preprocessors import NoPreprocessor
 from ray.rllib.utils import merge_dicts
-from ray.rllib.utils.annotations import override
+from ray.rllib.utils.annotations import override, DeveloperAPI
 from ray.rllib.utils.compression import pack
 from ray.rllib.utils.filter import get_filter
 from ray.rllib.utils.tf_run_builder import TFRunBuilder
@@ -30,6 +34,7 @@ from ray.rllib.utils.tf_run_builder import TFRunBuilder
 logger = logging.getLogger(__name__)
 
 
+@DeveloperAPI
 class PolicyEvaluator(EvaluatorInterface):
     """Common ``PolicyEvaluator`` implementation that wraps a ``PolicyGraph``.
 
@@ -83,11 +88,13 @@ class PolicyEvaluator(EvaluatorInterface):
             "traffic_light_policy": SampleBatch(...)})
     """
 
+    @DeveloperAPI
     @classmethod
     def as_remote(cls, num_cpus=None, num_gpus=None, resources=None):
         return ray.remote(
             num_cpus=num_cpus, num_gpus=num_gpus, resources=resources)(cls)
 
+    @DeveloperAPI
     def __init__(self,
                  env_creator,
                  policy_graph,
@@ -113,8 +120,10 @@ class PolicyEvaluator(EvaluatorInterface):
                  log_level=None,
                  callbacks=None,
                  input_creator=lambda ioctx: ioctx.default_sampler_input(),
-                 input_evaluation_method=None,
-                 output_creator=lambda ioctx: NoopOutput()):
+                 input_evaluation=frozenset([]),
+                 output_creator=lambda ioctx: NoopOutput(),
+                 remote_worker_envs=False,
+                 async_remote_worker_envs=False):
         """Initialize a policy evaluator.
 
         Arguments:
@@ -180,17 +189,21 @@ class PolicyEvaluator(EvaluatorInterface):
             callbacks (dict): Dict of custom debug callbacks.
             input_creator (func): Function that returns an InputReader object
                 for loading previous generated experiences.
-            input_evaluation_method (str): How to evaluate the current policy.
-                This only applies when the input is reading offline data.
-                Options are:
-                  - None: don't evaluate the policy. The episode reward and
-                    other metrics will be NaN.
+            input_evaluation (list): How to evaluate the policy performance.
+                This only makes sense to set when the input is reading offline
+                data. The possible values include:
+                  - "is": the step-wise importance sampling estimator.
+                  - "wis": the weighted step-wise is estimator.
                   - "simulation": run the environment in the background, but
                     use this data for evaluation only and never for learning.
-                  - "counterfactual": use counterfactual policy evaluation to
-                    estimate performance.
             output_creator (func): Function that returns an OutputWriter object
                 for saving generated experiences.
+            remote_worker_envs (bool): If using num_envs > 1, whether to create
+                those new envs in remote processes instead of in the current
+                process. This adds overheads, but can make sense if your envs
+                are very CPU intensive (e.g., for StarCraft).
+            async_remote_worker_envs (bool): Similar to remote_worker_envs,
+                but runs the envs asynchronously in the background.
         """
 
         if log_level:
@@ -214,9 +227,9 @@ class PolicyEvaluator(EvaluatorInterface):
         self.compress_observations = compress_observations
         self.preprocessing_enabled = True
 
-        self.env = env_creator(env_context)
+        self.env = _validate_env(env_creator(env_context))
         if isinstance(self.env, MultiAgentEnv) or \
-                isinstance(self.env, AsyncVectorEnv):
+                isinstance(self.env, BaseEnv):
 
             def wrap(env):
                 return env  # we can't auto-wrap these env types
@@ -249,13 +262,16 @@ class PolicyEvaluator(EvaluatorInterface):
 
         def make_env(vector_index):
             return wrap(
-                env_creator(env_context.with_vector_index(vector_index)))
+                env_creator(
+                    env_context.copy_with_overrides(
+                        vector_index=vector_index, remote=remote_worker_envs)))
 
         self.tf_sess = None
         policy_dict = _validate_and_canonicalize(policy_graph, self.env)
         self.policies_to_train = policies_to_train or list(policy_dict.keys())
         if _has_tensorflow_graph(policy_dict):
-            if (ray.worker._mode() != ray.worker.LOCAL_MODE
+            if (ray.is_initialized()
+                    and ray.worker._mode() != ray.worker.LOCAL_MODE
                     and not ray.get_gpu_ids()):
                 logger.info("Creating policy evaluation worker {}".format(
                     worker_index) +
@@ -277,7 +293,7 @@ class PolicyEvaluator(EvaluatorInterface):
         self.multiagent = set(self.policy_map.keys()) != {DEFAULT_POLICY_ID}
         if self.multiagent:
             if not (isinstance(self.env, MultiAgentEnv)
-                    or isinstance(self.env, AsyncVectorEnv)):
+                    or isinstance(self.env, BaseEnv)):
                 raise ValueError(
                     "Have multiple policy graphs {}, but the env ".format(
                         self.policy_map) +
@@ -290,8 +306,12 @@ class PolicyEvaluator(EvaluatorInterface):
         }
 
         # Always use vector env for consistency even if num_envs = 1
-        self.async_env = AsyncVectorEnv.wrap_async(
-            self.env, make_env=make_env, num_envs=num_envs)
+        self.async_env = BaseEnv.to_base_env(
+            self.env,
+            make_env=make_env,
+            num_envs=num_envs,
+            remote_envs=remote_worker_envs,
+            async_remote_envs=async_remote_worker_envs)
         self.num_envs = num_envs
 
         if self.batch_mode == "truncate_episodes":
@@ -304,18 +324,24 @@ class PolicyEvaluator(EvaluatorInterface):
             raise ValueError("Unsupported batch mode: {}".format(
                 self.batch_mode))
 
-        if input_evaluation_method == "simulation":
-            logger.warning(
-                "Requested 'simulation' input evaluation method: "
-                "will discard all sampler outputs and keep only metrics.")
-            sample_async = True
-        elif input_evaluation_method == "counterfactual":
-            raise NotImplementedError
-        elif input_evaluation_method is None:
-            pass
-        else:
-            raise ValueError("Unknown evaluation method: {}".format(
-                input_evaluation_method))
+        self.io_context = IOContext(log_dir, policy_config, worker_index, self)
+        self.reward_estimators = []
+        for method in input_evaluation:
+            if method == "simulation":
+                logger.warning(
+                    "Requested 'simulation' input evaluation method: "
+                    "will discard all sampler outputs and keep only metrics.")
+                sample_async = True
+            elif method == "is":
+                ise = ImportanceSamplingEstimator.create(self.io_context)
+                self.reward_estimators.append(ise)
+            elif method == "wis":
+                wise = WeightedImportanceSamplingEstimator.create(
+                    self.io_context)
+                self.reward_estimators.append(wise)
+            else:
+                raise ValueError(
+                    "Unknown evaluation method: {}".format(method))
 
         if sample_async:
             self.sampler = AsyncSampler(
@@ -331,7 +357,7 @@ class PolicyEvaluator(EvaluatorInterface):
                 pack=pack_episodes,
                 tf_sess=self.tf_sess,
                 clip_actions=clip_actions,
-                blackhole_outputs=input_evaluation_method == "simulation")
+                blackhole_outputs="simulation" in input_evaluation)
             self.sampler.start()
         else:
             self.sampler = SyncSampler(
@@ -348,7 +374,6 @@ class PolicyEvaluator(EvaluatorInterface):
                 tf_sess=self.tf_sess,
                 clip_actions=clip_actions)
 
-        self.io_context = IOContext(log_dir, policy_config, worker_index, self)
         self.input_reader = input_creator(self.io_context)
         assert isinstance(self.input_reader, InputReader), self.input_reader
         self.output_writer = output_creator(self.io_context)
@@ -388,6 +413,16 @@ class PolicyEvaluator(EvaluatorInterface):
                 "samples": batch
             })
 
+        # Always do writes prior to compression for consistency and to allow
+        # for better compression inside the writer.
+        self.output_writer.write(batch)
+
+        # Do off-policy estimation if needed
+        if self.reward_estimators:
+            for sub_batch in batch.split_by_episode():
+                for estimator in self.reward_estimators:
+                    estimator.process(sub_batch)
+
         if self.compress_observations:
             if isinstance(batch, MultiAgentBatch):
                 for data in batch.policy_batches.values():
@@ -397,9 +432,9 @@ class PolicyEvaluator(EvaluatorInterface):
                 batch["obs"] = [pack(o) for o in batch["obs"]]
                 batch["new_obs"] = [pack(o) for o in batch["new_obs"]]
 
-        self.output_writer.write(batch)
         return batch
 
+    @DeveloperAPI
     @ray.method(num_return_vals=2)
     def sample_with_count(self):
         """Same as sample() but returns the count as a separate future."""
@@ -466,16 +501,16 @@ class PolicyEvaluator(EvaluatorInterface):
             return self.policy_map[DEFAULT_POLICY_ID].apply_gradients(grads)
 
     @override(EvaluatorInterface)
-    def compute_apply(self, samples):
+    def learn_on_batch(self, samples):
         if isinstance(samples, MultiAgentBatch):
             info_out = {}
             if self.tf_sess is not None:
-                builder = TFRunBuilder(self.tf_sess, "compute_apply")
+                builder = TFRunBuilder(self.tf_sess, "learn_on_batch")
                 for pid, batch in samples.policy_batches.items():
                     if pid not in self.policies_to_train:
                         continue
                     info_out[pid], _ = (
-                        self.policy_map[pid]._build_compute_apply(
+                        self.policy_map[pid]._build_learn_on_batch(
                             builder, batch))
                 info_out = {k: builder.get(v) for k, v in info_out.items()}
             else:
@@ -483,23 +518,55 @@ class PolicyEvaluator(EvaluatorInterface):
                     if pid not in self.policies_to_train:
                         continue
                     info_out[pid], _ = (
-                        self.policy_map[pid].compute_apply(batch))
+                        self.policy_map[pid].learn_on_batch(batch))
             return info_out
         else:
             grad_fetch, apply_fetch = (
-                self.policy_map[DEFAULT_POLICY_ID].compute_apply(samples))
+                self.policy_map[DEFAULT_POLICY_ID].learn_on_batch(samples))
             return grad_fetch
 
+    @DeveloperAPI
+    def get_metrics(self):
+        """Returns a list of new RolloutMetric objects from evaluation."""
+
+        out = self.sampler.get_metrics()
+        for m in self.reward_estimators:
+            out.extend(m.get_metrics())
+        return out
+
+    @DeveloperAPI
+    def foreach_env(self, func):
+        """Apply the given function to each underlying env instance."""
+
+        envs = self.async_env.get_unwrapped()
+        if not envs:
+            return [func(self.async_env)]
+        else:
+            return [func(e) for e in envs]
+
+    @DeveloperAPI
+    def get_policy(self, policy_id=DEFAULT_POLICY_ID):
+        """Return policy graph for the specified id, or None.
+
+        Arguments:
+            policy_id (str): id of policy graph to return.
+        """
+
+        return self.policy_map.get(policy_id)
+
+    @DeveloperAPI
     def for_policy(self, func, policy_id=DEFAULT_POLICY_ID):
         """Apply the given function to the specified policy graph."""
 
         return func(self.policy_map[policy_id])
 
+    @DeveloperAPI
     def foreach_policy(self, func):
         """Apply the given function to each (policy, policy_id) tuple."""
 
         return [func(policy, pid) for pid, policy in self.policy_map.items()]
 
+    @DeveloperAPI
     def foreach_trainable_policy(self, func):
         """Apply the given function to each (policy, policy_id) tuple.
 
@@ -510,6 +577,7 @@ class PolicyEvaluator(EvaluatorInterface):
             if pid in self.policies_to_train
         ]
 
+    @DeveloperAPI
     def sync_filters(self, new_filters):
         """Changes self's filter to given and rebases any accumulated delta.
 
@@ -520,6 +588,7 @@ class PolicyEvaluator(EvaluatorInterface):
         for k in self.filters:
             self.filters[k].sync(new_filters[k])
 
+    @DeveloperAPI
     def get_filters(self, flush_after=False):
         """Returns a snapshot of filters.
 
@@ -536,6 +605,7 @@ class PolicyEvaluator(EvaluatorInterface):
                 f.clear_buffer()
         return return_filters
 
+    @DeveloperAPI
     def save(self):
         filters = self.get_filters(flush_after=True)
         state = {
@@ -544,23 +614,35 @@ class PolicyEvaluator(EvaluatorInterface):
         }
         return pickle.dumps({"filters": filters, "state": state})
 
+    @DeveloperAPI
     def restore(self, objs):
         objs = pickle.loads(objs)
         self.sync_filters(objs["filters"])
         for pid, state in objs["state"].items():
             self.policy_map[pid].set_state(state)
 
+    @DeveloperAPI
     def set_global_vars(self, global_vars):
         self.foreach_policy(lambda p, _: p.on_global_var_update(global_vars))
 
+    @DeveloperAPI
     def export_policy_model(self, export_dir, policy_id=DEFAULT_POLICY_ID):
         self.policy_map[policy_id].export_model(export_dir)
+
+    @DeveloperAPI
+    def export_policy_checkpoint(self,
+                                 export_dir,
+                                 filename_prefix="model",
+                                 policy_id=DEFAULT_POLICY_ID):
+        self.policy_map[policy_id].export_checkpoint(export_dir,
+                                                     filename_prefix)
 
     def _build_policy_map(self, policy_dict, policy_config):
         policy_map = {}
         preprocessors = {}
         for name, (cls, obs_space, act_space,
                    conf) in sorted(policy_dict.items()):
+            logger.debug("Creating policy graph for {}".format(name))
             merged_conf = merge_dicts(policy_config, conf)
             if self.preprocessing_enabled:
                 preprocessor = ModelCatalog.get_preprocessor_for_space(
@@ -580,7 +662,7 @@ class PolicyEvaluator(EvaluatorInterface):
         return policy_map, preprocessors
 
     def __del__(self):
-        if isinstance(self.sampler, AsyncSampler):
+        if hasattr(self, "sampler") and isinstance(self.sampler, AsyncSampler):
             self.sampler.shutdown = True
 
 
@@ -623,6 +705,20 @@ def _validate_and_canonicalize(policy_graph, env):
             DEFAULT_POLICY_ID: (policy_graph, env.observation_space,
                                 env.action_space, {})
         }
+
+
+def _validate_env(env):
+    # allow this as a special case (assumed gym.Env)
+    if hasattr(env, "observation_space") and hasattr(env, "action_space"):
+        return env
+
+    allowed_types = [gym.Env, MultiAgentEnv, ExternalEnv, VectorEnv, BaseEnv]
+    if not any(isinstance(env, tpe) for tpe in allowed_types):
+        raise ValueError(
+            "Returned env should be an instance of gym.Env, MultiAgentEnv, "
+            "ExternalEnv, VectorEnv, or BaseEnv. The provided env creator "
+            "function returned {} ({}).".format(env, type(env)))
+    return env
 
 
 def _monitor(env, path):

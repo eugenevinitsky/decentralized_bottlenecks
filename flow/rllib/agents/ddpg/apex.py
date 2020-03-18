@@ -23,7 +23,6 @@ APEX_DDPG_DEFAULT_CONFIG = merge_dicts(
         "learning_starts": 50000,
         "train_batch_size": 512,
         "sample_batch_size": 50,
-        "max_weight_sync_delay": 400,
         "target_network_update_freq": 500000,
         "timesteps_per_iteration": 25000,
         "per_worker_exploration": True,
@@ -48,6 +47,7 @@ class ApexDDPGAgent(DDPGAgent):
         # Ape-X updates based on num steps trained, not sampled
         if self.optimizer.num_steps_trained - self.last_target_update_ts > \
                 self.config["target_network_update_freq"]:
-            self.local_evaluator.for_policy(lambda p: p.update_target())
+            self.local_evaluator.foreach_trainable_policy(
+                lambda p, _: p.update_target())
             self.last_target_update_ts = self.optimizer.num_steps_trained
             self.num_target_updates += 1

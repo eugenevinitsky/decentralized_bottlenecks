@@ -1,8 +1,7 @@
 """Example of handling variable length and/or parametric action spaces.
 
 This is a toy example of the action-embedding based approach for handling large
-discrete action spaces (potentially infinite in size), similar to how
-OpenAI Five works:
+discrete action spaces (potentially infinite in size), similar to this:
 
     https://neuro.cs.ut.ee/the-use-of-embeddings-in-openai-five/
 
@@ -175,10 +174,10 @@ if __name__ == "__main__":
         }
     elif args.run == "DQN":
         cfg = {
-            "hiddens": [],  # don't postprocess the action scores
+            "hiddens": [],  # important: don't postprocess the action scores
         }
     else:
-        cfg = {}
+        cfg = {}  # PG, IMPALA, A2C, etc.
     run_experiments({
         "parametric_cartpole": {
             "run": args.run,
