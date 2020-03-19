@@ -185,13 +185,17 @@ def postprocess_ppo_gae(policy,
 
     net_outflow = 0.0
     if episode is not None:
+        post_exit_rew_len = policy.post_exit_rew_len
         outflow = np.array(episode.user_data['outflow']) / 2000.0
         final_time = sample_batch['t'][-1]
-        net_outflow = sum(outflow[final_time:])
+        if final_time + post_exit_rew_len >= outflow.shape[0]:
+            net_outflow = sum(outflow[final_time:])
+        else:
+            net_outflow = sum(outflow[final_time:final_time + post_exit_rew_len])
     # This is a hack because we are never returning done correctly so we just check if we have a time equal to the horizon
     # if we do, we clearly never completed
     if 't' in sample_batch.keys():
-        completed = (sample_batch['t'][-1] < policy.horizon - 1)
+        completed = (sample_batch['t'][-1] < policy.horizon - 1) or sample_batch["dones"][-1]
     else:
         completed = False
     if completed:
@@ -279,6 +283,7 @@ class AttributeMixin(object):
     def __init__(self, config):
         self.terminal_reward = config['model']['custom_options']['terminal_reward']
         self.horizon = config['model']['custom_options']['horizon']
+        self.post_exit_rew_len = config['model']['custom_options']['post_exit_rew_len']
 
 
 def setup_config(policy, obs_space, action_space, config):

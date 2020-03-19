@@ -4,7 +4,7 @@ from copy import deepcopy
 import numpy as np
 import random
 import traceback
-from gym.spaces import Box
+from gym.spaces import Box, Dict
 
 from traci.exceptions import FatalTraCIError
 from traci.exceptions import TraCIException
@@ -122,9 +122,6 @@ class MultiEnv(MultiAgentEnv, Env):
             self.render()
 
         states = self.get_state(rl_actions)
-        # TODO(@evinitsky) this is ALWAYS FALSE. If its arrived we never return a state
-        done = {key: key in self.k.vehicle.get_arrived_ids()
-                for key in states.keys()}
         if crash:
             print(
                 "**********************************************************\n"
@@ -136,6 +133,7 @@ class MultiEnv(MultiAgentEnv, Env):
                 "**********************************************************"
             )
 
+        done = {}
         if (self.time_counter >= self.env_params.sims_per_step *
                 (self.env_params.warmup_steps + self.env_params.horizon)):
             # TODO(@ev) clean this up
@@ -153,6 +151,14 @@ class MultiEnv(MultiAgentEnv, Env):
             reward = self.compute_reward(clipped_actions, fail=crash)
         else:
             reward = self.compute_reward(rl_actions, fail=crash)
+
+        for rl_id in self.k.vehicle.get_arrived_rl_ids():
+            done[rl_id] = True
+            reward[rl_id] = 0
+            if isinstance(self.observation_space, Dict):
+                states[rl_id] = self.observation_space.sample()
+            else:
+                states[rl_id] = np.zeros(self.observation_space.shape[0])
 
         return states, reward, done, infos
 

@@ -322,15 +322,12 @@ def setup_exps(args):
         config["entropy_coeff"] = args.entropy_coeff
 
         # if we have a centralized vf we can't use big batch sizes or we eat up all the system memory
-        if not args.centralized_vf:
-            config['sgd_minibatch_size'] = min(args.horizon * 10, 0.2 * config['train_batch_size'])
-        else:
-            config['sgd_minibatch_size'] = 40000
+        config['sgd_minibatch_size'] = 128
         if args.use_lstm:
             config['vf_loss_coeff'] = args.vf_loss_coeff
             # Grid search things
         if args.grid_search:
-            config['lr'] = tune.grid_search([5e-5, 5e-4])
+            config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
         else:
             config['num_sgd_iter'] = 10
 
@@ -388,6 +385,7 @@ def setup_exps(args):
     # config["sample_batch_size"] = args.horizon
     # config["observation_filter"] = "MeanStdFilter"
     config['model']['custom_options']['terminal_reward'] = args.terminal_reward
+    config['model']['custom_options']['post_exit_rew_len'] = args.post_exit_rew_len
     config['model']['custom_options']['horizon'] = args.horizon
 
     # save the flow params for replay

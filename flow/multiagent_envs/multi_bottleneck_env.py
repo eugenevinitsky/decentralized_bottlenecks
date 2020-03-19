@@ -176,15 +176,15 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         #                               in self.left_av_time_dict.keys()}
         #     veh_info.update(left_vehicles_dict)
 
-        if isinstance(self.observation_space, Box):
-            veh_info = {key: np.clip(value, a_min=self.observation_space.low[0:value.shape[0]],
-                                     a_max=self.observation_space.high[0:value.shape[0]]) for
-                        key, value in veh_info.items()}
-        elif isinstance(self.observation_space, Dict):
-            # TODO(@evinitsky) this is bad subclassing and will break if the obs space isn't uniform
-            veh_info = {key: np.clip(value, a_min=[self.observation_space.spaces['a_obs'].low[0]] * value.shape[0],
-                                     a_max=[self.observation_space.spaces['a_obs'].high[0]] * value.shape[0]) for
-                        key, value in veh_info.items()}
+        # if isinstance(self.observation_space, Box):
+        #     veh_info = {key: np.clip(value, a_min=self.observation_space.low[0:value.shape[0]],
+        #                              a_max=self.observation_space.high[0:value.shape[0]]) for
+        #                 key, value in veh_info.items()}
+        # elif isinstance(self.observation_space, Dict):
+        #     # TODO(@evinitsky) this is bad subclassing and will break if the obs space isn't uniform
+        #     veh_info = {key: np.clip(value, a_min=[self.observation_space.spaces['a_obs'].low[0]] * value.shape[0],
+        #                              a_max=[self.observation_space.spaces['a_obs'].high[0]] * value.shape[0]) for
+        #                 key, value in veh_info.items()}
 
         return veh_info
 
@@ -559,11 +559,11 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
     def observation_space(self):
         if self.simple_env:
             # abs_position duration, time since stopped, number of vehicles in the bottleneck, speed, lead speed, headway
-            new_obs = Box(low=-3.0, high=3.0, shape=(7,), dtype=np.float32)
+            new_obs = Box(low=-10.0, high=10.0, shape=(7,), dtype=np.float32)
         else:
             obs = super().observation_space
             # Extra keys "time since stop", duration
-            new_obs = Box(low=-3.0, high=3.0, shape=(obs.shape[0] + 2,), dtype=np.float32)
+            new_obs = Box(low=-10.0, high=10.0, shape=(obs.shape[0] + 2,), dtype=np.float32)
             # new_obs = Box(low=-3.0, high=3.0, shape=(obs.shape[0],), dtype=np.float32)
         return Dict({"a_obs": new_obs, "expert_action": self.action_space})
 
@@ -730,7 +730,7 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
             self.num_past_actions = 100
             num_obs += self.num_past_actions
 
-        new_obs = Box(low=-3.0, high=3.0, shape=(num_obs,), dtype=np.float32)
+        new_obs = Box(low=-10.0, high=10.0, shape=(num_obs,), dtype=np.float32)
         # new_obs = Box(low=-3.0, high=3.0, shape=(obs.shape[0],), dtype=np.float32)
         return new_obs
 
@@ -763,8 +763,8 @@ class MultiBottleneckDFQDEnv(MultiBottleneckEnv):
                 expert_action = int(self.find_nearest_idx(self.action_values, accel))
                 concat_list = np.concatenate((concat_list, [expert_action]))
 
-                value = np.clip(concat_list, a_min=self.observation_space.low, a_max=self.observation_space.high)
-                state_dict[key] = value
+                # value = np.clip(concat_list, a_min=self.observation_space.low, a_max=self.observation_space.high)
+                state_dict[key] = concat_list
 
         return state_dict
 

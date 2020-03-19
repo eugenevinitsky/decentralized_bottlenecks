@@ -73,6 +73,8 @@ def get_multiagent_bottleneck_parser():
                                                                         'the value function')
     parser.add_argument('--max_num_agents', type=int, default=120, help='The maximum number of agents we could ever have')
     parser.add_argument('--terminal_reward', action='store_true', default=False)
+    parser.add_argument('--post_exit_rew_len', type=int, default=200, help='This is how much of the future outflow '
+                                                                           'is given to the agent as a terminal reward')
 
     # dqfd arguments
     parser.add_argument('--dqfd', action='store_true', default=False,

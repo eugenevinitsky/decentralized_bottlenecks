@@ -67,6 +67,7 @@ class TraCIVehicle(KernelVehicle):
         # number of vehicles to exit the network for every time-step
         self._num_arrived = []
         self._arrived_ids = []
+        self._arrived_rl_ids = []
 
     def initialize(self, vehicles):
         """Initialize vehicle state information.
@@ -119,18 +120,21 @@ class TraCIVehicle(KernelVehicle):
                 self.kernel_api.vehicle.getSubscriptionResults(veh_id)
         sim_obs = self.kernel_api.simulation.getSubscriptionResults()
 
+        arrived_rl_ids = []
         # remove exiting vehicles from the vehicles class
         for veh_id in sim_obs[tc.VAR_ARRIVED_VEHICLES_IDS]:
-            if veh_id not in sim_obs[tc.VAR_TELEPORT_STARTING_VEHICLES_IDS]:
-                self.remove(veh_id)
-                # remove exiting vehicles from the vehicle subscription if they
-                # haven't been removed already
-                if vehicle_obs[veh_id] is None:
-                    vehicle_obs.pop(veh_id, None)
-            else:
+            if veh_id in self.get_rl_ids():
+                arrived_rl_ids.append(veh_id)
+            if veh_id in sim_obs[tc.VAR_TELEPORT_STARTING_VEHICLES_IDS]:
                 # this is meant to resolve the KeyError bug when there are
                 # collisions
                 vehicle_obs[veh_id] = self.__sumo_obs[veh_id]
+            self.remove(veh_id)
+            # remove exiting vehicles from the vehicle subscription if they
+            # haven't been removed already
+            if vehicle_obs[veh_id] is None:
+                vehicle_obs.pop(veh_id, None)
+        self._arrived_rl_ids.append(arrived_rl_ids)
 
         # add entering vehicles into the vehicles class
         for veh_id in sim_obs[tc.VAR_DEPARTED_VEHICLES_IDS]:
@@ -159,6 +163,7 @@ class TraCIVehicle(KernelVehicle):
             self._num_arrived.clear()
             self._departed_ids.clear()
             self._arrived_ids.clear()
+            self._arrived_rl_ids.clear()
 
             # add vehicles from a network template, if applicable
             if hasattr(self.master_kernel.scenario.network,
@@ -471,6 +476,13 @@ class TraCIVehicle(KernelVehicle):
             return self._arrived_ids[-1]
         else:
             return []
+
+    def get_arrived_rl_ids(self):
+        """See parent class."""
+        if len(self._arrived_rl_ids) > 0:
+            return self._arrived_rl_ids[-1]
+        else:
+            return 0
 
     def get_departed_ids(self):
         """See parent class."""
