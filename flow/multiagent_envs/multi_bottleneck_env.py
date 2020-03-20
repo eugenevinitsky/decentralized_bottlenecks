@@ -104,7 +104,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if self.env_params.additional_params.get('keep_past_actions', False):
             self.num_past_actions = 100
             num_obs += self.num_past_actions
-        return Box(low=-3.0, high=3.0,
+        return Box(low=-10.0, high=10.0,
                    shape=(num_obs,),
                    dtype=np.float32)
 
@@ -113,12 +113,12 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         """See class definition."""
         if self.env_params.additional_params['communicate']:
             accel = Box(
-                low=-5.0 * self.env_params.sims_per_step, high=3.0, shape=(1,), dtype=np.float32)
+                low=-4.0 / 8.0, high=2.6 / 8.0, shape=(1,), dtype=np.float32)
             communicate = Discrete(2)
             return Tuple((accel, communicate))
         else:
             return Box(
-                low=-5.0 * self.env_params.sims_per_step, high=3.0, shape=(1,), dtype=np.float32)
+                low=-4.0 / 8.0, high=2.6 / 8.0, shape=(1,), dtype=np.float32)
 
     def get_state(self, rl_actions=None):
         """See class definition."""
@@ -126,7 +126,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         # vehicles for all of the avs
         self.update_curr_rl_vehicles()
         add_params = self.env_params.additional_params
-        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) == '2']
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3']]
 
         if add_params['centralized_obs']:
             state = self.get_centralized_state()
@@ -278,7 +278,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             if self.env_params.additional_params.get('communicate', False):
                 accel = np.concatenate([action[0] for action in actions])
             else:
-                accel = actions
+                accel = [val * 8.0 for val in actions]
             self.k.vehicle.apply_acceleration(rl_ids, accel)
 
     def compute_reward(self, rl_actions, **kwargs):
@@ -307,7 +307,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 penalty = (num_vehs - 30 * self.scaling) / 10.0
                 reward -= penalty
 
-        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) == '2']
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3']]
         reward_dict = {rl_id: reward for rl_id in rl_ids}
         if add_params["speed_reward"]:
             reward_dict = {rl_id: reward + (self.k.vehicle.get_speed(rl_id) / 10) for rl_id, reward in reward_dict.items()}
@@ -580,7 +580,7 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
         self.update_curr_rl_vehicles()
         if self.simple_env:
             state_dict = {}
-            rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) == '2']
+            rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
             for rl_id in rl_ids:
                 controller = self.curr_rl_vehicles[rl_id]['controller']
