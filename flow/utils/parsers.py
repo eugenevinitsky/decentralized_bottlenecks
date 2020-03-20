@@ -84,6 +84,10 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument('--fingerprinting', action='store_true', default=False,
                         help='Whether to add the iteration number to the inputs')
 
+    # TD3 arguments
+    parser.add_argument('--td3', action='store_true', default=False,
+                        help='Whether to use td3')
+
     # arguments for ray
     parser.add_argument('--use_lstm', action='store_true')
     parser.add_argument('--use_gru', action='store_true')

@@ -165,7 +165,7 @@ def kl_and_loss_stats(policy, train_batch):
         "kl": policy.loss_obj.mean_kl,
         "entropy": policy.loss_obj.mean_entropy,
         "entropy_coeff": tf.cast(policy.entropy_coeff, tf.float64),
-        "avg_rew": train_batch["rewards"][-1]
+        "advantages": train_batch[Postprocessing.ADVANTAGES]
     }
 
 
@@ -189,9 +189,12 @@ def postprocess_ppo_gae(policy,
         outflow = np.array(episode.user_data['outflow']) / 2000.0
         final_time = sample_batch['t'][-1]
         if final_time + post_exit_rew_len >= outflow.shape[0]:
-            net_outflow = sum(outflow[final_time:])
+            if final_time > 0:
+                net_outflow = np.mean((outflow[final_time:]))
+            else:
+                net_outflow = np.mean((outflow[final_time:]))
         else:
-            net_outflow = sum(outflow[final_time:final_time + post_exit_rew_len])
+            net_outflow = np.mean((outflow[final_time:final_time + post_exit_rew_len]))
     # This is a hack because we are never returning done correctly so we just check if we have a time equal to the horizon
     # if we do, we clearly never completed
     if 't' in sample_batch.keys():
@@ -210,6 +213,14 @@ def postprocess_ppo_gae(policy,
                                sample_batch[SampleBatch.ACTIONS][-1],
                                sample_batch[SampleBatch.REWARDS][-1],
                                *next_state)
+
+    # now scale the rewards by the horizo so the cumulative reward is independent of time in the system
+    # TODO(@evinitsky) does this make sense?
+    if policy.terminal_reward and sample_batch['rewards'].shape[0] > 1:
+        sample_batch['rewards'][:-1] = sample_batch['rewards'][:-1] / (sample_batch['rewards'][:-1].shape[0])
+    else:
+        sample_batch['rewards'] = sample_batch['rewards'] / (sample_batch['rewards'].shape[0])
+
     batch = compute_advantages(
         sample_batch,
         last_r,
@@ -301,7 +312,7 @@ def setup_mixins(policy, obs_space, action_space, config):
 
 
 CustomPPOTFPolicy = build_tf_policy(
-    name="PPOTFPolicy",
+    name="CustomPPOTFPolicy",
     get_default_config=lambda: ray.rllib.agents.ppo.ppo.DEFAULT_CONFIG,
     loss_fn=ppo_surrogate_loss,
     stats_fn=kl_and_loss_stats,

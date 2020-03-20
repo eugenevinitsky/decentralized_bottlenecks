@@ -6,6 +6,7 @@ The agents all share a single model.
 from datetime import datetime
 import errno
 import json
+from math import ceil
 import os
 import subprocess
 import sys
@@ -14,12 +15,13 @@ import numpy as np
 import pytz
 import ray
 import ray.rllib.agents.ppo as ppo
+from ray.rllib.agents.ddpg.td3 import TD3_DEFAULT_CONFIG, TD3Trainer
 from ray import tune
 from ray.rllib.models import ModelCatalog
 from ray.tune import run
 from ray.tune.registry import register_env
 
-from flow.agents.custom_ppo import CustomPPOTrainer
+from flow.agents.custom_ppo import CustomPPOTrainer, CustomPPOTFPolicy
 from flow.agents.centralized_PPO import CentralizedCriticModel, CentralizedCriticModelRNN
 from flow.agents.centralized_PPO import CCTrainer
 from flow.agents.centralized_imitation_PPO import ImitationCentralizedTrainer
@@ -266,12 +268,15 @@ def on_episode_start(info):
 
 def on_episode_end(info):
     env = info['env'].get_unwrapped()[0]
-    total_outflow = env.k.vehicle.get_outflow_rate(500)
-    inflow = env.inflow
-    # round it to 100
-    inflow = int(inflow / 100) * 100
-    episode = info["episode"]
-    episode.custom_metrics["net_outflow_{}".format(inflow)] = total_outflow
+    total_time_step = env.env_params.horizon * env.sim_step * env.env_params.sims_per_step
+    time_step = 250
+    for i in range(int(ceil(total_time_step / time_step))):
+        total_outflow = env.k.vehicle.get_outflow_rate_between_times((i) * time_step, (i+1) * time_step)
+        inflow = env.inflow
+        # round it to 100
+        inflow = int(inflow / 100) * 100
+        episode = info["episode"]
+        episode.custom_metrics["net_outflow_{}_time0_{}_time1_{}".format(inflow, time_step * (i), time_step * (i+1))] = total_outflow
 
 
 def on_episode_step(info):
@@ -314,6 +319,15 @@ def setup_exps(args):
             config['n_step'] = tune.grid_search([1, 5, 10])
             config['train_batch_size'] = tune.grid_search([32])
             config['reserved_frac'] = tune.grid_search([0.1, 0.3])
+    elif args.td3:
+        alg_run = 'TD3'
+        config = TD3_DEFAULT_CONFIG
+        config["buffer_size"] = 20000 # reduced to test if this is the source of memory problems
+        config["sample_batch_size"] = 50
+        if args.grid_search:
+            config["prioritized_replay"] = tune.grid_search(['True', 'False'])
+            config["actor_lr"] = tune.grid_search([1e-3, 1e-4])
+            config["critic_lr"] = tune.grid_search([1e-3, 1e-4])
     else:
         alg_run = 'PPO'
         config = ppo.DEFAULT_CONFIG.copy()
@@ -403,7 +417,11 @@ def setup_exps(args):
     act_space = test_env.action_space
 
     # Setup PG with an ensemble of `num_policies` different policy graphs
-    policy_graphs = {'av': (None, obs_space, act_space, {})}
+    if alg_run == 'PPO':
+        policy_graphs = {'av': (CustomPPOTFPolicy, obs_space, act_space, {})}
+
+    else:
+        policy_graphs = {'av': (None, obs_space, act_space, {})}
 
     def policy_mapping_fn(_):
         return 'av'
@@ -465,6 +483,9 @@ if __name__ == '__main__':
     elif args.dqfd:
         alg_run = DQFDTrainer
         run_name = "dqfd"
+    elif args.td3:
+        alg_run = TD3Trainer
+        run_name = "td3"
     else:
         alg_run = CustomPPOTrainer
         run_name = "ppo_custom"

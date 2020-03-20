@@ -1371,11 +1371,11 @@
 ####################################################################################################################################################
 ## 3/19/20 exps
 # Hack to force the actions to their extremes so that it's more likely the vehicles learn to stop
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_no_out_rew_true_pe10 --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
---num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 2.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
---multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 10 --terminal_reward --num_sample_seconds 0.0 --post_exit_rew_len 10" \
---start --stop --cluster-name ev_2pen_1 --tmux
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_no_out_rew_true_pe10 --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
+#--num_samples 1 --grid_search --n_cpus 12 --use_s3 --rollout_scale_factor 2.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
+#--multi_node --sim_step 0.5 --life_penalty 0.0 --create_inflow_graph --sims_per_step 10 --terminal_reward --num_sample_seconds 0.0 --post_exit_rew_len 10" \
+#--start --stop --cluster-name ev_2pen_1 --tmux
 
 ray exec ray_autoscale.yaml \
 "python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_no_out_rew_true_pe40 --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \

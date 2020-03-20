@@ -500,7 +500,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             number of vehicles in the congested area
             and average velocity of segments 3,4,5,6
         '''
-        time_step = self.time_counter / self.env_params.horizon
+        time_step = self.time_counter / (self.env_params.horizon * self.env_params.sims_per_step)
         outflow = self.k.vehicle.get_outflow_rate(10) / 3600
         valid_edges = ['3', '4', '5']
         congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
