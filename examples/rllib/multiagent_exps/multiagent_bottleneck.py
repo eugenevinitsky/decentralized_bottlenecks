@@ -352,6 +352,9 @@ def setup_exps(args):
         if args.local_mode:
             config["learning_starts"] = 1000
             config["pure_exploration_steps"] = 1000
+        else:
+            config["learning_starts"] = 10000
+            config["pure_exploration_steps"] = 100000
         if args.grid_search:
             config["prioritized_replay"] = tune.grid_search(['True', 'False'])
             config["actor_lr"] = tune.grid_search([1e-3, 1e-4])
