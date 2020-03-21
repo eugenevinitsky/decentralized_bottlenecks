@@ -79,7 +79,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
     def increase_curr_iter(self):
         self.curr_iter += 1
         curriculum_scaling = min(self.curr_iter / self.num_curr_iters, 1.0)
-        self.env_params.horizon = max(curriculum_scaling * self.max_horizon, self.min_horizon)
+        self.env_params.horizon = self.min_horizon + curriculum_scaling * (self.max_horizon - self.min_horizon)
+
         print('YO THE HORIZON IS', self.env_params.horizon)
 
     @property
