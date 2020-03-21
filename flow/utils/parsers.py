@@ -88,6 +88,12 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument('--td3', action='store_true', default=False,
                         help='Whether to use td3')
 
+    # Curriculum stuff
+    parser.add_argument('--curriculum', action='store_true', help='If true, anneal the av_frac and inflow over '
+                                                                  'num_curr_iter steps')
+    parser.add_argument("--num_curr_iters", type=int, default=100, help='How many steps to run curriculum over')
+    parser.add_argument("--min_horizon", type=int, default=200, help='How many steps to run curriculum over')
+
     # arguments for ray
     parser.add_argument('--use_lstm', action='store_true')
     parser.add_argument('--use_gru', action='store_true')

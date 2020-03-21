@@ -5,7 +5,7 @@ TODO(ak): add paper after it has been published.
 """
 
 from collections import defaultdict
-from copy import deepcopy
+from copy import deepcopy, copy
 
 from gym.spaces.box import Box
 from gym.spaces.dict_space import Dict
@@ -65,6 +65,22 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
            The reward is a dict consisting of the normalized
            outflow of the bottleneck
     """
+    def __init__(self, env_params, sim_params, scenario, simulator='traci'):
+        super().__init__(env_params, sim_params, scenario, simulator)
+        self.simple_env = env_params.additional_params.get("simple_env")
+        self.curr_iter = 0
+        self.num_curr_iters = env_params.additional_params["num_curr_iters"]
+        self.curriculum = env_params.additional_params["curriculum"]
+        self.min_horizon = env_params.additional_params["min_horizon"]
+        self.max_horizon = env_params.additional_params["horizon"]
+        if self.curriculum:
+            self.env_params.horizon = self.min_horizon
+
+    def increase_curr_iter(self):
+        self.curr_iter += 1
+        curriculum_scaling = min(self.curr_iter / self.num_curr_iters, 1.0)
+        self.env_params.horizon = max(curriculum_scaling * self.max_horizon, self.min_horizon)
+        print('YO THE HORIZON IS', self.env_params.horizon)
 
     @property
     def observation_space(self):
@@ -87,6 +103,10 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 num_obs += 4 * segment[1] * \
                            self.k.scenario.num_lanes(segment[0])
             num_obs += 7
+        elif self.simple_env:
+            if self.simple_env:
+                # abs_position duration, time since stopped, number of vehicles in the bottleneck, speed, lead speed, headway
+                num_obs = 7
         else:
             if self.env_params.additional_params['communicate']:
                 # eight possible signals if above
@@ -120,6 +140,18 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             return Box(
                 low=-4.0 / 8.0, high=2.6 / 8.0, shape=(1,), dtype=np.float32)
 
+    def init_decentral_controller(self, rl_id):
+        return FakeDecentralizedALINEAController(rl_id, stop_edge="2", stop_pos=310,
+                                                       additional_env_params=self.env_params.additional_params,
+                                                       car_following_params=SumoCarFollowingParams())
+
+    def update_curr_rl_vehicles(self):
+        self.curr_rl_vehicles.update({rl_id: {'controller': self.init_decentral_controller(rl_id),
+                                              'time_since_stopped': 0.0,
+                                              'is_stopped': False,}
+                                              for rl_id in self.k.vehicle.get_rl_ids()
+                                      if rl_id not in self.curr_rl_vehicles.keys()})
+
     def get_state(self, rl_actions=None):
         """See class definition."""
         # action space is speed and velocity of leading and following
@@ -131,6 +163,42 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if add_params['centralized_obs']:
             state = self.get_centralized_state()
             veh_info = {rl_id: np.concatenate((self.veh_statistics(rl_id), state)) for rl_id in rl_ids}
+        elif self.simple_env:
+            self.update_curr_rl_vehicles()
+            veh_info = {}
+            rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if
+                      self.k.vehicle.get_edge(veh_id) in ['2', '3']]
+            congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
+            for rl_id in rl_ids:
+                controller = self.curr_rl_vehicles[rl_id]['controller']
+                if self.k.vehicle.get_speed(rl_id) <= 0.2:
+                    self.curr_rl_vehicles[rl_id]['time_since_stopped'] += 1.0
+                else:
+                    self.curr_rl_vehicles[rl_id]['time_since_stopped'] = 0.0
+
+                accel = controller.get_accel(self)
+
+                if accel is None:
+                    accel = -np.abs(self.action_space.low[0])
+                duration = controller.duration
+                abs_position = self.k.vehicle.get_position(rl_id)
+                # if rl_actions and rl_id in rl_actions.keys():
+                #     print('RL ', rl_actions[rl_id])
+                #     print('Expert ', accel)
+                speed = self.k.vehicle.get_speed(rl_id)
+                lead_id = self.k.vehicle.get_leader(rl_id)
+                lead_speed = self.k.vehicle.get_speed(lead_id)
+                if lead_speed == -1001:
+                    lead_speed = -10
+                headway = self.k.vehicle.get_headway(rl_id)
+                veh_info[rl_id] = np.array([abs_position / 1000.0,
+                                                        self.curr_rl_vehicles[rl_id][
+                                                            'time_since_stopped'] / self.env_params.horizon,
+                                                        duration / 100.0,
+                                                        congest_number,
+                                                        speed / 50.0,
+                                                        lead_speed / 50.0,
+                                                        headway / 1000.0])
         else:
             if self.env_params.additional_params.get('communicate', False):
                 veh_info = {rl_id: np.concatenate((self.veh_statistics(rl_id),
@@ -255,18 +323,6 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         return np.concatenate((num_vehicles_list, num_rl_vehicles_list,
                                mean_speed_norm, mean_rl_speed, [outflow],
                                [self.inflow]))
-
-    def update_curr_rl_vehicles(self):
-        self.curr_rl_vehicles.update({rl_id: {'time_since_stopped': 0.0,}
-                                              for rl_id in self.k.vehicle.get_rl_ids()
-                                      if rl_id not in self.curr_rl_vehicles.keys()})
-
-        for key in self.curr_rl_vehicles.keys():
-            if key in self.k.vehicle.get_rl_ids():
-                if self.k.vehicle.get_speed(key) <= 0.2:
-                    self.curr_rl_vehicles[key]['time_since_stopped'] += 1.0
-                else:
-                    self.curr_rl_vehicles[key]['time_since_stopped'] = 0.0
 
     def _apply_rl_actions(self, rl_actions):
         """
@@ -539,18 +595,6 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
         self.iter_num = 0
         self.num_imitation_iters = env_params.additional_params.get("num_imitation_iters")
         self.simple_env = env_params.additional_params.get("simple_env")
-
-    def init_decentral_controller(self, rl_id):
-        return FakeDecentralizedALINEAController(rl_id, stop_edge="2", stop_pos=310,
-                                                       additional_env_params=self.env_params.additional_params,
-                                                       car_following_params=SumoCarFollowingParams())
-
-    def update_curr_rl_vehicles(self):
-        self.curr_rl_vehicles.update({rl_id: {'controller': self.init_decentral_controller(rl_id),
-                                              'time_since_stopped': 0.0,
-                                              'is_stopped': False,}
-                                              for rl_id in self.k.vehicle.get_rl_ids()
-                                      if rl_id not in self.curr_rl_vehicles.keys()})
 
     def set_iteration_num(self, iter_num):
         self.iter_num = iter_num

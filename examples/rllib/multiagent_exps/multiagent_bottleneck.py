@@ -156,7 +156,13 @@ def setup_flow_params(args):
         'num_imitation_iters': args.num_imitation_iters,
 
         # parameters from imitation
-        "simple_env": args.simple_env
+        "simple_env": args.simple_env,
+
+        # curriculum stuff
+        "curriculum": args.curriculum,
+        "num_curr_iters": args.num_curr_iters,
+        "min_horizon": args.min_horizon,
+        "horizon": args.horizon
     }
 
     if args.dqfd:
@@ -304,6 +310,13 @@ def on_train_result_dqfd(info):
         lambda ev: ev.foreach_env(
             lambda env: env.update_num_steps(num_steps_sampled, iteration, exp_vals)))
 
+def on_train_result_curriculum(info):
+    trainer = info["trainer"]
+
+    trainer.workers.foreach_worker(
+        lambda ev: ev.foreach_env(
+            lambda env: env.increase_curr_iter()))
+
 
 def setup_exps(args):
     rllib_params = setup_rllib_params(args)
@@ -322,8 +335,11 @@ def setup_exps(args):
     elif args.td3:
         alg_run = 'TD3'
         config = TD3_DEFAULT_CONFIG
-        config["buffer_size"] = 20000 # reduced to test if this is the source of memory problems
+        config["buffer_size"] = 100000 # reduced to test if this is the source of memory problems
         config["sample_batch_size"] = 50
+        if args.local_mode:
+            config["learning_starts"] = 1000
+            config["pure_exploration_steps"] = 1000
         if args.grid_search:
             config["prioritized_replay"] = tune.grid_search(['True', 'False'])
             config["actor_lr"] = tune.grid_search([1e-3, 1e-4])
@@ -395,6 +411,7 @@ def setup_exps(args):
 
     config['gamma'] = 0.99  # discount rate
     config['horizon'] = args.horizon
+    config['no_done_at_end'] = True
     # config["batch_mode"] = "truncate_episodes"
     # config["sample_batch_size"] = args.horizon
     # config["observation_filter"] = "MeanStdFilter"
@@ -469,6 +486,8 @@ if __name__ == '__main__':
         config["callbacks"] = {"on_episode_end": tune.function(on_episode_end),
                                "on_episode_start": tune.function(on_episode_start),
                                "on_episode_step": tune.function(on_episode_step),}
+    if args.curriculum:
+        config["callbacks"].update({"on_train_result": tune.function(on_train_result_curriculum)})
 
     if args.imitate and not args.centralized_vf:
         from flow.agents.ImitationPPO import ImitationTrainer

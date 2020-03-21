@@ -51,6 +51,9 @@ class MultiEnv(MultiAgentEnv, Env):
         """
         self.step_counter += 1
         self.left_av_list = []
+        done = {}
+        states = {}
+        reward = {}
         self.observed_rl_cars.update(self.k.vehicle.get_rl_ids())
         for _ in range(self.env_params.sims_per_step):
             self.time_counter += 1
@@ -121,7 +124,15 @@ class MultiEnv(MultiAgentEnv, Env):
             # render a frame
             self.render()
 
-        states = self.get_state(rl_actions)
+            for rl_id in self.k.vehicle.get_arrived_rl_ids():
+                done[rl_id] = True
+                reward[rl_id] = 0
+                if isinstance(self.observation_space, Dict):
+                    states[rl_id] = self.observation_space.sample()
+                else:
+                    states[rl_id] = np.zeros(self.observation_space.shape[0])
+
+        states.update(self.get_state(rl_actions))
         if crash:
             print(
                 "**********************************************************\n"
@@ -133,32 +144,21 @@ class MultiEnv(MultiAgentEnv, Env):
                 "**********************************************************"
             )
 
-        done = {}
         if (self.time_counter >= self.env_params.sims_per_step *
                 (self.env_params.warmup_steps + self.env_params.horizon)):
             # TODO(@ev) clean this up
-            done['__all__'] = False
+            done['__all__'] = True
         else:
             done['__all__'] = False
         infos = {key: {'id': key} for key in states.keys()}
-        # infos = {
-        #     key: {"outflow": self.k.vehicle.get_outflow_rate(self.env_params.sims_per_step * self.sim_step) / 2000.0}
-        #     for key in self.left_av_time_dict.keys()}
 
         # compute the reward
         if self.env_params.clip_actions:
             clipped_actions = self.clip_actions(rl_actions)
-            reward = self.compute_reward(clipped_actions, fail=crash)
+            reward.update(self.compute_reward(clipped_actions, fail=crash))
         else:
-            reward = self.compute_reward(rl_actions, fail=crash)
+            reward.update(self.compute_reward(rl_actions, fail=crash))
 
-        for rl_id in self.k.vehicle.get_arrived_rl_ids():
-            done[rl_id] = True
-            reward[rl_id] = 0
-            if isinstance(self.observation_space, Dict):
-                states[rl_id] = self.observation_space.sample()
-            else:
-                states[rl_id] = np.zeros(self.observation_space.shape[0])
 
         return states, reward, done, infos
 
