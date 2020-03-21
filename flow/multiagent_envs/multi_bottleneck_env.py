@@ -70,6 +70,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         self.simple_env = env_params.additional_params.get("simple_env")
         self.super_simple_env = env_params.additional_params.get("super_simple_env")
 
+        self.rew_n_crit = env_params.additional_params.get("rew_n_crit")
+
         self.curr_iter = 0
         self.num_curr_iters = env_params.additional_params["num_curr_iters"]
         self.curriculum = env_params.additional_params["curriculum"]
@@ -370,16 +372,21 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         # reward is the mean AV speed
         # reward is the outflow over "num_sample_seconds" seconds
         reward = 0.0
-        if add_params["num_sample_seconds"] > 0.0:
-            reward = self.k.vehicle.get_outflow_rate(
-                add_params["num_sample_seconds"]) / 2000.0
-
-        reward -= np.abs(self.env_params.additional_params["life_penalty"])
-        if add_params["congest_penalty"]:
+        # we get a reward if there are fewer vehicles in the network than rew_n_crit
+        if self.rew_n_crit > 0:
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
-            if num_vehs > 30 * self.scaling:
-                penalty = (num_vehs - 30 * self.scaling) / 10.0
-                reward -= penalty
+            reward += self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)
+        else:
+            if add_params["num_sample_seconds"] > 0.0:
+                reward = self.k.vehicle.get_outflow_rate(
+                    add_params["num_sample_seconds"]) / 2000.0
+
+            reward -= np.abs(self.env_params.additional_params["life_penalty"])
+            if add_params["congest_penalty"]:
+                num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
+                if num_vehs > 30 * self.scaling:
+                    penalty = (num_vehs - 30 * self.scaling) / 10.0
+                    reward -= penalty
 
         rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3']]
         reward_dict = {rl_id: reward for rl_id in rl_ids}

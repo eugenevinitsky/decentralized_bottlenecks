@@ -217,10 +217,10 @@ def postprocess_ppo_gae(policy,
 
     # now scale the rewards by the horizo so the cumulative reward is independent of time in the system
     # TODO(@evinitsky) does this make sense?
-    if policy.terminal_reward and sample_batch['rewards'].shape[0] > 1:
-        sample_batch['rewards'][:-1] = sample_batch['rewards'][:-1] / (sample_batch['rewards'][:-1].shape[0])
-    else:
-        sample_batch['rewards'] = sample_batch['rewards'] / (sample_batch['rewards'].shape[0])
+    # if policy.terminal_reward and sample_batch['rewards'].shape[0] > 1:
+    #     sample_batch['rewards'][:-1] = sample_batch['rewards'][:-1] / (sample_batch['rewards'][:-1].shape[0])
+    # else:
+    #     sample_batch['rewards'] = sample_batch['rewards'] / (sample_batch['rewards'].shape[0])
 
     batch = compute_advantages(
         sample_batch,

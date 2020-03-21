@@ -164,7 +164,8 @@ def setup_flow_params(args):
         "curriculum": args.curriculum,
         "num_curr_iters": args.num_curr_iters,
         "min_horizon": args.min_horizon,
-        "horizon": args.horizon
+        "horizon": args.horizon,
+        "rew_n_crit": args.rew_n_crit
     }
 
     if args.dqfd:
@@ -278,18 +279,20 @@ def setup_flow_params(args):
 def on_episode_start(info):
     episode = info["episode"]
     episode.user_data["outflow"] = []
+    episode.user_data["n_crit"] = []
 
 
 def on_episode_end(info):
     env = info['env'].get_unwrapped()[0]
     total_time_step = env.env_params.horizon * env.sim_step * env.env_params.sims_per_step
     time_step = 250
+    episode = info["episode"]
+    episode.custom_metrics["num_congested"] = np.mean(episode.user_data["n_crit"])
     for i in range(int(ceil(total_time_step / time_step))):
         total_outflow = env.k.vehicle.get_outflow_rate_between_times((i) * time_step, (i+1) * time_step)
         inflow = env.inflow
         # round it to 100
         inflow = int(inflow / 100) * 100
-        episode = info["episode"]
         episode.custom_metrics["net_outflow_{}_time0_{}_time1_{}".format(inflow, time_step * (i), time_step * (i+1))] = total_outflow
 
 
@@ -298,6 +301,7 @@ def on_episode_step(info):
     env = info['env'].get_unwrapped()[0]
     outflow = env.k.vehicle.get_outflow_rate(int(env.sim_step * env.env_params.sims_per_step))
     episode.user_data["outflow"].append(outflow)
+    episode.user_data["n_crit"].append(len(env.k.vehicle.get_ids_by_edge('4')))
 
 
 def on_train_result(info):
@@ -343,7 +347,7 @@ def setup_exps(args):
     elif args.td3:
         alg_run = 'TD3'
         config = deepcopy(TD3_DEFAULT_CONFIG)
-        config["buffer_size"] = 100000 # reduced to test if this is the source of memory problems
+        config["buffer_size"] = 100000
         config["sample_batch_size"] = 50
         if args.local_mode:
             config["learning_starts"] = 1000

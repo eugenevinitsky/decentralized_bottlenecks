@@ -77,6 +77,8 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument('--terminal_reward', action='store_true', default=False)
     parser.add_argument('--post_exit_rew_len', type=int, default=200, help='This is how much of the future outflow '
                                                                            'is given to the agent as a terminal reward')
+    parser.add_argument('--rew_n_crit', type=int, default=0, help='If set to a value above zero, we get rewarded if fewer than '
+                                                              'n_crit AVs in the bottleneck, and penalized if above')
 
     # dqfd arguments
     parser.add_argument('--dqfd', action='store_true', default=False,
