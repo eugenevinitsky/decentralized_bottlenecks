@@ -3,6 +3,7 @@ In this example, each agent is given a single acceleration per timestep.
 
 The agents all share a single model.
 """
+from copy import deepcopy
 from datetime import datetime
 import errno
 import json
@@ -341,7 +342,7 @@ def setup_exps(args):
             config['reserved_frac'] = tune.grid_search([0.1, 0.3])
     elif args.td3:
         alg_run = 'TD3'
-        config = TD3_DEFAULT_CONFIG
+        config = deepcopy(TD3_DEFAULT_CONFIG)
         config["buffer_size"] = 100000 # reduced to test if this is the source of memory problems
         config["sample_batch_size"] = 50
         if args.local_mode:
