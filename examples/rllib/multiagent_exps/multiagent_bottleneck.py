@@ -157,6 +157,7 @@ def setup_flow_params(args):
 
         # parameters from imitation
         "simple_env": args.simple_env,
+        "super_simple_env": args.super_simple_env,
 
         # curriculum stuff
         "curriculum": args.curriculum,
@@ -209,6 +210,12 @@ def setup_flow_params(args):
         env_name = 'MultiBottleneckDFQDEnv'
     else:
         env_name = 'MultiBottleneckEnv'
+
+    # if args.super_simple_env:
+    #     scenario = 'SimpleBottleneckScenario'
+    # else:
+    scenario='BottleneckScenario'
+
     flow_params = dict(
         # name of the experiment
         exp_tag=args.exp_title,
@@ -217,7 +224,7 @@ def setup_flow_params(args):
         env_name=env_name,
 
         # name of the scenario class the experiment is running on
-        scenario='BottleneckScenario',
+        scenario=scenario,
 
         # simulator that is used by the experiment
         simulator='traci',

@@ -67,6 +67,8 @@ def get_multiagent_bottleneck_parser():
                         help='The percentage of top scores to imitate on. .10 will imitate on the top 10%')
     parser.add_argument('--simple_env', action='store_true', default=False,
                         help='If true, the imitation env mimics the observations available to the imitated controllers')
+    parser.add_argument('--super_simple_env', action='store_true', default=False,
+                        help='If true, the imitation env mimics the observations available to the imitated controllers')
     parser.add_argument('--centralized_vf', action='store_true', default=False,
                         help='If true, use a centralized value function')
     parser.add_argument('--central_vf_size', type=int, default=64, help='The number of hidden units in '

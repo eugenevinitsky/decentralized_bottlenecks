@@ -68,6 +68,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
     def __init__(self, env_params, sim_params, scenario, simulator='traci'):
         super().__init__(env_params, sim_params, scenario, simulator)
         self.simple_env = env_params.additional_params.get("simple_env")
+        self.super_simple_env = env_params.additional_params.get("super_simple_env")
+
         self.curr_iter = 0
         self.num_curr_iters = env_params.additional_params["num_curr_iters"]
         self.curriculum = env_params.additional_params["curriculum"]
@@ -105,9 +107,10 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                            self.k.scenario.num_lanes(segment[0])
             num_obs += 7
         elif self.simple_env:
-            if self.simple_env:
-                # abs_position duration, time since stopped, number of vehicles in the bottleneck, speed, lead speed, headway
-                num_obs = 7
+            # abs_position duration, time since stopped, number of vehicles in the bottleneck, speed, lead speed, headway
+            num_obs = 7
+        elif self.super_simple_env:
+            num_obs = 3
         else:
             if self.env_params.additional_params['communicate']:
                 # eight possible signals if above
@@ -177,10 +180,6 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 else:
                     self.curr_rl_vehicles[rl_id]['time_since_stopped'] = 0.0
 
-                accel = controller.get_accel(self)
-
-                if accel is None:
-                    accel = -np.abs(self.action_space.low[0])
                 duration = controller.duration
                 abs_position = self.k.vehicle.get_position(rl_id)
                 # if rl_actions and rl_id in rl_actions.keys():
@@ -200,6 +199,24 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                                                         speed / 50.0,
                                                         lead_speed / 50.0,
                                                         headway / 1000.0])
+        elif self.super_simple_env:
+            self.update_curr_rl_vehicles()
+            veh_info = {}
+            rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if
+                      self.k.vehicle.get_edge(veh_id) in ['2', '3']]
+            congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
+            for rl_id in rl_ids:
+                abs_position = self.k.vehicle.get_position(rl_id)
+
+                if self.k.vehicle.get_speed(rl_id) <= 0.2:
+                    self.curr_rl_vehicles[rl_id]['time_since_stopped'] += 1.0
+                else:
+                    self.curr_rl_vehicles[rl_id]['time_since_stopped'] = 0.0
+                veh_info[rl_id] = np.array([abs_position / 1000.0,
+                                            self.curr_rl_vehicles[rl_id][
+                                                'time_since_stopped'] / self.env_params.horizon,
+                                            congest_number,
+                                            ])
         else:
             if self.env_params.additional_params.get('communicate', False):
                 veh_info = {rl_id: np.concatenate((self.veh_statistics(rl_id),

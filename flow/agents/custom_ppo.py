@@ -165,7 +165,8 @@ def kl_and_loss_stats(policy, train_batch):
         "kl": policy.loss_obj.mean_kl,
         "entropy": policy.loss_obj.mean_entropy,
         "entropy_coeff": tf.cast(policy.entropy_coeff, tf.float64),
-        "advantages": train_batch[Postprocessing.ADVANTAGES]
+        "advantages": train_batch[Postprocessing.ADVANTAGES],
+        "rewards": train_batch["rewards"]
     }
 
 
@@ -186,7 +187,7 @@ def postprocess_ppo_gae(policy,
     net_outflow = 0.0
     if episode is not None:
         post_exit_rew_len = policy.post_exit_rew_len
-        outflow = np.array(episode.user_data['outflow']) / 2000.0
+        outflow = np.array(episode.user_data['outflow'])
         final_time = sample_batch['t'][-1]
         if final_time + post_exit_rew_len >= outflow.shape[0]:
             if final_time > 0:
