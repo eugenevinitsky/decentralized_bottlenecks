@@ -164,7 +164,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         # vehicles for all of the avs
         self.update_curr_rl_vehicles()
         add_params = self.env_params.additional_params
-        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3']]
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4']]
 
         if add_params['centralized_obs']:
             state = self.get_centralized_state()
@@ -173,7 +173,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             self.update_curr_rl_vehicles()
             veh_info = {}
             rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if
-                      self.k.vehicle.get_edge(veh_id) in ['2', '3']]
+                      self.k.vehicle.get_edge(veh_id) in ['2', '3', '4']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
             for rl_id in rl_ids:
                 controller = self.curr_rl_vehicles[rl_id]['controller']
@@ -205,7 +205,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             self.update_curr_rl_vehicles()
             veh_info = {}
             rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if
-                      self.k.vehicle.get_edge(veh_id) in ['2', '3']]
+                      self.k.vehicle.get_edge(veh_id) in ['2', '3', '4']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
             for rl_id in rl_ids:
                 abs_position = self.k.vehicle.get_position(rl_id)
@@ -388,7 +388,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     penalty = (num_vehs - 30 * self.scaling) / 10.0
                     reward -= penalty
 
-        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3']]
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4']]
         reward_dict = {rl_id: reward for rl_id in rl_ids}
         if add_params["speed_reward"]:
             reward_dict = {rl_id: reward + (self.k.vehicle.get_speed(rl_id) / 10) for rl_id, reward in reward_dict.items()}
@@ -649,7 +649,7 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
         self.update_curr_rl_vehicles()
         if self.simple_env:
             state_dict = {}
-            rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3']]
+            rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
             for rl_id in rl_ids:
                 controller = self.curr_rl_vehicles[rl_id]['controller']
