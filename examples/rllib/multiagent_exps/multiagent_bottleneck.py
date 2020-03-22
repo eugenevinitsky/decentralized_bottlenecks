@@ -359,6 +359,7 @@ def setup_exps(args):
             config["prioritized_replay"] = tune.grid_search(['True', 'False'])
             config["actor_lr"] = tune.grid_search([1e-3, 1e-4])
             config["critic_lr"] = tune.grid_search([1e-3, 1e-4])
+            config["n_step"] = tune.grid_search([1, 5])
     else:
         alg_run = 'PPO'
         config = ppo.DEFAULT_CONFIG.copy()
