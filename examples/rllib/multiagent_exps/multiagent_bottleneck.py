@@ -348,7 +348,7 @@ def setup_exps(args):
         alg_run = 'TD3'
         config = deepcopy(TD3_DEFAULT_CONFIG)
         config["buffer_size"] = 100000
-        config["sample_batch_size"] = 50
+        config["sample_batch_size"] = 5
         if args.local_mode:
             config["learning_starts"] = 1000
             config["pure_exploration_steps"] = 1000
@@ -486,6 +486,11 @@ if __name__ == '__main__':
                 + date + '/' + args.exp_title
     config['env'] = env_name
 
+
+    # create a custom string that makes looking at the experiment names easier
+    def trial_str_creator(trial):
+        return "{}_{}".format(trial.trainable_name, trial.experiment_tag)
+
     # store custom metrics
     if args.imitate:
         config["callbacks"] = {"on_episode_end": tune.function(on_episode_end),
@@ -533,6 +538,7 @@ if __name__ == '__main__':
             'stop': {
                 'training_iteration': args.num_iters
             },
+            'trial_name_creator': trial_str_creator,
             'config': config,
             'num_samples': args.num_samples,
         }
