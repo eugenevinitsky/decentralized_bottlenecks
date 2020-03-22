@@ -164,7 +164,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         # vehicles for all of the avs
         self.update_curr_rl_vehicles()
         add_params = self.env_params.additional_params
-        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4']]
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
 
         if add_params['centralized_obs']:
             state = self.get_centralized_state()
@@ -173,7 +173,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             self.update_curr_rl_vehicles()
             veh_info = {}
             rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if
-                      self.k.vehicle.get_edge(veh_id) in ['2', '3', '4']]
+                      self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
             for rl_id in rl_ids:
                 controller = self.curr_rl_vehicles[rl_id]['controller']
@@ -205,7 +205,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             self.update_curr_rl_vehicles()
             veh_info = {}
             rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if
-                      self.k.vehicle.get_edge(veh_id) in ['2', '3', '4']]
+                      self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
             for rl_id in rl_ids:
                 abs_position = self.k.vehicle.get_position(rl_id)
@@ -349,13 +349,17 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         Per-vehicle accelerations
         """
         if rl_actions:
-            rl_ids = list(rl_actions.keys())
-            actions = list(rl_actions.values())
-            if self.env_params.additional_params.get('communicate', False):
-                accel = np.concatenate([action[0] for action in actions])
-            else:
-                accel = [val * 8.0 for val in actions]
-            self.k.vehicle.apply_acceleration(rl_ids, accel)
+            accel_list = []
+            rl_ids = []
+            for rl_id, action in rl_actions.items():
+                if self.env_params.additional_params.get('communicate', False):
+                    accel = np.concatenate([action[0] for action in action])
+                else:
+                    accel = [val * 8.0 for val in action]
+                if self.k.vehicle.get_edge(rl_id) in ['2', '3']:
+                    accel_list.extend(accel)
+                    rl_ids.append(rl_id)
+            self.k.vehicle.apply_acceleration(rl_ids, accel_list)
 
     def compute_reward(self, rl_actions, **kwargs):
         """Outflow rate over last ten seconds normalized to max of 1."""
@@ -375,7 +379,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         # we get a reward if there are fewer vehicles in the network than rew_n_crit
         if self.rew_n_crit > 0:
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
-            reward += self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)
+            reward += (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 100
         else:
             if add_params["num_sample_seconds"] > 0.0:
                 reward = self.k.vehicle.get_outflow_rate(
@@ -388,7 +392,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     penalty = (num_vehs - 30 * self.scaling) / 10.0
                     reward -= penalty
 
-        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4']]
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
         reward_dict = {rl_id: reward for rl_id in rl_ids}
         if add_params["speed_reward"]:
             reward_dict = {rl_id: reward + (self.k.vehicle.get_speed(rl_id) / 10) for rl_id, reward in reward_dict.items()}
@@ -649,7 +653,7 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
         self.update_curr_rl_vehicles()
         if self.simple_env:
             state_dict = {}
-            rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4']]
+            rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
             for rl_id in rl_ids:
                 controller = self.curr_rl_vehicles[rl_id]['controller']
