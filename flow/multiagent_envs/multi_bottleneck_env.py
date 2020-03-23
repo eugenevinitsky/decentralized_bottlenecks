@@ -381,9 +381,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
             reward += (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 100
         else:
-            if add_params["num_sample_seconds"] > 0.0:
-                reward = self.k.vehicle.get_outflow_rate(
-                    add_params["num_sample_seconds"]) / 2000.0
+            reward = len(self.k.vehicle.get_ids_by_edge('5')) / 100.0
 
             reward -= np.abs(self.env_params.additional_params["life_penalty"])
             if add_params["congest_penalty"]:
