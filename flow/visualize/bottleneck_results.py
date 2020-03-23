@@ -84,6 +84,9 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
     elif config_run == "ppo_custom":
         from flow.agents.custom_ppo import CustomPPOTrainer
         agent_cls = CustomPPOTrainer
+    elif config_run == 'TD3':
+        from ray.rllib.agents.ddpg.td3 import TD3Trainer
+        agent_cls = TD3Trainer
     else:
         agent_cls = get_agent_class(config_run)
 
@@ -265,6 +268,7 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
 
         vehicles = env.unwrapped.k.vehicle
         outflow = vehicles.get_outflow_rate(500)
+        print('Outflow was ', outflow)
         final_outflows.append(outflow)
         inflow = vehicles.get_inflow_rate(500)
         final_inflows.append(inflow)
@@ -355,10 +359,13 @@ def run_bottleneck_results(outflow_min, outflow_max, step_size, num_trials, outp
         os.makedirs(os.path.join(output_path, 'figures'))
     outflow_name = 'bottleneck_outflow_{}.txt'.format(filename)
     speed_name = 'speed_outflow_{}.txt'.format(filename)
+    rewards_name = 'rewards_{}.txt'.format(filename)
     with open(os.path.join(output_path, outflow_name), 'ab') as file:
         np.savetxt(file, outflow_arr, delimiter=', ')
     with open(os.path.join(output_path, speed_name), 'ab') as file:
         np.savetxt(file, velocity_arr, delimiter=', ')
+    with open(os.path.join(output_path, rewards_name), 'ab') as file:
+        np.savetxt(file, final_rewards, delimiter=', ')
 
     # Plot the inflow results
     # open the file and pull from there

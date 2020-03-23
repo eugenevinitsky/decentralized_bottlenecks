@@ -280,6 +280,8 @@ def on_episode_start(info):
     episode = info["episode"]
     episode.user_data["outflow"] = []
     episode.user_data["n_crit"] = []
+    episode.user_data["n_veh_edge4_l0"] = []
+    episode.user_data["n_veh_edge4_l1"] = []
 
 
 def on_episode_end(info):
@@ -288,6 +290,9 @@ def on_episode_end(info):
     time_step = 250
     episode = info["episode"]
     episode.custom_metrics["num_congested"] = np.mean(episode.user_data["n_crit"])
+    episode.custom_metrics["n_veh_edge4_l0"] = np.mean(episode.user_data["n_veh_edge4_l0"])
+    episode.custom_metrics["n_veh_edge4_l1"] = np.mean(episode.user_data["n_veh_edge4_l1"])
+
     for i in range(int(ceil(total_time_step / time_step))):
         total_outflow = env.k.vehicle.get_outflow_rate_between_times((i) * time_step, (i+1) * time_step)
         inflow = env.inflow
@@ -301,7 +306,12 @@ def on_episode_step(info):
     env = info['env'].get_unwrapped()[0]
     outflow = env.k.vehicle.get_outflow_rate(int(env.sim_step * env.env_params.sims_per_step))
     episode.user_data["outflow"].append(outflow)
-    episode.user_data["n_crit"].append(len(env.k.vehicle.get_ids_by_edge('4')))
+    edge_4_veh = env.k.vehicle.get_ids_by_edge('4')
+    episode.user_data["n_crit"].append(len(edge_4_veh))
+    l0 = np.sum(["0" == env.k.vehicle.get_edge(veh_id) for veh_id in edge_4_veh])
+    episode.user_data["n_veh_edge4_l0"].append(l0)
+    l1 = np.sum(["1" == env.k.vehicle.get_edge(veh_id) for veh_id in edge_4_veh])
+    episode.user_data["n_veh_edge4_l1"].append(l1)
 
 
 def on_train_result(info):
@@ -525,7 +535,7 @@ if __name__ == '__main__':
         run_name = "dqfd"
     elif args.td3:
         alg_run = TD3Trainer
-        run_name = "td3"
+        run_name = "TD3"
     else:
         alg_run = CustomPPOTrainer
         run_name = "ppo_custom"
@@ -570,12 +580,11 @@ if __name__ == '__main__':
                 else:
                     ray.init()
 
-                run_bottleneck_results(400, 3500, 100, args.num_test_trials, output_path, args.exp_title, checkpoint_path,
+                run_bottleneck_results(400, 3600, 100, args.num_test_trials, output_path, args.exp_title, checkpoint_path,
                                        gen_emission=False, render_mode='no_render', checkpoint_num=dirpath.split('_')[-1],
                                        horizon=max(args.horizon, int(1000 / (args.sims_per_step * args.sim_step))), end_len=500)
 
                 if args.use_s3:
-                    # visualize_adversaries(config, checkpoint_path, 10, 100, output_path)
                     for i in range(4):
                         try:
                             p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
