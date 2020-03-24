@@ -84,7 +84,7 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
     elif config_run == "ppo_custom":
         from flow.agents.custom_ppo import CustomPPOTrainer
         agent_cls = CustomPPOTrainer
-    elif config_run == 'TD3':
+    elif config_run == 'TD3' or config_run=='td3':
         from ray.rllib.agents.ddpg.td3 import TD3Trainer
         agent_cls = TD3Trainer
     else:

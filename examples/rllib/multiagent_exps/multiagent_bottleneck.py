@@ -308,9 +308,9 @@ def on_episode_step(info):
     episode.user_data["outflow"].append(outflow)
     edge_4_veh = env.k.vehicle.get_ids_by_edge('4')
     episode.user_data["n_crit"].append(len(edge_4_veh))
-    l0 = np.sum(["0" == env.k.vehicle.get_edge(veh_id) for veh_id in edge_4_veh])
+    l0 = np.sum([0 == env.k.vehicle.get_lane(veh_id) for veh_id in edge_4_veh])
     episode.user_data["n_veh_edge4_l0"].append(l0)
-    l1 = np.sum(["1" == env.k.vehicle.get_edge(veh_id) for veh_id in edge_4_veh])
+    l1 = np.sum([1 == env.k.vehicle.get_lane(veh_id) for veh_id in edge_4_veh])
     episode.user_data["n_veh_edge4_l1"].append(l1)
 
 
@@ -588,10 +588,10 @@ if __name__ == '__main__':
                     for i in range(4):
                         try:
                             p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                             "s3://eugene.experiments/trb_bottleneck_paper/graphs/{}/{}/{}".format(date,
+                                                                             "s3://eugene.experiments/trb_bottleneck_paper/final_graphs/{}/{}/{}".format(date,
                                                                                                                               args.exp_title,
                                                                                                                               tune_name)).split(
                                 ' '))
-                            p1.wait(50)
+                            p1.wait(5000)
                         except Exception as e:
                             print('This is the error ', e)
