@@ -1515,21 +1515,21 @@ ray exec ray_autoscale.yaml \
 --start --stop --cluster-name ev_0pen1 --tmux
 
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l800_h3000_td3senv_ncrit12_av0p2 --num_iters 300 --checkpoint_freq 50 --av_frac 0.2 \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l800_h3000_td3senv_ncrit12_av0p2_curr --num_iters 300 --checkpoint_freq 50 --av_frac 0.2 \
 --num_samples 1 --horizon 2000 --low_inflow 800 --high_inflow 3000 --simple_env \
 --sim_step 0.5 --create_inflow_graph --sims_per_step 1 --rew_n_crit 12 \
 --td3 --grid_search --use_s3 --curriculum --num_curr_iters 100" \
 --start --stop --cluster-name ev_0pen_2 --tmux
 
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l800_h3000_td3senv_ncrit12_av0p4 --num_iters 300 --checkpoint_freq 50 --av_frac 0.4 \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l800_h3000_td3senv_ncrit12_av0p4_curr --num_iters 300 --checkpoint_freq 50 --av_frac 0.4 \
 --num_samples 1 --horizon 2000 --low_inflow 800 --high_inflow 3000 --simple_env \
 --sim_step 0.5 --create_inflow_graph --sims_per_step 1 --rew_n_crit 12 \
 --td3 --grid_search --use_s3 --num_curr_iters 100" \
 --start --stop --cluster-name ev_0pen_3 --tmux
 
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l800_h3000_td3senv_ncrit12_av1p0 --num_iters 500 --checkpoint_freq 50 --av_frac 1.0 \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l800_h3000_td3senv_ncrit12_av1p0_curr --num_iters 500 --checkpoint_freq 50 --av_frac 1.0 \
 --num_samples 1 --horizon 2000 --low_inflow 800 --high_inflow 3000 --simple_env \
 --sim_step 0.5 --create_inflow_graph --sims_per_step 1 --rew_n_crit 12 \
 --td3 --grid_search --use_s3 --num_curr_iters 100" \
