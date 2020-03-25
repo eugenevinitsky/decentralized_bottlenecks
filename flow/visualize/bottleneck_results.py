@@ -87,6 +87,9 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
     elif config_run == 'TD3' or config_run=='td3':
         from ray.rllib.agents.ddpg.td3 import TD3Trainer
         agent_cls = TD3Trainer
+    elif config_run == 'QMIX':
+        from flow.agents.q_mix import QMixTrainer
+        agent_cls = QMixTrainer
     else:
         agent_cls = get_agent_class(config_run)
 

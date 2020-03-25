@@ -12,11 +12,14 @@ import os
 import subprocess
 import sys
 
+from gym.spaces import Tuple
 import numpy as np
 import pytz
 import ray
 import ray.rllib.agents.ppo as ppo
 from ray.rllib.agents.ddpg.td3 import TD3_DEFAULT_CONFIG, TD3Trainer
+from ray.rllib.agents.qmix import DEFAULT_CONFIG as QMIX_DEFAULT_CONFIG
+
 from ray import tune
 from ray.rllib.models import ModelCatalog
 from ray.tune import run
@@ -28,6 +31,7 @@ from flow.agents.centralized_PPO import CCTrainer
 from flow.agents.centralized_imitation_PPO import ImitationCentralizedTrainer
 from flow.agents.DQfD import DQFDTrainer
 import flow.agents.DQfD as DQfD
+from flow.agents.q_mix import QMixTrainer
 
 from flow.core.params import SumoParams, EnvParams, InitialConfig, NetParams, \
     InFlows, SumoLaneChangeParams, SumoCarFollowingParams
@@ -35,6 +39,7 @@ from flow.core.params import TrafficLightParams
 from flow.core.params import VehicleParams
 from flow.controllers import RLController, ContinuousRouter, \
     SimLaneChangeController
+from flow.multiagent_envs import MultiBottleneckEnv
 from flow.models.GRU import GRU
 from flow.visualize.bottleneck_results import run_bottleneck_results
 from flow.utils.parsers import get_multiagent_bottleneck_parser
@@ -165,7 +170,12 @@ def setup_flow_params(args):
         "num_curr_iters": args.num_curr_iters,
         "min_horizon": args.min_horizon,
         "horizon": args.horizon,
-        "rew_n_crit": args.rew_n_crit
+        "rew_n_crit": args.rew_n_crit,
+
+        # qmix stuff
+        "action_discretization": 5,
+        "qmix": args.qmix,
+        "num_qmix_agents": args.max_num_agents_qmix
     }
 
     if args.dqfd:
@@ -286,6 +296,8 @@ def on_episode_start(info):
 
 def on_episode_end(info):
     env = info['env'].get_unwrapped()[0]
+    if not isinstance(env, MultiBottleneckEnv):
+        env = env.env
     total_time_step = env.env_params.horizon * env.sim_step * env.env_params.sims_per_step
     time_step = 250
     episode = info["episode"]
@@ -304,6 +316,8 @@ def on_episode_end(info):
 def on_episode_step(info):
     episode = info["episode"]
     env = info['env'].get_unwrapped()[0]
+    if not isinstance(env, MultiBottleneckEnv):
+        env = env.env
     outflow = env.k.vehicle.get_outflow_rate(int(env.sim_step * env.env_params.sims_per_step))
     episode.user_data["outflow"].append(outflow)
     edge_4_veh = env.k.vehicle.get_ids_by_edge('4')
@@ -370,6 +384,9 @@ def setup_exps(args):
             config["actor_lr"] = tune.grid_search([1e-3, 1e-4])
             config["critic_lr"] = tune.grid_search([1e-3, 1e-4])
             config["n_step"] = tune.grid_search([1, 5])
+    elif args.qmix:
+        alg_run = 'QMIX'
+        config =  QMIX_DEFAULT_CONFIG
     else:
         alg_run = 'PPO'
         config = ppo.DEFAULT_CONFIG.copy()
@@ -441,9 +458,9 @@ def setup_exps(args):
     # config["batch_mode"] = "truncate_episodes"
     # config["sample_batch_size"] = args.horizon
     # config["observation_filter"] = "MeanStdFilter"
-    config['model']['custom_options']['terminal_reward'] = args.terminal_reward
-    config['model']['custom_options']['post_exit_rew_len'] = args.post_exit_rew_len
-    config['model']['custom_options']['horizon'] = args.horizon
+    # config['model']['custom_options']['terminal_reward'] = args.terminal_reward
+    # config['model']['custom_options']['post_exit_rew_len'] = args.post_exit_rew_len
+    # config['model']['custom_options']['horizon'] = args.horizon
 
     # save the flow params for replay
     flow_json = json.dumps(
@@ -459,23 +476,30 @@ def setup_exps(args):
     obs_space = test_env.observation_space
     act_space = test_env.action_space
 
-    # Setup PG with an ensemble of `num_policies` different policy graphs
-    if alg_run == 'PPO':
-        policy_graphs = {'av': (CustomPPOTFPolicy, obs_space, act_space, {})}
-
+    if args.qmix:
+        config['env_config']['max_num_agents'] = args.max_num_agents_qmix
+        grouping = {"AVs": list(np.arange(args.max_num_agents_qmix))}
+        obs_space = Tuple([obs_space] * args.max_num_agents_qmix)
+        act_space = Tuple([act_space] * args.max_num_agents_qmix)
+        register_env(env_name, lambda config: create_env(config).with_agent_groups(
+            grouping, obs_space=obs_space, act_space=act_space))
     else:
-        policy_graphs = {'av': (None, obs_space, act_space, {})}
+        # Setup PG with an ensemble of `num_policies` different policy graphs
+        if alg_run == 'PPO':
+            policy_graphs = {'av': (CustomPPOTFPolicy, obs_space, act_space, {})}
+        else:
+            policy_graphs = {'av': (None, obs_space, act_space, {})}
 
-    def policy_mapping_fn(_):
-        return 'av'
+        def policy_mapping_fn(_):
+            return 'av'
 
-    config.update({
-        'multiagent': {
-            'policies': policy_graphs,
-            'policy_mapping_fn': tune.function(policy_mapping_fn),
-            "policies_to_train": ["av"]
-        }
-    })
+        config.update({
+            'multiagent': {
+                'policies': policy_graphs,
+                'policy_mapping_fn': tune.function(policy_mapping_fn),
+                "policies_to_train": ["av"]
+            }
+        })
     return alg_run, env_name, config
 
 
@@ -536,6 +560,9 @@ if __name__ == '__main__':
     elif args.td3:
         alg_run = TD3Trainer
         run_name = "TD3"
+    elif args.qmix:
+        alg_run = QMixTrainer
+        run_name = "QMIX"
     else:
         alg_run = CustomPPOTrainer
         run_name = "ppo_custom"
