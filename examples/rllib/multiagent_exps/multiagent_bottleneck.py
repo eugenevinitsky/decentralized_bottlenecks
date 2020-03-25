@@ -386,7 +386,12 @@ def setup_exps(args):
             config["n_step"] = tune.grid_search([1, 5])
     elif args.qmix:
         alg_run = 'QMIX'
-        config =  QMIX_DEFAULT_CONFIG
+        config = deepcopy(QMIX_DEFAULT_CONFIG)
+        if args.grid_search:
+            config["buffer_size"] = tune.grid_search([50000, 250000])
+            config["lr"] = tune.grid_search([5e-3, 5e-4])
+            config["exploration_fraction"] = tune.grid_search([0.1, 0.3])
+
     else:
         alg_run = 'PPO'
         config = ppo.DEFAULT_CONFIG.copy()

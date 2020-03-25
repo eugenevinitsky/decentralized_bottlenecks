@@ -386,6 +386,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 if self.env_params.additional_params.get('communicate', False):
                     accel = np.concatenate([action[0] for action in action])
                 elif self.qmix:
+                    # TODO(@evinitsky) look into this, is the mapping consistent?
                     accel = self.action_values[action]
                     curr_index = rl_id
                     if curr_index >= len(rl_id_list):
