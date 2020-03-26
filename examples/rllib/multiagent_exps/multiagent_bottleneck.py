@@ -175,7 +175,10 @@ def setup_flow_params(args):
         # qmix stuff
         "action_discretization": 5,
         "qmix": args.qmix,
-        "num_qmix_agents": args.max_num_agents_qmix
+        "num_qmix_agents": args.max_num_agents_qmix,
+
+        # keep giving reward after termination
+        "reward_after_exit": args.reward_after_exit
     }
 
     if args.dqfd:

@@ -4,8 +4,8 @@ This environment was used in:
 TODO(ak): add paper after it has been published.
 """
 
-from collections import defaultdict
-from copy import deepcopy, copy
+from collections import defaultdict, OrderedDict
+from copy import deepcopy
 
 from gym.spaces.box import Box
 from gym.spaces.dict_space import Dict
@@ -50,6 +50,8 @@ ADDITIONAL_RL_ENV_PARAMS = {
     "speed_reward": False,
     # use qmix
     "qmix": False,
+    # if this is true, agents continue to accrue reward even after they have exited
+    "reward_after_exit": True
 }
 
 
@@ -92,6 +94,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
         self.qmix = self.env_params.additional_params['qmix']
         self.num_qmix_agents = self.env_params.additional_params['num_qmix_agents']
+        self.reward_after_exit = self.env_params.additional_params["reward_after_exit"]
+
 
     def increase_curr_iter(self):
         self.curr_iter += 1
@@ -303,6 +307,22 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                                          "valid_agent": 1} for rl_id_idx, rl_id in
                              enumerate(rl_ids)})
             veh_info = veh_info_copy
+            self.rl_id_to_idx_map = {rl_id: i for i, rl_id in enumerate(rl_ids)}
+            self.idx_to_rl_id_map = {i: rl_id for i, rl_id in enumerate(rl_ids)}
+
+        # TODO(@evinitsky) this is totally broken. rl_id is not the ID.
+        # if self.reward_after_exit:
+        #     for rl_id in self.left_av_list:
+        #         if isinstance(self.observation_space, Dict):
+        #             update_dict = OrderedDict()
+        #             for k, space in self.observation_space.spaces.items():
+        #                 if isinstance(space, Box):
+        #                     update_dict[k] = np.zeros(space.shape[0])
+        #                 elif isinstance(space, Discrete):
+        #                     update_dict[k] = 0
+        #             veh_info[rl_id] = update_dict
+        #         else:
+        #             veh_info.update({rl_id: np.zeros(self.observation_space.shape[0])})
 
         return veh_info
 
@@ -386,12 +406,11 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 if self.env_params.additional_params.get('communicate', False):
                     accel = np.concatenate([action[0] for action in action])
                 elif self.qmix:
-                    # TODO(@evinitsky) look into this, is the mapping consistent?
                     accel = self.action_values[action]
                     curr_index = rl_id
-                    if curr_index >= len(rl_id_list):
+                    if curr_index >= len(self.idx_to_rl_id_map):
                         break
-                    rl_id = rl_id_list[rl_id]
+                    rl_id = self.idx_to_rl_id_map[rl_id]
                 else:
                     # rescale the actions so that they're more likely to brake or accelerate
                     accel = [val * 8.0 for val in action]
@@ -419,10 +438,33 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         # reward is the mean AV speed
         # reward is the outflow over "num_sample_seconds" seconds
         reward = 0.0
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
         # we get a reward if there are fewer vehicles in the network than rew_n_crit
         if self.rew_n_crit > 0:
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
-            reward += (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 100
+            reward += (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 500
+            reward_dict = {rl_id: reward for rl_id in rl_ids}
+        elif add_params["speed_reward"]:
+            reward_dict = {}
+            for rl_id in rl_ids:
+                veh_ids = self.k.vehicle.get_ids_by_edge(self.k.vehicle.get_edge(rl_id))
+                lanes = self.k.vehicle.get_lane(veh_ids)
+                edge_poses = self.k.vehicle.get_position(veh_ids)
+                rl_lane = self.k.vehicle.get_lane(rl_id)
+                rl_edge_pos = self.k.vehicle.get_position(rl_id)
+                # we only reward the speed for vehicles causally downstream of the AV
+                veh_ids = [veh_id for veh_id, lane, edge_pos in zip(veh_ids, lanes, edge_poses)
+                           if (lane == rl_lane and edge_pos < rl_edge_pos)]
+                if len(veh_ids) > 0:
+                    avg_speed = np.mean(self.k.vehicle.get_speed(veh_ids))
+                else:
+                    avg_speed = 0
+                reward_dict[rl_id] = avg_speed / 100.0
+            if add_params["congest_penalty"]:
+                num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
+                if num_vehs > 30 * self.scaling:
+                    penalty = (num_vehs - 30 * self.scaling) / 100.0
+                    reward_dict = {rl_id: reward - penalty for rl_id, reward in reward_dict.items()}
         else:
             reward = len(self.k.vehicle.get_ids_by_edge('5')) / 100.0
 
@@ -433,7 +475,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     penalty = (num_vehs - 30 * self.scaling) / 10.0
                     reward -= penalty
 
-        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
+            reward_dict = {rl_id: reward for rl_id in rl_ids}
 
         # # Return the outflow since the vehicle left
         # if int(self.time_counter/self.env_params.sims_per_step) == self.env_params.horizon:
@@ -442,13 +484,11 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         #                           for veh_id, exit_time in self.left_av_time_dict.items()}
         #     reward_dict.update(left_vehicles_dict)
         if self.qmix:
-            reward_dict = {rl_idx: reward if rl_idx < len(rl_ids) else 0 for rl_idx in
+            temp_reward_dict = {idx: 0 for idx in
                            range(self.num_qmix_agents)}
-        else:
-            reward_dict = {rl_id: reward for rl_id in rl_ids}
-            if add_params["speed_reward"]:
-                reward_dict = {rl_id: reward + (self.k.vehicle.get_speed(rl_id) / 10) for rl_id, reward in
-                               reward_dict.items()}
+            temp_reward_dict.update({self.rl_id_to_idx_map[rl_id]: reward_dict[rl_id] for rl_id in rl_ids})
+            reward_dict = temp_reward_dict
+
         return reward_dict
 
     def reset(self, new_inflow_rate=None):

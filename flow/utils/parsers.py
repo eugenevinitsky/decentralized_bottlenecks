@@ -74,7 +74,7 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument('--central_vf_size', type=int, default=64, help='The number of hidden units in '
                                                                         'the value function')
     parser.add_argument('--max_num_agents', type=int, default=120, help='The maximum number of agents we could ever have')
-    parser.add_argument('--terminal_reward', action='store_true', default=False)
+    parser.add_argument('--reward_after_exit', action='store_true', default=False)
     parser.add_argument('--post_exit_rew_len', type=int, default=200, help='This is how much of the future outflow '
                                                                            'is given to the agent as a terminal reward')
     parser.add_argument('--rew_n_crit', type=int, default=0, help='If set to a value above zero, we get rewarded if fewer than '
