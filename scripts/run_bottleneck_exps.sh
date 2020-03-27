@@ -1604,10 +1604,33 @@
 #--qmix --grid_search --use_s3 --curriculum --num_curr_iters 100" \
 #--start --stop --cluster-name ev_0pen_9 --tmux
 
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l800_h3000_qmix_ncrit12_av0p1_curr_agg --num_iters 300 --checkpoint_freq 50 --av_frac 0.1 \
---num_samples 1 --horizon 2000 --low_inflow 800 --high_inflow 3000 \
---sim_step 0.5 --create_inflow_graph --sims_per_step 1 --rew_n_crit 12 --aggregate_info \
---qmix --grid_search --use_s3" \
---start --stop --cluster-name ev_0pen_10 --tmux
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l800_h3000_qmix_ncrit12_av0p1_curr_agg --num_iters 300 --checkpoint_freq 50 --av_frac 0.1 \
+#--num_samples 1 --horizon 2000 --low_inflow 800 --high_inflow 3000 \
+#--sim_step 0.5 --create_inflow_graph --sims_per_step 1 --rew_n_crit 12 --aggregate_info \
+#--qmix --grid_search --use_s3" \
+#--start --stop --cluster-name ev_0pen_10 --tmux
 
+#####################################################
+# 3/26, simple env sweep but using the terminal reward
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l800_h3000_td3_ncrit12_av0p1_senv --num_iters 300 --checkpoint_freq 50 --av_frac 0.1 \
+--num_samples 1 --horizon 2000 --low_inflow 800 --high_inflow 3000 --life_penalty 0.0 \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 1 --rew_n_crit 12 --simple_env --reward_after_exit \
+--td3 --grid_search --use_s3" \
+--start --stop --cluster-name ev_0pen5 --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l800_h3000_td3_ncrit12_av0p2_senv --num_iters 300 --checkpoint_freq 50 --av_frac 0.2 \
+--num_samples 1 --horizon 2000 --low_inflow 800 --high_inflow 3000 --life_penalty 0.0 \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 1 --rew_n_crit 12 --simple_env --reward_after_exit \
+--td3 --grid_search --use_s3" \
+--start --stop --cluster-name ev_0pen6 --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l800_h3000_td3_ncrit12_av0p4_senv --num_iters 300 --checkpoint_freq 50 --av_frac 0.4 \
+--num_samples 1 --horizon 2000 --low_inflow 800 --high_inflow 3000 --life_penalty 0.0 \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 1 --rew_n_crit 12 --simple_env --reward_after_exit \
+--td3 --grid_search --use_s3" \
+--start --stop --cluster-name ev_0pen7 --tmux
