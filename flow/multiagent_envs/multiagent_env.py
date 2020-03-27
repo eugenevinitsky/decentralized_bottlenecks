@@ -111,6 +111,15 @@ class MultiEnv(MultiAgentEnv, Env):
 
             # crash encodes whether the simulator experienced a collision
             crash = self.k.simulation.check_collision()
+            colliding_ids = self.k.simulation.get_colliding_ids()
+            for veh_id in colliding_ids:
+                if veh_id in self.k.vehicle.get_rl_ids():
+                    done[veh_id] = True
+                    reward[veh_id] = 0
+                    if isinstance(self.observation_space, Dict):
+                        states[veh_id] = self.observation_space.sample()
+                    else:
+                        states[veh_id] = np.zeros(self.observation_space.shape[0])
 
             # stop collecting new simulation steps if there is a collision
             if crash:
@@ -121,22 +130,23 @@ class MultiEnv(MultiAgentEnv, Env):
             # render a frame
             self.render()
 
-            if not self.qmix:
-                for rl_id in self.k.vehicle.get_arrived_rl_ids():
-                    done[rl_id] = True
-                    reward[rl_id] = 0
-                    if isinstance(self.observation_space, Dict):
-                        states[rl_id] = self.observation_space.sample()
-                    else:
-                        states[rl_id] = np.zeros(self.observation_space.shape[0])
+            # if not self.qmix:
+            #     for rl_id in self.k.vehicle.get_arrived_rl_ids():
+            #         done[rl_id] = True
+            #         reward[rl_id] = 0
+            #         if isinstance(self.observation_space, Dict):
+            #             states[rl_id] = self.observation_space.sample()
+            #         else:
+            #             states[rl_id] = np.zeros(self.observation_space.shape[0])
 
+        self.left_av_set.update(self.left_av_list)
         states.update(self.get_state(rl_actions))
         if crash:
             print(
                 "**********************************************************\n"
                 "**********************************************************\n"
                 "**********************************************************\n"
-                "WARNING: THERE WAS A COLLISION.\n"
+                "WARNING: THERE WAS A COLLISION. THE IDS are {}\n".format(colliding_ids),
                 "**********************************************************\n"
                 "**********************************************************\n"
                 "**********************************************************"
@@ -178,7 +188,6 @@ class MultiEnv(MultiAgentEnv, Env):
         """
 
         self.observed_rl_cars = set()
-        self.left_av_time_dict = {}
         # set rendering to true
         self.num_resets += 1
         if self.num_resets > 0 and self.should_render:

@@ -375,13 +375,13 @@ def setup_exps(args):
         alg_run = 'TD3'
         config = deepcopy(TD3_DEFAULT_CONFIG)
         config["buffer_size"] = 500000
-        config["sample_batch_size"] = 5
+        config["sample_batch_size"] = 50
         if args.local_mode:
             config["learning_starts"] = 1000
             config["pure_exploration_steps"] = 1000
         else:
-            config["learning_starts"] = 10000
-            config["pure_exploration_steps"] = 10000
+            config["learning_starts"] = 50000
+            config["pure_exploration_steps"] = 50000
         if args.grid_search:
             config["prioritized_replay"] = tune.grid_search(['True', 'False'])
             config["actor_lr"] = tune.grid_search([1e-3, 1e-4])

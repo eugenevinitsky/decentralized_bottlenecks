@@ -300,17 +300,19 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
         # TODO(@evinitsky) this is totally broken. rl_id is not the ID.
         if self.reward_after_exit:
-            for rl_id in self.left_av_list:
-                if isinstance(self.observation_space, Dict):
-                    update_dict = OrderedDict()
-                    for k, space in self.observation_space.spaces.items():
-                        if isinstance(space, Box):
-                            update_dict[k] = np.zeros(space.shape[0])
-                        elif isinstance(space, Discrete):
-                            update_dict[k] = 0
-                    veh_info[rl_id] = update_dict
-                else:
-                    veh_info.update({rl_id: np.zeros(self.observation_space.shape[0])})
+            if int(self.time_counter / self.env_params.sims_per_step) == self.env_params.horizon:
+                self.left_av_set.update(self.k.vehicle.get_arrived_rl_ids())
+                for rl_id in self.left_av_set:
+                    if isinstance(self.observation_space, Dict):
+                        update_dict = OrderedDict()
+                        for k, space in self.observation_space.spaces.items():
+                            if isinstance(space, Box):
+                                update_dict[k] = np.zeros(space.shape[0])
+                            elif isinstance(space, Discrete):
+                                update_dict[k] = 0
+                        veh_info[rl_id] = update_dict
+                    else:
+                        veh_info.update({rl_id: np.zeros(self.observation_space.shape[0])})
 
         if self.qmix:
             # assert self.num_actions != 0
@@ -415,7 +417,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     # rescale the actions so that they're more likely to brake or accelerate
                     accel = [val * 8.0 for val in action]
 
-                if self.k.vehicle.get_edge(rl_id) in ['2', '3']:
+                if self.k.vehicle.get_edge(rl_id) in ['3']:
                     if isinstance(accel, list):
                         accel_list.extend(accel)
                     else:
@@ -443,7 +445,9 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if self.rew_n_crit > 0:
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
             reward += (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 500
+            # reward_dict = {rl_id: reward if self.k.vehicle.get_edge(rl_id) in ['4', '5'] else 0 for rl_id in rl_ids}
             reward_dict = {rl_id: reward for rl_id in rl_ids}
+
         elif add_params["speed_reward"]:
             reward_dict = {}
             for rl_id in rl_ids:
@@ -484,14 +488,23 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         #     end_time = self.env_params.horizon * self.sim_params.sim_step
         #     left_vehicles_dict = {veh_id: self.k.vehicle.get_outflow_rate(end_time - exit_time) / 2000.0
         #                           for veh_id, exit_time in self.left_av_time_dict.items()}
-        #     reward_dict.update(left_vehicles_dict)
+        #     reward_dict.update(left_runvehicles_dict)
         if self.reward_after_exit:
             for rl_id in rl_ids:
-                if self.k.vehicle.get_edge(rl_id) in ['4', '5']:
-                    self.reward_tracker_dict[rl_id].append(reward_dict[rl_id])
+                # if self.k.vehicle.get_edge(rl_id) in ['4', '5']:
+                self.reward_tracker_dict[rl_id].append(reward_dict[rl_id])
 
-            reward_dict = {rl_id: 0 for rl_id in rl_ids}
-            reward_dict.update({rl_id:  10 * np.nan_to_num(np.mean(self.reward_tracker_dict[rl_id])) for rl_id in self.left_av_list})
+            if int(self.time_counter / self.env_params.sims_per_step) == self.env_params.horizon:
+                self.left_av_set.update(self.k.vehicle.get_arrived_rl_ids())
+                rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if
+                          self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
+                self.left_av_set.update(rl_ids)
+                reward_dict.update(
+                    {rl_id: np.nan_to_num(np.mean((self.reward_tracker_dict[rl_id]))) for
+                     rl_id in self.left_av_set})
+                print(reward_dict)
+            else:
+                reward_dict = {rl_id: 0 for rl_id in rl_ids}
 
         if self.qmix:
             temp_reward_dict = {idx: 0 for idx in
