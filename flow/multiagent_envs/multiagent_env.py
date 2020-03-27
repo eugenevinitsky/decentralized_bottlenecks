@@ -99,10 +99,7 @@ class MultiEnv(MultiAgentEnv, Env):
 
             # advance the simulation in the simulator by one step
 
-            left_cars = self.k.vehicle.get_arrived_ids()
-            left_avs = [veh_id for veh_id in left_cars if veh_id in self.observed_rl_cars]
-            self.left_av_list.extend(left_avs)
-            self.left_av_time_dict.update({left_av: self.time_counter * self.sim_params.sim_step for left_av in left_avs})
+            self.left_av_list.extend(self.k.vehicle.get_arrived_rl_ids())
             self.k.simulation.simulation_step()
 
             # store new observations in the vehicles and traffic lights class

@@ -95,7 +95,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         self.qmix = self.env_params.additional_params['qmix']
         self.num_qmix_agents = self.env_params.additional_params['num_qmix_agents']
         self.reward_after_exit = self.env_params.additional_params["reward_after_exit"]
-
+        self.reward_tracker_dict = defaultdict(lambda: [])
 
     def increase_curr_iter(self):
         self.curr_iter += 1
@@ -262,18 +262,18 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 veh_info = {rl_id: np.concatenate((val, agg_statistics))
                             for rl_id, val in veh_info.items()}
 
-        if self.env_params.additional_params.get('keep_past_actions', False):
-            # update the actions history with the most recent actions
-            for rl_id in self.k.vehicle.get_rl_ids():
-                agent_past_dict, num_steps = self.past_actions_dict[rl_id]
-                if rl_actions and rl_id in rl_actions.keys():
-                    agent_past_dict[num_steps] = rl_actions[rl_id] / self.action_space.high
-                num_steps += 1
-                num_steps %= self.num_past_actions
-                self.past_actions_dict[rl_id] = [agent_past_dict, num_steps]
-            actions_history = {rl_id: self.past_actions_dict[rl_id][0] for rl_id in self.k.vehicle.get_rl_ids()}
-            veh_info = {rl_id: np.concatenate((veh_info[rl_id], actions_history[rl_id])) for
-                        rl_id in rl_ids}
+        # if self.env_params.additional_params.get('keep_past_actions', False):
+        #     # update the actions history with the most recent actions
+        #     for rl_id in self.k.vehicle.get_rl_ids():
+        #         agent_past_dict, num_steps = self.past_actions_dict[rl_id]
+        #         if rl_actions and rl_id in rl_actions.keys():
+        #             agent_past_dict[num_steps] = rl_actions[rl_id] / self.action_space.high
+        #         num_steps += 1
+        #         num_steps %= self.num_past_actions
+        #         self.past_actions_dict[rl_id] = [agent_past_dict, num_steps]
+        #     actions_history = {rl_id: self.past_actions_dict[rl_id][0] for rl_id in self.k.vehicle.get_rl_ids()}
+        #     veh_info = {rl_id: np.concatenate((veh_info[rl_id], actions_history[rl_id])) for
+        #                 rl_id in rl_ids}
 
         # Go through the human drivers and add zeros if the vehicles have left as a final observation
         # if int(self.time_counter / self.env_params.sims_per_step) == self.env_params.horizon:
@@ -298,6 +298,20 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         #                              a_max=[self.observation_space.spaces['a_obs'].high[0]] * value.shape[0]) for
         #                 key, value in veh_info.items()}
 
+        # TODO(@evinitsky) this is totally broken. rl_id is not the ID.
+        if self.reward_after_exit:
+            for rl_id in self.left_av_list:
+                if isinstance(self.observation_space, Dict):
+                    update_dict = OrderedDict()
+                    for k, space in self.observation_space.spaces.items():
+                        if isinstance(space, Box):
+                            update_dict[k] = np.zeros(space.shape[0])
+                        elif isinstance(space, Discrete):
+                            update_dict[k] = 0
+                    veh_info[rl_id] = update_dict
+                else:
+                    veh_info.update({rl_id: np.zeros(self.observation_space.shape[0])})
+
         if self.qmix:
             # assert self.num_actions != 0
             assert len(self.k.vehicle.get_rl_ids()) < self.num_qmix_agents
@@ -309,20 +323,6 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             veh_info = veh_info_copy
             self.rl_id_to_idx_map = {rl_id: i for i, rl_id in enumerate(rl_ids)}
             self.idx_to_rl_id_map = {i: rl_id for i, rl_id in enumerate(rl_ids)}
-
-        # TODO(@evinitsky) this is totally broken. rl_id is not the ID.
-        # if self.reward_after_exit:
-        #     for rl_id in self.left_av_list:
-        #         if isinstance(self.observation_space, Dict):
-        #             update_dict = OrderedDict()
-        #             for k, space in self.observation_space.spaces.items():
-        #                 if isinstance(space, Box):
-        #                     update_dict[k] = np.zeros(space.shape[0])
-        #                 elif isinstance(space, Discrete):
-        #                     update_dict[k] = 0
-        #             veh_info[rl_id] = update_dict
-        #         else:
-        #             veh_info.update({rl_id: np.zeros(self.observation_space.shape[0])})
 
         return veh_info
 
@@ -456,14 +456,14 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 veh_ids = [veh_id for veh_id, lane, edge_pos in zip(veh_ids, lanes, edge_poses)
                            if (lane == rl_lane and edge_pos < rl_edge_pos)]
                 if len(veh_ids) > 0:
-                    avg_speed = np.mean(self.k.vehicle.get_speed(veh_ids))
+                    avg_speed = np.sum(self.k.vehicle.get_speed(veh_ids))
                 else:
                     avg_speed = 0
                 reward_dict[rl_id] = avg_speed / 100.0
             if add_params["congest_penalty"]:
                 num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
                 if num_vehs > 15 * self.scaling:
-                    penalty = (num_vehs - 15 * self.scaling) / 5000.0
+                    penalty = (num_vehs - 15 * self.scaling) / 100.0
                     reward_dict = {rl_id: reward - penalty for rl_id, reward in reward_dict.items()}
         else:
             reward = len(self.k.vehicle.get_ids_by_edge('5')) / 100.0
@@ -477,12 +477,21 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
             reward_dict = {rl_id: reward for rl_id in rl_ids}
 
+        # if we are doing reward after exit, add the tracked mean reward
+
         # # Return the outflow since the vehicle left
         # if int(self.time_counter/self.env_params.sims_per_step) == self.env_params.horizon:
         #     end_time = self.env_params.horizon * self.sim_params.sim_step
         #     left_vehicles_dict = {veh_id: self.k.vehicle.get_outflow_rate(end_time - exit_time) / 2000.0
         #                           for veh_id, exit_time in self.left_av_time_dict.items()}
         #     reward_dict.update(left_vehicles_dict)
+        if self.reward_after_exit:
+            for rl_id in rl_ids:
+                self.reward_tracker_dict[rl_id].append(reward_dict[rl_id])
+
+            reward_dict = {rl_id: 0 for rl_id in rl_ids}
+            reward_dict.update({rl_id:  100 * np.mean(self.reward_tracker_dict[rl_id]) for rl_id in self.left_av_list})
+
         if self.qmix:
             temp_reward_dict = {idx: 0 for idx in
                            range(self.num_qmix_agents)}
@@ -494,6 +503,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
     def reset(self, new_inflow_rate=None):
         self.curr_rl_vehicles = {}
         self.update_curr_rl_vehicles()
+        self.reward_tracker_dict = defaultdict(lambda: [])
 
         # dict tracking past actions
         if self.env_params.additional_params.get('keep_past_actions', False):
