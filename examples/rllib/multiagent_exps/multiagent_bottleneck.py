@@ -374,7 +374,7 @@ def setup_exps(args):
     elif args.td3:
         alg_run = 'TD3'
         config = deepcopy(TD3_DEFAULT_CONFIG)
-        config["buffer_size"] = 100000
+        config["buffer_size"] = 500000
         config["sample_batch_size"] = 5
         if args.local_mode:
             config["learning_starts"] = 1000
