@@ -130,14 +130,15 @@ class MultiEnv(MultiAgentEnv, Env):
             # render a frame
             self.render()
 
-            # if not self.qmix:
-            #     for rl_id in self.k.vehicle.get_arrived_rl_ids():
-            #         done[rl_id] = True
-            #         reward[rl_id] = 0
-            #         if isinstance(self.observation_space, Dict):
-            #             states[rl_id] = self.observation_space.sample()
-            #         else:
-            #             states[rl_id] = np.zeros(self.observation_space.shape[0])
+            if not self.qmix and not self.reward_after_exit:
+                for rl_id in self.k.vehicle.get_arrived_rl_ids():
+                    if rl_id not in self.colliding_av_set:
+                        done[rl_id] = True
+                        reward[rl_id] = 0
+                        if isinstance(self.observation_space, Dict):
+                            states[rl_id] = self.observation_space.sample()
+                        else:
+                            states[rl_id] = np.zeros(self.observation_space.shape[0])
 
         self.left_av_set.update(self.left_av_list)
         states.update(self.get_state(rl_actions))
@@ -155,7 +156,10 @@ class MultiEnv(MultiAgentEnv, Env):
         if (self.time_counter >= self.env_params.sims_per_step *
                 (self.env_params.warmup_steps + self.env_params.horizon)):
             # TODO(@ev) clean this up
-            done['__all__'] = True
+            done['__all__'] = False
+            if self.reward_after_exit:
+                for key in self.left_av_list:
+                    done[key] = True
         else:
             done['__all__'] = False
         infos = {key: {'id': key} for key in states.keys()}
@@ -166,7 +170,6 @@ class MultiEnv(MultiAgentEnv, Env):
             reward.update(self.compute_reward(clipped_actions, fail=crash))
         else:
             reward.update(self.compute_reward(rl_actions, fail=crash))
-
 
         return states, reward, done, infos
 
@@ -189,6 +192,9 @@ class MultiEnv(MultiAgentEnv, Env):
 
         self.total_reward = 0
         self.observed_rl_cars = set()
+        self.left_av_set = set()
+        self.colliding_av_set = set()
+
         # set rendering to true
         self.num_resets += 1
         if self.num_resets > 0 and self.should_render:

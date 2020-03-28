@@ -146,6 +146,7 @@ class Env(*classdef):
         self.left_av_list = []
         self.left_av_time_dict = {}
         self.left_av_set = set()
+        self.colliding_av_set = set()
 
         # simulation step size
         self.sim_step = sim_params.sim_step
@@ -435,7 +436,6 @@ class Env(*classdef):
 
         # reset the time counter
         self.time_counter = 0
-        self.left_av_set = set()
 
         # warn about not using restart_instance when using inflows
         if len(self.net_params.inflows.get()) > 0 and \

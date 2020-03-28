@@ -462,13 +462,13 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     self.total_reward -= penalty
                     reward_dict = {rl_id: reward - penalty for rl_id, reward in reward_dict.items()}
         else:
-            reward = self.k.vehicle.get_outflow_rate(self.env_params.additional_params["num_sample_seconds"]) / (200.0 * self.env_params.horizon)
+            reward = self.k.vehicle.get_outflow_rate(self.env_params.additional_params["num_sample_seconds"]) / (2000.0 * self.env_params.horizon)
 
             # reward -= np.abs(self.env_params.additional_params["life_penalty"])
             if add_params["congest_penalty"]:
                 num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
                 if num_vehs > 30 * self.scaling:
-                    penalty = (num_vehs - 30 * self.scaling) / 10.0
+                    penalty = (num_vehs - 30 * self.scaling) / (10.0 * self.env_params.horizon)
                     reward -= penalty
             self.total_reward += reward
             reward_dict = {rl_id: reward for rl_id in rl_ids}
