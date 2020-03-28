@@ -442,43 +442,35 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         reward = 0.0
         rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
         # we get a reward if there are fewer vehicles in the network than rew_n_crit
-        if self.rew_n_crit > 0:
+        # TODO(@evinitsky) watch out for this condition
+        if self.rew_n_crit > 0 and self.curriculum_scaling < 1.0:
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
-            reward += (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 500
+            reward += (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 5000
+            self.total_reward += reward
             # reward_dict = {rl_id: reward if self.k.vehicle.get_edge(rl_id) in ['4', '5'] else 0 for rl_id in rl_ids}
             reward_dict = {rl_id: reward for rl_id in rl_ids}
 
         elif add_params["speed_reward"]:
-            reward_dict = {}
-            for rl_id in rl_ids:
-                veh_ids = self.k.vehicle.get_ids_by_edge(self.k.vehicle.get_edge(rl_id))
-                lanes = self.k.vehicle.get_lane(veh_ids)
-                edge_poses = self.k.vehicle.get_position(veh_ids)
-                rl_lane = self.k.vehicle.get_lane(rl_id)
-                rl_edge_pos = self.k.vehicle.get_position(rl_id)
-                # we only reward the speed for vehicles causally downstream of the AV
-                veh_ids = [veh_id for veh_id, lane, edge_pos in zip(veh_ids, lanes, edge_poses)
-                           if (lane == rl_lane and edge_pos < rl_edge_pos)]
-                if len(veh_ids) > 0:
-                    avg_speed = np.sum(self.k.vehicle.get_speed(veh_ids))
-                else:
-                    avg_speed = 0
-                reward_dict[rl_id] = avg_speed / 100.0
+            reward = np.nan_to_num(np.sum(self.k.vehicle.get_speed(self.k.vehicle.get_ids_by_edge('4')))) / (10.0 * self.env_params.horizon)
+            self.total_reward += reward
+            reward_dict = {rl_id: reward for rl_id in rl_ids}
             if add_params["congest_penalty"]:
                 num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
                 if num_vehs > 15 * self.scaling:
-                    penalty = (num_vehs - 15 * self.scaling) / 100.0
+                    penalty = (num_vehs - 15 * self.scaling) / (10.0 * self.env_params.horizon)
+                    reward = reward - penalty
+                    self.total_reward -= penalty
                     reward_dict = {rl_id: reward - penalty for rl_id, reward in reward_dict.items()}
         else:
-            reward = len(self.k.vehicle.get_ids_by_edge('5')) / 100.0
+            reward = self.k.vehicle.get_outflow_rate(self.env_params.additional_params["num_sample_seconds"]) / (200.0 * self.env_params.horizon)
 
-            reward -= np.abs(self.env_params.additional_params["life_penalty"])
+            # reward -= np.abs(self.env_params.additional_params["life_penalty"])
             if add_params["congest_penalty"]:
                 num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
                 if num_vehs > 30 * self.scaling:
                     penalty = (num_vehs - 30 * self.scaling) / 10.0
                     reward -= penalty
-
+            self.total_reward += reward
             reward_dict = {rl_id: reward for rl_id in rl_ids}
 
         # if we are doing reward after exit, add the tracked mean reward
@@ -490,21 +482,24 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         #                           for veh_id, exit_time in self.left_av_time_dict.items()}
         #     reward_dict.update(left_runvehicles_dict)
         if self.reward_after_exit:
-            for rl_id in rl_ids:
+            for rl_id in self.left_av_set:
                 # if self.k.vehicle.get_edge(rl_id) in ['4', '5']:
-                self.reward_tracker_dict[rl_id].append(reward_dict[rl_id])
+                self.reward_tracker_dict[rl_id].append(reward)
+            # combined_ids = self.left_av_set.union(rl_ids)
 
             if int(self.time_counter / self.env_params.sims_per_step) == self.env_params.horizon:
                 self.left_av_set.update(self.k.vehicle.get_arrived_rl_ids())
                 rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if
                           self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
+                for rl_id in rl_ids:
+                    self.reward_tracker_dict[rl_id].append(reward)
                 self.left_av_set.update(rl_ids)
                 reward_dict.update(
-                    {rl_id: np.nan_to_num(np.mean((self.reward_tracker_dict[rl_id]))) for
+                    {rl_id: np.nan_to_num(np.sum(self.reward_tracker_dict[rl_id])) for
                      rl_id in self.left_av_set})
                 print(reward_dict)
             else:
-                reward_dict = {rl_id: 0 for rl_id in rl_ids}
+                reward_dict = {rl_id: reward for rl_id in rl_ids}
 
         if self.qmix:
             temp_reward_dict = {idx: 0 for idx in

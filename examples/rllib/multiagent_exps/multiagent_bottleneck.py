@@ -305,6 +305,7 @@ def on_episode_end(info):
     time_step = 250
     episode = info["episode"]
     episode.custom_metrics["num_congested"] = np.mean(episode.user_data["n_crit"])
+    episode.custom_metrics["num_congested_var"] = np.std(episode.user_data["n_crit"])
     episode.custom_metrics["n_veh_edge4_l0"] = np.mean(episode.user_data["n_veh_edge4_l0"])
     episode.custom_metrics["n_veh_edge4_l1"] = np.mean(episode.user_data["n_veh_edge4_l1"])
 
@@ -374,8 +375,8 @@ def setup_exps(args):
     elif args.td3:
         alg_run = 'TD3'
         config = deepcopy(TD3_DEFAULT_CONFIG)
-        config["buffer_size"] = 500000
-        config["sample_batch_size"] = 50
+        config["buffer_size"] = 100000
+        config["sample_batch_size"] = 5
         if args.local_mode:
             config["learning_starts"] = 1000
             config["pure_exploration_steps"] = 1000

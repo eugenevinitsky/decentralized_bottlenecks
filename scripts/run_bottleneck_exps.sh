@@ -1645,9 +1645,23 @@
 #--td3 --grid_search --use_s3" \
 #--start --stop --cluster-name ev_0pen1 --tmux
 
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l2400_h2400_td3_ncrit12_av0p1_senv_out_buff5e5 --num_iters 300 --checkpoint_freq 50 --av_frac 0.1 \
+#--num_samples 1 --horizon 2000 --low_inflow 2400 --high_inflow 2400 --life_penalty 0.0 \
+#--sim_step 0.5 --create_inflow_graph --sims_per_step 1 --rew_n_crit 12 --simple_env --reward_after_exit \
+#--td3 --grid_search --use_s3" \
+#--start --stop --cluster-name ev_0pen2 --tmux
+
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l2400_h2400_td3_ncrit12_av0p4_senv_out_buff5e5 --num_iters 300 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --horizon 2000 --low_inflow 2400 --high_inflow 2400 --life_penalty 0.0 \
+#--sim_step 0.5 --create_inflow_graph --sims_per_step 1 --rew_n_crit 12 --simple_env --reward_after_exit \
+#--td3 --grid_search --use_s3" \
+#--start --stop --cluster-name ev_0pen3 --tmux
+
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l2400_h2400_td3_ncrit12_av0p1_senv_out_buff5e5 --num_iters 300 --checkpoint_freq 50 --av_frac 0.1 \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l2400_h2400_td3_ncrit12_av0p4_senv_out_buff5e5_curr --num_iters 300 --checkpoint_freq 50 --av_frac 0.4 \
 --num_samples 1 --horizon 2000 --low_inflow 2400 --high_inflow 2400 --life_penalty 0.0 \
 --sim_step 0.5 --create_inflow_graph --sims_per_step 1 --rew_n_crit 12 --simple_env --reward_after_exit \
---td3 --grid_search --use_s3" \
---start --stop --cluster-name ev_0pen2 --tmux
+--td3 --grid_search --use_s3 --curriculum" \
+--start --stop --cluster-name ev_0pen4 --tmux

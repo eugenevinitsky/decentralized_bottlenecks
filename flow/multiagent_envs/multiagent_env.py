@@ -187,6 +187,7 @@ class MultiEnv(MultiAgentEnv, Env):
             to be zero.
         """
 
+        self.total_reward = 0
         self.observed_rl_cars = set()
         # set rendering to true
         self.num_resets += 1
