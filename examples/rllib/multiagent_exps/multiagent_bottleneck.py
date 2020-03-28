@@ -387,7 +387,7 @@ def setup_exps(args):
             config["prioritized_replay"] = tune.grid_search(['True', 'False'])
             config["actor_lr"] = tune.grid_search([1e-3, 1e-4])
             config["critic_lr"] = tune.grid_search([1e-3, 1e-4])
-            config["n_step"] = tune.grid_search([1, 5])
+            config["n_step"] = 5
     elif args.qmix:
         alg_run = 'QMIX'
         config = deepcopy(QMIX_DEFAULT_CONFIG)
@@ -461,7 +461,9 @@ def setup_exps(args):
             config['model']['custom_options']['mining_frac'] = args.mining_frac
             config["model"]["custom_options"]["final_imitation_weight"] = args.final_imitation_weight
 
-    config['gamma'] = 0.99  # discount rate
+    config['gamma'] = 0.995  # discount rate
+    if args.grid_search:
+        config['gamma'] = tune.grid_search([0.995, .999])  # discount rate
     config['horizon'] = args.horizon
     # config['no_done_at_end'] = True
     # config["batch_mode"] = "truncate_episodes"

@@ -178,6 +178,7 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
     mean_speed = []
     std_speed = []
     mean_rewards = []
+    num_congested = []
     per_agent_rew = collections.defaultdict(lambda: 0.0)
 
     # keep track of the last 500 seconds of velocity data for lane 0
@@ -200,6 +201,7 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
         k = 0
         while k < env_params.horizon and not done:
             vehicles = env.unwrapped.k.vehicle
+            num_congested.append(len(vehicles.get_ids_by_edge('4')))
             vel.append(np.mean(vehicles.get_speed(vehicles.get_ids())))
             # don't start recording till we have hit the warmup time
             if k >= env_params.horizon - (end_len / sim_step):
@@ -272,6 +274,7 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
         vehicles = env.unwrapped.k.vehicle
         outflow = vehicles.get_outflow_rate(500)
         print('Outflow was ', outflow)
+        print('Num congested was ', np.mean(num_congested))
         final_outflows.append(outflow)
         inflow = vehicles.get_inflow_rate(500)
         final_inflows.append(inflow)

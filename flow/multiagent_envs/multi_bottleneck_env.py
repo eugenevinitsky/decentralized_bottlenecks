@@ -489,15 +489,9 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
             if int(self.time_counter / self.env_params.sims_per_step) == self.env_params.horizon:
                 self.left_av_set.update(self.k.vehicle.get_arrived_rl_ids())
-                rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if
-                          self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
-                for rl_id in rl_ids:
-                    self.reward_tracker_dict[rl_id].append(reward)
-                self.left_av_set.update(rl_ids)
                 reward_dict.update(
                     {rl_id: np.nan_to_num(np.sum(self.reward_tracker_dict[rl_id])) for
                      rl_id in self.left_av_set})
-                print(reward_dict)
             else:
                 reward_dict = {rl_id: reward for rl_id in rl_ids}
 
