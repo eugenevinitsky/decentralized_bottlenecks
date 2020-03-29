@@ -181,7 +181,7 @@ def setup_flow_params(args):
         "reward_after_exit": args.reward_after_exit,
         # after you exit, you will get all the reward accumulated over this many system steps.
         # this is to prevent you from exiting and not experiencing the consequences
-        "future_reward_time": 100
+        "future_reward_time": 25
     }
 
     if args.dqfd:
@@ -382,7 +382,7 @@ def setup_exps(args):
         config["sample_batch_size"] = 5
         if args.local_mode:
             config["learning_starts"] = 1000
-            config["pure_exploration_steps"] = 10000
+            config["pure_exploration_steps"] = 1000
         else:
             # config["learning_starts"] = 50000
             config["pure_exploration_steps"] = 50000
