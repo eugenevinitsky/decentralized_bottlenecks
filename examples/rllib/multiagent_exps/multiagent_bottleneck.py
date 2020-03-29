@@ -461,9 +461,9 @@ def setup_exps(args):
             config['model']['custom_options']['mining_frac'] = args.mining_frac
             config["model"]["custom_options"]["final_imitation_weight"] = args.final_imitation_weight
 
-    config['gamma'] = 0.995  # discount rate
+    config['gamma'] = 1.0  # discount rate
     if args.grid_search:
-        config['gamma'] = tune.grid_search([0.995, .999])  # discount rate
+        config['gamma'] = tune.grid_search([0.995, 1.0])  # discount rate
     config['horizon'] = args.horizon
     # config['no_done_at_end'] = True
     # config["batch_mode"] = "truncate_episodes"

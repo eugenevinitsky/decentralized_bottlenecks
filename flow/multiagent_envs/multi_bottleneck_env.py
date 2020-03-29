@@ -492,8 +492,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 reward_dict.update(
                     {rl_id: np.nan_to_num(np.sum(self.reward_tracker_dict[rl_id])) for
                      rl_id in self.left_av_set})
-            else:
-                reward_dict = {rl_id: reward for rl_id in rl_ids}
+                print(reward_dict)
 
         if self.qmix:
             temp_reward_dict = {idx: 0 for idx in
