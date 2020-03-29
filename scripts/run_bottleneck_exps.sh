@@ -1697,9 +1697,25 @@
 #--td3 --grid_search --use_s3" \
 #--start --stop --cluster-name ev_0pen3 --tmux
 
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l2400_h2400_td3_av0p4_senv_out_10s --num_iters 300 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --horizon 200 --low_inflow 2400 --high_inflow 2400 --life_penalty 0.0 \
+#--sim_step 0.5 --create_inflow_graph --sims_per_step 10 --simple_env --reward_after_exit --congest_penalty \
+#--td3 --grid_search --use_s3" \
+#--start --stop --cluster-name ev_0pen4 --tmux
+
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l2400_h2400_td3_av0p4_senv_out_25s_t2 --num_iters 300 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --horizon 1000 --low_inflow 2400 --high_inflow 2400 --life_penalty 0.0 \
+#--sim_step 0.5 --create_inflow_graph --sims_per_step 2 --simple_env --reward_after_exit --congest_penalty \
+#--td3 --grid_search --use_s3" \
+#--start --stop --cluster-name ev_0pen4 --tmux
+
+#####################################################
+# 3/29, tests of outflow reward
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l2400_h2400_td3_av0p4_senv_out_10s --num_iters 300 --checkpoint_freq 50 --av_frac 0.4 \
---num_samples 1 --horizon 200 --low_inflow 2400 --high_inflow 2400 --life_penalty 0.0 \
---sim_step 0.5 --create_inflow_graph --sims_per_step 10 --simple_env --reward_after_exit --congest_penalty \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py l2400_h2400_td3_av0p4_senv_out_25s_t2 --num_iters 300 --checkpoint_freq 50 --av_frac 0.4 \
+--num_samples 1 --horizon 1000 --low_inflow 2400 --high_inflow 2400 --life_penalty 0.0 \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 2 --simple_env --reward_after_exit --congest_penalty \
 --td3 --grid_search --use_s3" \
 --start --stop --cluster-name ev_0pen4 --tmux

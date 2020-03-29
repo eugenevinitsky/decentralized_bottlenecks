@@ -316,6 +316,22 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     else:
                         veh_info.update({rl_id: np.zeros(self.observation_space.shape[0])})
 
+            # here vehicles whose future time was waaaay after end of horizon still get reward
+            if int(self.time_counter / self.env_params.sims_per_step) == self.env_params.horizon:
+                for exit_time, rl_ids in self.left_av_time_dict.items():
+                    if exit_time >= self.step_counter:
+                        for rl_id in rl_ids:
+                            if isinstance(self.observation_space, Dict):
+                                update_dict = OrderedDict()
+                                for k, space in self.observation_space.spaces.items():
+                                    if isinstance(space, Box):
+                                        update_dict[k] = np.zeros(space.shape[0])
+                                    elif isinstance(space, Discrete):
+                                        update_dict[k] = 0
+                                veh_info[rl_id] = update_dict
+                            else:
+                                veh_info.update({rl_id: np.zeros(self.observation_space.shape[0])})
+
         if self.qmix:
             # assert self.num_actions != 0
             assert len(self.k.vehicle.get_rl_ids()) < self.num_qmix_agents
@@ -449,15 +465,16 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
             reward += (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 50
             self.total_reward += reward
-            # reward_dict = {rl_id: reward if self.k.vehicle.get_edge(rl_id) in ['4', '5'] else 0 for rl_id in rl_ids}
             reward_dict = {rl_id: reward if self.k.vehicle.get_edge(rl_id) in ['4', '5'] else 0 for rl_id in rl_ids}
 
         elif add_params["speed_reward"]:
             reward = np.nan_to_num(np.sum(self.k.vehicle.get_speed(self.k.vehicle.get_ids_by_edge('4')))) / (self.env_params.horizon)
             self.total_reward += reward
             # TODO put back
-            # reward_dict = {rl_id: reward for rl_id in rl_ids}
-            reward_dict = {rl_id: 0 for rl_id in rl_ids}
+            if self.reward_after_exit:
+                reward_dict = {rl_id: 0 for rl_id in rl_ids}
+            else:
+                reward_dict = {rl_id: reward for rl_id in rl_ids}
             if add_params["congest_penalty"]:
                 num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
                 if num_vehs > 15 * self.scaling:
@@ -466,9 +483,11 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     self.total_reward -= penalty
                     # no penalty for waiting longer
                     # TODO put back
-                    # reward_dict = {rl_id: reward - penalty if self.k.vehicle.get_edge(rl_id) in ['4', '5'] else 0
-                    #                for rl_id, reward in reward_dict.items()}
-                    reward_dict = {rl_id: 0 for rl_id, reward in reward_dict.items()}
+                    if self.reward_after_exit:
+                        reward_dict = {rl_id: 0 for rl_id, reward in reward_dict.items()}
+                    else:
+                        reward_dict = {rl_id: reward - penalty if self.k.vehicle.get_edge(rl_id) in ['4', '5'] else 0
+                                       for rl_id, reward in reward_dict.items()}
         else:
             reward = self.k.vehicle.get_outflow_rate(self.env_params.additional_params["num_sample_seconds"]) / (200.0 * self.env_params.horizon)
 
@@ -476,19 +495,17 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             if add_params["congest_penalty"]:
                 num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
                 if num_vehs > 30 * self.scaling:
-                    penalty = (num_vehs - 30 * self.scaling) / (self.env_params.horizon)
+                    penalty = (num_vehs - 30 * self.scaling) / (self.env_params.horizon / 4.0)
                     reward -= penalty
             self.total_reward += reward
-            reward_dict = {rl_id: reward for rl_id in rl_ids}
+            if self.reward_after_exit:
+                reward_dict = {rl_id: 0 for rl_id in rl_ids}
+            else:
+                reward_dict = {rl_id: reward if self.k.vehicle.get_edge(rl_id) in ['4', '5'] else 0 for rl_id in rl_ids}
 
         # if we are doing reward after exit, add the tracked mean reward
 
         # # Return the outflow since the vehicle left
-        # if int(self.time_counter/self.env_params.sims_per_step) == self.env_params.horizon:
-        #     end_time = self.env_params.horizon * self.sim_params.sim_step
-        #     left_vehicles_dict = {veh_id: self.k.vehicle.get_outflow_rate(end_time - exit_time) / 2000.0
-        #                           for veh_id, exit_time in self.left_av_time_dict.items()}
-        #     reward_dict.update(left_runvehicles_dict)
         if self.reward_after_exit:
             for rl_id in self.left_av_set:
                 # if self.k.vehicle.get_edge(rl_id) in ['4', '5']:
@@ -503,12 +520,26 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 print({rl_id: np.nan_to_num(np.sum(self.reward_tracker_dict[rl_id])) for
                      rl_id in left_rl_ids})
 
+            # here vehicles whose future time was waaaay after end of horizon still get reward
+            if int(self.time_counter / self.env_params.sims_per_step) == self.env_params.horizon:
+                for exit_time, rl_ids in self.left_av_time_dict.items():
+                    if exit_time > self.step_counter:
+                        for rl_id in rl_ids:
+                            reward_dict.update({rl_id: np.nan_to_num(np.sum(self.reward_tracker_dict[rl_id]))})
+                # print('YOOHOOO WE ARE HERE')
+                # print('YOOHOOO WE ARE HERE')
+                # print('YOOHOOO WE ARE HERE')
+                #
+                # print({rl_id: np.nan_to_num(np.sum(self.reward_tracker_dict[rl_id]))
+                #        for rl_id in self.reward_tracker_dict.keys()})
+
         if self.qmix:
             temp_reward_dict = {idx: 0 for idx in
                            range(self.num_qmix_agents)}
             temp_reward_dict.update({self.rl_id_to_idx_map[rl_id]: reward_dict[rl_id] for rl_id in rl_ids})
             reward_dict = temp_reward_dict
 
+        # print({key: reward for key, reward in reward_dict.items() if reward != 0})
         return reward_dict
 
     def reset(self, new_inflow_rate=None):
