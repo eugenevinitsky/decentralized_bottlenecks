@@ -178,7 +178,10 @@ def setup_flow_params(args):
         "num_qmix_agents": args.max_num_agents_qmix,
 
         # keep giving reward after termination
-        "reward_after_exit": args.reward_after_exit
+        "reward_after_exit": args.reward_after_exit,
+        # after you exit, you will get all the reward accumulated over this many system steps.
+        # this is to prevent you from exiting and not experiencing the consequences
+        "future_reward_time": 100
     }
 
     if args.dqfd:
@@ -379,9 +382,9 @@ def setup_exps(args):
         config["sample_batch_size"] = 5
         if args.local_mode:
             config["learning_starts"] = 1000
-            config["pure_exploration_steps"] = 1000
+            config["pure_exploration_steps"] = 10000
         else:
-            config["learning_starts"] = 50000
+            # config["learning_starts"] = 50000
             config["pure_exploration_steps"] = 50000
         if args.grid_search:
             config["prioritized_replay"] = tune.grid_search(['True', 'False'])
@@ -461,9 +464,9 @@ def setup_exps(args):
             config['model']['custom_options']['mining_frac'] = args.mining_frac
             config["model"]["custom_options"]["final_imitation_weight"] = args.final_imitation_weight
 
-    config['gamma'] = 1.0  # discount rate
+    config['gamma'] = .999  # discount rate
     if args.grid_search:
-        config['gamma'] = tune.grid_search([0.995, 1.0])  # discount rate
+        config['gamma'] = tune.grid_search([0.99, .995])  # discount rate
     config['horizon'] = args.horizon
     # config['no_done_at_end'] = True
     # config["batch_mode"] = "truncate_episodes"
