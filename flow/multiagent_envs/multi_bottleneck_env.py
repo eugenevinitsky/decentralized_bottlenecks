@@ -465,28 +465,29 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
             reward += (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 50
             self.total_reward += reward
-            reward_dict = {rl_id: reward if self.k.vehicle.get_edge(rl_id) in ['4', '5'] else 0 for rl_id in rl_ids}
+            if self.reward_after_exit:
+                reward_dict = {rl_id: 0 for rl_id in rl_ids}
+            else:
+                reward_dict = {rl_id: reward if self.k.vehicle.get_edge(rl_id) in ['4', '5'] else 0 for rl_id in rl_ids}
 
         elif add_params["speed_reward"]:
-            reward = np.nan_to_num(np.sum(self.k.vehicle.get_speed(self.k.vehicle.get_ids_by_edge('4')))) / (self.env_params.horizon)
+            reward = np.nan_to_num(np.mean(self.k.vehicle.get_speed(self.k.vehicle.get_ids_by_edge(['4', '5'])))) / (self.env_params.horizon)
             self.total_reward += reward
             # TODO put back
             if self.reward_after_exit:
                 reward_dict = {rl_id: 0 for rl_id in rl_ids}
             else:
-                reward_dict = {rl_id: reward for rl_id in rl_ids}
+                reward_dict = {rl_id: reward if self.k.vehicle.get_edge(rl_id) in ['4', '5'] else 0 for rl_id in rl_ids}
             if add_params["congest_penalty"]:
                 num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
                 if num_vehs > 15 * self.scaling:
-                    penalty = (num_vehs - 15 * self.scaling) / (10.0 * self.env_params.horizon)
+                    penalty = 10 * (num_vehs - 15 * self.scaling) / (self.env_params.horizon)
                     reward = reward - penalty
                     self.total_reward -= penalty
-                    # no penalty for waiting longer
-                    # TODO put back
                     if self.reward_after_exit:
                         reward_dict = {rl_id: 0 for rl_id, reward in reward_dict.items()}
                     else:
-                        reward_dict = {rl_id: reward - penalty if self.k.vehicle.get_edge(rl_id) in ['4', '5'] else 0
+                        reward_dict = {rl_id: reward if self.k.vehicle.get_edge(rl_id) in ['4', '5'] else 0
                                        for rl_id, reward in reward_dict.items()}
         else:
             reward = self.k.vehicle.get_outflow_rate(self.env_params.additional_params["num_sample_seconds"]) / (200.0 * self.env_params.horizon)
