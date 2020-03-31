@@ -97,6 +97,11 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         self.reward_after_exit = self.env_params.additional_params["reward_after_exit"]
         self.reward_tracker_dict = defaultdict(lambda: [])
 
+        if self.qmix:
+            self.default_state = {idx: {"obs": np.zeros(self.observation_space.spaces['obs'].shape[0]),
+                                        "action_mask": self.get_action_mask(valid_agent=False)}
+                                  for idx in range(self.num_qmix_agents)}
+
     def increase_curr_iter(self):
         self.curr_iter += 1
         self.curriculum_scaling = min(self.curr_iter / self.num_curr_iters, 1.0)
@@ -154,7 +159,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
         # if using qmix, we'll have a Dict as an observation space
         if self.qmix:
-            obs_space = Dict({'obs': obs_space, 'valid_agent': Discrete(2)})
+            obs_space = Dict({'obs': obs_space, "action_mask": Box(0, 1, shape=(self.action_space.n,))})
 
         return obs_space
 
@@ -167,7 +172,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             communicate = Discrete(2)
             return Tuple((accel, communicate))
         if self.qmix:
-            return Discrete(3)
+            return Discrete(4)
         else:
             return Box(
                 low=-4.0 / 8.0, high=2.6 / 8.0, shape=(1,), dtype=np.float32)
@@ -335,10 +340,10 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if self.qmix:
             # assert self.num_actions != 0
             assert len(self.k.vehicle.get_rl_ids()) < self.num_qmix_agents
-            veh_info_copy = {idx: {"obs": np.zeros(self.observation_space.spaces['obs'].shape[0]), "valid_agent": 0}
-                        for idx in range(self.num_qmix_agents)}
+            veh_info_copy = deepcopy(self.default_state)
             veh_info_copy.update({rl_id_idx: {"obs": veh_info[rl_id],
-                                         "valid_agent": 1} for rl_id_idx, rl_id in
+                                         "action_mask": self.get_action_mask(valid_agent=True)}
+                                  for rl_id_idx, rl_id in
                              enumerate(rl_ids)})
             veh_info = veh_info_copy
             self.rl_id_to_idx_map = {rl_id: i for i, rl_id in enumerate(rl_ids)}
@@ -414,6 +419,17 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                                mean_speed_norm, mean_rl_speed, [outflow],
                                [self.inflow]))
 
+    def get_action_mask(self, valid_agent):
+        """If a valid agent, return a 0 in the position of the no-op action. If not, return a 1 in that position
+        and a zero everywhere else."""
+        if valid_agent:
+            temp_list = np.array([1 for _ in range(self.action_space.n)])
+            temp_list[0] = 0
+        else:
+            temp_list = np.array([0 for _ in range(self.action_space.n)])
+            temp_list[0] = 1
+        return temp_list
+
     def _apply_rl_actions(self, rl_actions):
         """
         Per-vehicle accelerations
@@ -426,11 +442,15 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 if self.env_params.additional_params.get('communicate', False):
                     accel = np.concatenate([action[0] for action in action])
                 elif self.qmix:
-                    accel = self.action_values[action]
-                    curr_index = rl_id
-                    if curr_index >= len(self.idx_to_rl_id_map):
-                        break
-                    rl_id = self.idx_to_rl_id_map[rl_id]
+                    # 0 is the no-op
+                    if action > 0:
+                        accel = self.action_values[action - 1]
+                        curr_index = rl_id
+                        if curr_index >= len(self.idx_to_rl_id_map):
+                            break
+                        rl_id = self.idx_to_rl_id_map[rl_id]
+                    else:
+                        continue
                 else:
                     # rescale the actions so that they're more likely to brake or accelerate
                     accel = [val * 8.0 for val in action]
@@ -460,15 +480,15 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         reward = 0.0
         rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
         # we get a reward if there are fewer vehicles in the network than rew_n_crit
-        # TODO(@evinitsky) watch out for this condition
-        if self.rew_n_crit > 0 and self.curriculum_scaling < 1.0:
+        if self.rew_n_crit > 0:
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
-            reward += (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 50
+            reward += (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 100
             self.total_reward += reward
             if self.reward_after_exit:
                 reward_dict = {rl_id: 0 for rl_id in rl_ids}
             else:
-                reward_dict = {rl_id: reward if self.k.vehicle.get_edge(rl_id) in ['4', '5'] else 0 for rl_id in rl_ids}
+                reward_dict = {rl_id: reward if self.k.vehicle.get_edge(rl_id) in ['2', '3', '4', '5'] else 0 for rl_id in rl_ids}
+            print(reward)
 
         elif add_params["speed_reward"]:
             reward = np.nan_to_num(np.mean(self.k.vehicle.get_speed(self.k.vehicle.get_ids_by_edge(['4', '5'])))) / (self.env_params.horizon)
@@ -476,6 +496,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             # TODO put back
             if self.reward_after_exit:
                 reward_dict = {rl_id: 0 for rl_id in rl_ids}
+
             else:
                 reward_dict = {rl_id: reward if self.k.vehicle.get_edge(rl_id) in ['4', '5'] else 0 for rl_id in rl_ids}
             if add_params["congest_penalty"]:
@@ -535,9 +556,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 #        for rl_id in self.reward_tracker_dict.keys()})
 
         if self.qmix:
-            temp_reward_dict = {idx: 0 for idx in
+            temp_reward_dict = {idx: reward for idx in
                            range(self.num_qmix_agents)}
-            temp_reward_dict.update({self.rl_id_to_idx_map[rl_id]: reward_dict[rl_id] for rl_id in rl_ids})
             reward_dict = temp_reward_dict
 
         # print({key: reward for key, reward in reward_dict.items() if reward != 0})

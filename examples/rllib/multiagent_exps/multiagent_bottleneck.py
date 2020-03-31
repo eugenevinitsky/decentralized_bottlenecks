@@ -296,6 +296,7 @@ def on_episode_start(info):
     episode = info["episode"]
     episode.user_data["outflow"] = []
     episode.user_data["n_crit"] = []
+    episode.user_data["edge_4_speed"] = []
     episode.user_data["n_veh_edge4_l0"] = []
     episode.user_data["n_veh_edge4_l1"] = []
 
@@ -308,6 +309,7 @@ def on_episode_end(info):
     time_step = 250
     episode = info["episode"]
     episode.custom_metrics["num_congested"] = np.mean(episode.user_data["n_crit"])
+    episode.custom_metrics["edge_4_speed"] = np.mean(episode.user_data["edge_4_speed"])
     episode.custom_metrics["num_congested_var"] = np.std(episode.user_data["n_crit"])
     episode.custom_metrics["n_veh_edge4_l0"] = np.mean(episode.user_data["n_veh_edge4_l0"])
     episode.custom_metrics["n_veh_edge4_l1"] = np.mean(episode.user_data["n_veh_edge4_l1"])
@@ -329,6 +331,7 @@ def on_episode_step(info):
     episode.user_data["outflow"].append(outflow)
     edge_4_veh = env.k.vehicle.get_ids_by_edge('4')
     episode.user_data["n_crit"].append(len(edge_4_veh))
+    episode.user_data["edge_4_speed"].append(np.nan_to_num(np.mean(env.k.vehicle.get_speed(edge_4_veh))))
     l0 = np.sum([0 == env.k.vehicle.get_lane(veh_id) for veh_id in edge_4_veh])
     episode.user_data["n_veh_edge4_l0"].append(l0)
     l1 = np.sum([1 == env.k.vehicle.get_lane(veh_id) for veh_id in edge_4_veh])
@@ -383,9 +386,9 @@ def setup_exps(args):
         if args.local_mode:
             config["learning_starts"] = 1000
             config["pure_exploration_steps"] = 1000
-        else:
-            # config["learning_starts"] = 50000
-            config["pure_exploration_steps"] = 50000
+        # else:
+        #     # config["learning_starts"] = 50000
+        #     config["pure_exploration_steps"] = 50000
         if args.grid_search:
             config["prioritized_replay"] = tune.grid_search(['True', 'False'])
             config["actor_lr"] = tune.grid_search([1e-3, 1e-4])
@@ -464,7 +467,7 @@ def setup_exps(args):
             config['model']['custom_options']['mining_frac'] = args.mining_frac
             config["model"]["custom_options"]["final_imitation_weight"] = args.final_imitation_weight
 
-    config['gamma'] = .999  # discount rate
+    config['gamma'] = .99  # discount rate
     if args.grid_search:
         config['gamma'] = tune.grid_search([0.99, .995])  # discount rate
     config['horizon'] = args.horizon
