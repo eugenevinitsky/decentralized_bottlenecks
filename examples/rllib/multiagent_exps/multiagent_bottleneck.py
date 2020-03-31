@@ -386,14 +386,14 @@ def setup_exps(args):
         if args.local_mode:
             config["learning_starts"] = 1000
             config["pure_exploration_steps"] = 1000
-        # else:
-        #     # config["learning_starts"] = 50000
-        #     config["pure_exploration_steps"] = 50000
+        else:
+            config["learning_starts"] = 10000
+            config["pure_exploration_steps"] = 10000
         if args.grid_search:
             config["prioritized_replay"] = tune.grid_search(['True', 'False'])
             config["actor_lr"] = tune.grid_search([1e-3, 1e-4])
             config["critic_lr"] = tune.grid_search([1e-3, 1e-4])
-            config["n_step"] = 5
+            config["n_step"] = tune.grid_search([1, 5])
     elif args.qmix:
         alg_run = 'QMIX'
         config = deepcopy(QMIX_DEFAULT_CONFIG)
@@ -468,8 +468,6 @@ def setup_exps(args):
             config["model"]["custom_options"]["final_imitation_weight"] = args.final_imitation_weight
 
     config['gamma'] = .99  # discount rate
-    if args.grid_search:
-        config['gamma'] = tune.grid_search([0.99, .995])  # discount rate
     config['horizon'] = args.horizon
     # config['no_done_at_end'] = True
     # config["batch_mode"] = "truncate_episodes"

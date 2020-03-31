@@ -488,10 +488,9 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 reward_dict = {rl_id: 0 for rl_id in rl_ids}
             else:
                 reward_dict = {rl_id: reward if self.k.vehicle.get_edge(rl_id) in ['2', '3', '4', '5'] else 0 for rl_id in rl_ids}
-            print(reward)
 
         elif add_params["speed_reward"]:
-            reward = np.nan_to_num(np.mean(self.k.vehicle.get_speed(self.k.vehicle.get_ids_by_edge(['4', '5'])))) / (self.env_params.horizon)
+            reward = np.nan_to_num(np.mean(self.k.vehicle.get_speed(self.k.vehicle.get_ids_by_edge(['4', '5'])))) / (100.0)
             self.total_reward += reward
             # TODO put back
             if self.reward_after_exit:
@@ -508,22 +507,21 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     if self.reward_after_exit:
                         reward_dict = {rl_id: 0 for rl_id, reward in reward_dict.items()}
                     else:
-                        reward_dict = {rl_id: reward if self.k.vehicle.get_edge(rl_id) in ['4', '5'] else 0
-                                       for rl_id, reward in reward_dict.items()}
+                        reward_dict = {rl_id: reward for rl_id, reward in reward_dict.items() if self.k.vehicle.get_edge(rl_id) in rl_ids }
         else:
-            reward = self.k.vehicle.get_outflow_rate(self.env_params.additional_params["num_sample_seconds"]) / (200.0 * self.env_params.horizon)
+            reward = self.k.vehicle.get_outflow_rate(self.env_params.additional_params["num_sample_seconds"]) / (20000.0)
 
             # reward -= np.abs(self.env_params.additional_params["life_penalty"])
             if add_params["congest_penalty"]:
                 num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
                 if num_vehs > 30 * self.scaling:
-                    penalty = (num_vehs - 30 * self.scaling) / (self.env_params.horizon / 4.0)
+                    penalty = (num_vehs - 30 * self.scaling) / (400.0)
                     reward -= penalty
             self.total_reward += reward
             if self.reward_after_exit:
                 reward_dict = {rl_id: 0 for rl_id in rl_ids}
             else:
-                reward_dict = {rl_id: reward if self.k.vehicle.get_edge(rl_id) in ['4', '5'] else 0 for rl_id in rl_ids}
+                reward_dict = {rl_id: reward for rl_id in rl_ids if self.k.vehicle.get_edge(rl_id) in rl_ids }
 
         # if we are doing reward after exit, add the tracked mean reward
 
