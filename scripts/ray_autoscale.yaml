@@ -80,7 +80,7 @@ worker_nodes:
 setup_commands:
     # checkout your desired branch on all worker nodes
     - cd ~/flow && git remote add cdc_bottlenecks https://github.com/eugenevinitsky/cdc_bottlenecks.git
-    - cd ~/flow && git fetch cdc_bottlenecks && git checkout cdc_bottlenecks/final_exps
+    - cd ~/flow && git fetch cdc_bottlenecks && git checkout cdc_bottlenecks/working_code
     # set up ray by pip installing and copying over rllib and tune folder
     - pip install --upgrade pyzmq notebook
     - pip install -r ~/flow/requirements.txt
