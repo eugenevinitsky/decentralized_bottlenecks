@@ -80,6 +80,15 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if self.curriculum:
             self.env_params.horizon = self.min_horizon
 
+        self.action_values = np.array([-4.5, 0, 2.6])
+
+        self.qmix = self.env_params.additional_params['qmix']
+        self.num_qmix_agents = self.env_params.additional_params['max_num_agents']
+        if self.qmix:
+            self.default_state = {idx: {"obs": np.zeros(self.observation_space.spaces['obs'].shape[0]),
+                                        "action_mask": self.get_action_mask(valid_agent=False)}
+                                  for idx in range(self.num_qmix_agents)}
+
     def increase_curr_iter(self):
         self.curr_iter += 1
         curriculum_scaling = min(self.curr_iter / self.num_curr_iters, 1.0)
@@ -130,9 +139,15 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if self.env_params.additional_params.get('keep_past_actions', False):
             self.num_past_actions = 100
             num_obs += self.num_past_actions
-        return Box(low=-10.0, high=10.0,
+
+        obs_space = Box(low=-10.0, high=10.0,
                    shape=(num_obs,),
                    dtype=np.float32)
+        # if using qmix, we'll have a Dict as an observation space
+        if self.qmix:
+            obs_space = Dict({'obs': obs_space, "action_mask": Box(0, 1, shape=(self.action_space.n,))})
+
+        return obs_space
 
     @property
     def action_space(self):
@@ -142,6 +157,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 low=-4.0 / 8.0, high=2.6 / 8.0, shape=(1,), dtype=np.float32)
             communicate = Discrete(2)
             return Tuple((accel, communicate))
+        if self.qmix:
+            return Discrete(4)
         else:
             return Box(
                 low=-4.0 / 8.0, high=2.6 / 8.0, shape=(1,), dtype=np.float32)
@@ -274,6 +291,18 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         #                              a_max=[self.observation_space.spaces['a_obs'].high[0]] * value.shape[0]) for
         #                 key, value in veh_info.items()}
 
+        if self.qmix:
+            # assert self.num_actions != 0
+            assert len(self.k.vehicle.get_rl_ids()) < self.num_qmix_agents
+            veh_info_copy = deepcopy(self.default_state)
+            veh_info_copy.update({rl_id_idx: {"obs": veh_info[rl_id],
+                                         "action_mask": self.get_action_mask(valid_agent=True)}
+                                  for rl_id_idx, rl_id in
+                             enumerate(rl_ids)})
+            veh_info = veh_info_copy
+            self.rl_id_to_idx_map = {rl_id: i for i, rl_id in enumerate(rl_ids)}
+            self.idx_to_rl_id_map = {i: rl_id for i, rl_id in enumerate(rl_ids)}
+
         return veh_info
 
     def get_centralized_state(self):
@@ -344,6 +373,17 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                                mean_speed_norm, mean_rl_speed, [outflow],
                                [self.inflow]))
 
+    def get_action_mask(self, valid_agent):
+        """If a valid agent, return a 0 in the position of the no-op action. If not, return a 1 in that position
+        and a zero everywhere else."""
+        if valid_agent:
+            temp_list = np.array([1 for _ in range(self.action_space.n)])
+            temp_list[0] = 0
+        else:
+            temp_list = np.array([0 for _ in range(self.action_space.n)])
+            temp_list[0] = 1
+        return temp_list
+
     def _apply_rl_actions(self, rl_actions):
         """
         Per-vehicle accelerations
@@ -354,6 +394,16 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             for rl_id, action in rl_actions.items():
                 if self.env_params.additional_params.get('communicate', False):
                     accel = np.concatenate([action[0] for action in action])
+                elif self.qmix:
+                    # 0 is the no-op
+                    if action > 0:
+                        accel = [self.action_values[action - 1]]
+                        curr_index = rl_id
+                        if curr_index >= len(self.idx_to_rl_id_map):
+                            break
+                        rl_id = self.idx_to_rl_id_map[rl_id]
+                    else:
+                        continue
                 else:
                     accel = [val * 8.0 for val in action]
                 if self.k.vehicle.get_edge(rl_id) in ['2', '3']:
@@ -403,6 +453,12 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         #     left_vehicles_dict = {veh_id: self.k.vehicle.get_outflow_rate(end_time - exit_time) / 2000.0
         #                           for veh_id, exit_time in self.left_av_time_dict.items()}
         #     reward_dict.update(left_vehicles_dict)
+
+        if self.qmix:
+            temp_reward_dict = {idx: reward for idx in
+                           range(self.num_qmix_agents)}
+            reward_dict = temp_reward_dict
+
         return reward_dict
 
     def reset(self, new_inflow_rate=None):

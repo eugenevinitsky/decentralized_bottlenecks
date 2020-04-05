@@ -92,6 +92,10 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument('--td3', action='store_true', default=False,
                         help='Whether to use td3')
 
+    # QMIX arguments
+    parser.add_argument('--qmix', action='store_true', default=False,
+                        help='Whether to use qmix')
+
     # Curriculum stuff
     parser.add_argument('--curriculum', action='store_true', help='If true, anneal the av_frac and inflow over '
                                                                   'num_curr_iter steps')

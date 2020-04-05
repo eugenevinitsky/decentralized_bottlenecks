@@ -124,13 +124,14 @@ class MultiEnv(MultiAgentEnv, Env):
             # render a frame
             self.render()
 
-            for rl_id in self.k.vehicle.get_arrived_rl_ids():
-                done[rl_id] = True
-                reward[rl_id] = 0
-                if isinstance(self.observation_space, Dict):
-                    states[rl_id] = self.observation_space.sample()
-                else:
-                    states[rl_id] = np.zeros(self.observation_space.shape[0])
+            if not self.qmix:
+                for rl_id in self.k.vehicle.get_arrived_rl_ids():
+                    done[rl_id] = True
+                    reward[rl_id] = 0
+                    if isinstance(self.observation_space, Dict):
+                        states[rl_id] = self.observation_space.sample()
+                    else:
+                        states[rl_id] = np.zeros(self.observation_space.shape[0])
 
         states.update(self.get_state(rl_actions))
         if crash:
