@@ -389,7 +389,7 @@ def setup_exps(args):
             config["buffer_size"] = 1000000
             config["learning_starts"] = 4000
         if args.grid_search:
-            config["buffer_size"] = tune.grid_search([100000, 1000000])
+            config["buffer_size"] = tune.grid_search([10000, 100000, 1000000])
             config["lr"] = tune.grid_search([5e-3, 5e-4])
             config["learning_starts"] = 10000
             config["exploration_fraction"] = tune.grid_search([0.1, 0.3])
