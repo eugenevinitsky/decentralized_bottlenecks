@@ -426,10 +426,22 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         # reward is the mean AV speed
         # reward is the outflow over "num_sample_seconds" seconds
         reward = 0.0
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
         # we get a reward if there are fewer vehicles in the network than rew_n_crit
         if self.rew_n_crit > 0:
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
             reward += (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 100
+            reward_dict = {rl_id: reward for rl_id in rl_ids}
+        elif add_params["speed_reward"]:
+            reward_dict = {rl_id: self.k.vehicle.get_speed(rl_id)**2 / 500 if self.k.vehicle.get_edge(rl_id) in ['4', '5'] else 0
+                           for rl_id in rl_ids }
+            if add_params["congest_penalty"]:
+                num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
+                if num_vehs > 20 * self.scaling:
+                    penalty = (num_vehs - 20 * self.scaling) / 100.0
+                    reward_dict = {rl_id: reward - penalty if self.k.vehicle.get_edge(rl_id) in ['4', '5']
+                                    else 0 for rl_id, reward in reward_dict.items()}
+            reward = np.nan_to_num(np.mean(np.array(self.k.vehicle.get_speed(self.k.vehicle.get_ids()))**2)) / 500
         else:
             if add_params["num_sample_seconds"] > 0.0:
                 reward = self.k.vehicle.get_outflow_rate(
@@ -442,10 +454,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     penalty = (num_vehs - 30 * self.scaling) / 10.0
                     reward -= penalty
 
-        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
-        reward_dict = {rl_id: reward for rl_id in rl_ids}
-        if add_params["speed_reward"]:
-            reward_dict = {rl_id: reward + (self.k.vehicle.get_speed(rl_id) / 10) for rl_id, reward in reward_dict.items()}
+            reward_dict = {rl_id: reward for rl_id in rl_ids}
 
         # # Return the outflow since the vehicle left
         # if int(self.time_counter/self.env_params.sims_per_step) == self.env_params.horizon:
@@ -455,7 +464,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         #     reward_dict.update(left_vehicles_dict)
 
         if self.qmix:
-            temp_reward_dict = {idx: reward for idx in
+            temp_reward_dict = {idx: reward / 100 for idx in
                            range(self.num_qmix_agents)}
             reward_dict = temp_reward_dict
 
@@ -739,7 +748,7 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
                                                       congest_number,
                                                       speed / 50.0,
                                                       lead_speed / 50.0,
-                                                       headway / 1000.0]),
+                                                      headway / 1000.0]),
                                        "expert_action": np.array([np.clip(accel, a_min=self.action_space.low[0],
                                                                           a_max=self.action_space.high[0])])}
 

@@ -18,7 +18,7 @@ import pytz
 import ray
 import ray.rllib.agents.ppo as ppo
 from ray.rllib.agents.ddpg.td3 import TD3_DEFAULT_CONFIG, TD3Trainer
-from ray.rllib.agents.qmix import DEFAULT_CONFIG as QMIX_DEFAULT_CONFIG, QMixTrainer
+from flow.agents.qmix.qmix import DEFAULT_CONFIG as QMIX_DEFAULT_CONFIG, QMixTrainer
 from ray.rllib.env.group_agents_wrapper import _GroupAgentsWrapper
 from ray import tune
 from ray.rllib.models import ModelCatalog
@@ -385,10 +385,18 @@ def setup_exps(args):
     elif args.qmix:
         alg_run = 'QMIX'
         config = deepcopy(QMIX_DEFAULT_CONFIG)
+        if args.local_mode:
+            config["buffer_size"] = 1000000
+            config["learning_starts"] = 4000
         if args.grid_search:
-            config["buffer_size"] = tune.grid_search([50000, 250000])
+            config["buffer_size"] = tune.grid_search([100000, 1000000])
             config["lr"] = tune.grid_search([5e-3, 5e-4])
+            config["learning_starts"] = 10000
             config["exploration_fraction"] = tune.grid_search([0.1, 0.3])
+        if args.use_lstm:
+            config["model"]["custom_options"]["is_rnn"] = True
+        else:
+            config["model"]["custom_options"]["is_rnn"] = False
     else:
         alg_run = 'PPO'
         config = ppo.DEFAULT_CONFIG.copy()

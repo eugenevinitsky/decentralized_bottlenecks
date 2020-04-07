@@ -1589,23 +1589,66 @@
 # 4/04
 # Rerunning code to check that it works
 
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_nc12_0p1_agg_h400 --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
---num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
---sim_step 0.5 --create_inflow_graph --sims_per_step 5 --rew_n_crit 12 \
---td3 --grid_search --use_s3" \
---start --stop --cluster-name ev_0pen_10 --tmux
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_nc12_0p1_agg_h400 --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+#--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+#--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --rew_n_crit 12 \
+#--td3 --grid_search --use_s3" \
+#--start --stop --cluster-name ev_0pen_10 --tmux
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3senv_nc12_0p2_agg_h400 --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
+#--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+#--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --rew_n_crit 12 \
+#--td3 --grid_search --use_s3" \
+#--start --stop --cluster-name ev_0pen_11 --tmux
+#
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_nc12_0p4_agg_h400 --num_iters 350 --checkpoint_freq 50 --av_frac 0.4 \
+#--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+#--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --rew_n_crit 12 \
+#--td3 --grid_search --use_s3" \
+#--start --stop --cluster-name ev_0pen_12 --tmux
+
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_qmix_senv_nc12_0p2_agg_h400 --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
+#--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+#--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --rew_n_crit 12 \
+#--qmix --grid_search --use_s3" \
+#--start --stop --cluster-name ev_0pen_13 --tmux
+
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_qmix_senv_outflow_0p2_agg_h400 --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
+#--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+#--sim_step 0.5 --create_inflow_graph --sims_per_step 5 \
+#--qmix --grid_search --use_s3" \
+#--start --stop --cluster-name ev_0pen_14 --tmux
+
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_qmix_senv_outflow_cpen_0p2_agg_h400 --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
+#--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+#--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --congest_penalty \
+#--qmix --grid_search --use_s3" \
+#--start --stop --cluster-name ev_0pen_15 --tmux
+
+######################################################################################
+# 4/05
+# Rerunning code to check that outflow rew works
+
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_outflow_cpen_0p2_agg_h400 --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
+#--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+#--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --congest_penalty \
+#--td3 --grid_search --use_s3" \
+#--start --stop --cluster-name ev_0pen_16 --tmux
+
+######################################################################################
+# 4/07
+# Rerunning code to check that outflow rew works
 
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3senv_nc12_0p2_agg_h400 --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
---num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
---sim_step 0.5 --create_inflow_graph --sims_per_step 5 --rew_n_crit 12 \
---td3 --grid_search --use_s3" \
---start --stop --cluster-name ev_0pen_11 --tmux
-
-ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_nc12_0p4_agg_h400 --num_iters 350 --checkpoint_freq 50 --av_frac 0.4 \
---num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
---sim_step 0.5 --create_inflow_graph --sims_per_step 5 --rew_n_crit 12 \
---td3 --grid_search --use_s3" \
---start --stop --cluster-name ev_0pen_12 --tmux
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_qmix_senv_outflow_cpen_0p2_agg_h400 --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --congest_penalty \
+--qmix --grid_search --use_s3" \
+--start --stop --cluster-name ev_0pen_16 --tmux
