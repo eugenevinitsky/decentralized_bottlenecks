@@ -25,8 +25,8 @@ class QMixer(nn.Module):
         self.state_dim = int(np.prod(state_shape))
 
         self.hyper_w_1 = nn.Linear(self.state_dim,
-                                   self.embed_dim * self.n_agents)
-        self.hyper_w_final = nn.Linear(self.state_dim, self.embed_dim)
+                                   self.embed_dim * self.n_agents, bias=False)
+        self.hyper_w_final = nn.Linear(self.state_dim, self.embed_dim, bias=False)
 
         # State dependent bias for hidden layer
         self.hyper_b_1 = nn.Linear(self.state_dim, self.embed_dim)

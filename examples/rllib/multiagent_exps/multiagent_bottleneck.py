@@ -18,7 +18,8 @@ import pytz
 import ray
 import ray.rllib.agents.ppo as ppo
 from ray.rllib.agents.ddpg.td3 import TD3_DEFAULT_CONFIG, TD3Trainer
-from flow.agents.qmix.qmix import DEFAULT_CONFIG as QMIX_DEFAULT_CONFIG, QMixTrainer, QMixTrainerPrioritizedReplay, QMIX_DEFAULT_CONFIG2
+from flow.agents.qmix.qmix import DEFAULT_CONFIG as QMIX_DEFAULT_CONFIG, QMixTrainer,\
+    QMixTrainerPrioritizedReplay, QMIX_DEFAULT_CONFIG_PRIORITIZED
 from ray.rllib.env.group_agents_wrapper import _GroupAgentsWrapper
 from ray import tune
 from ray.rllib.models import ModelCatalog
@@ -29,8 +30,8 @@ from flow.agents.custom_ppo import CustomPPOTrainer, CustomPPOTFPolicy
 from flow.agents.centralized_PPO import CentralizedCriticModel, CentralizedCriticModelRNN
 from flow.agents.centralized_PPO import CCTrainer
 from flow.agents.centralized_imitation_PPO import ImitationCentralizedTrainer
-from flow.agents.DQfD import DQFDTrainer
-import flow.agents.DQfD as DQfD
+# from flow.agents.DQfD import DQFDTrainer
+# import flow.agents.DQfD as DQfD
 
 from flow.core.params import SumoParams, EnvParams, InitialConfig, NetParams, \
     InFlows, SumoLaneChangeParams, SumoCarFollowingParams
@@ -355,18 +356,18 @@ def on_train_result_curriculum(info):
 def setup_exps(args):
     rllib_params = setup_rllib_params(args)
     flow_params = setup_flow_params(args)
-    if args.dqfd:
-        alg_run = 'DQFD'
-        config = DQfD.DEFAULT_CONFIG.copy()
-        config['num_expert_steps'] = args.num_expert_steps
-        config['compress_observations'] = False
-        # Grid search things
-        if args.grid_search:
-            config['lr'] = tune.grid_search([5e-6, 5e-5, 5e-4])
-            config['n_step'] = tune.grid_search([1, 5, 10])
-            config['train_batch_size'] = tune.grid_search([32])
-            config['reserved_frac'] = tune.grid_search([0.1, 0.3])
-    elif args.td3:
+    # if args.dqfd:
+    #     alg_run = 'DQFD'
+    #     config = DQfD.DEFAULT_CONFIG.copy()
+    #     config['num_expert_steps'] = args.num_expert_steps
+    #     config['compress_observations'] = False
+    #     # Grid search things
+    #     if args.grid_search:
+    #         config['lr'] = tune.grid_search([5e-6, 5e-5, 5e-4])
+    #         config['n_step'] = tune.grid_search([1, 5, 10])
+    #         config['train_batch_size'] = tune.grid_search([32])
+    #         config['reserved_frac'] = tune.grid_search([0.1, 0.3])
+    if args.td3:
         alg_run = 'TD3'
         config = deepcopy(TD3_DEFAULT_CONFIG)
         config["buffer_size"] = 100000
@@ -389,15 +390,15 @@ def setup_exps(args):
             config = deepcopy(QMIX_DEFAULT_CONFIG)
         else:
             # prioritized replay
-            config = deepcopy(QMIX_DEFAULT_CONFIG2)
+            config = deepcopy(QMIX_DEFAULT_CONFIG_PRIORITIZED)
         if args.local_mode:
             config["buffer_size"] = 1000000
-            config["learning_starts"] = 4000
+            config["learning_starts"] = 100
         if args.grid_search:
-            config["buffer_size"] = tune.grid_search([10000, 100000, 1000000])
-            config["lr"] = tune.grid_search([5e-3, 5e-4])
+            config["buffer_size"] = tune.grid_search([100000, 1000000])
             config["learning_starts"] = 10000
-            config["exploration_fraction"] = tune.grid_search([0.1, 0.3])
+            config["mixing_embed_dim"] = tune.grid_search([32, 320])
+            config["exploration_fraction"] = tune.grid_search([0.1, 0.5])
         if args.use_lstm:
             config["model"]["custom_options"]["is_rnn"] = True
         else:
@@ -570,9 +571,9 @@ if __name__ == '__main__':
     elif not args.imitate and args.centralized_vf:
         alg_run = CCTrainer
         run_name = "central_trainer"
-    elif args.dqfd:
-        alg_run = DQFDTrainer
-        run_name = "dqfd"
+    # elif args.dqfd:
+    #     alg_run = DQFDTrainer
+    #     run_name = "dqfd"
     elif args.td3:
         alg_run = TD3Trainer
         run_name = "TD3"

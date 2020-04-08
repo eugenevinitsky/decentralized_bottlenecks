@@ -73,6 +73,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         self.rew_n_crit = env_params.additional_params.get("rew_n_crit")
 
         self.curr_iter = 0
+        self.rew_history = 0
         self.num_curr_iters = env_params.additional_params["num_curr_iters"]
         self.curriculum = env_params.additional_params["curriculum"]
         self.min_horizon = env_params.additional_params["min_horizon"]
@@ -80,7 +81,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if self.curriculum:
             self.env_params.horizon = self.min_horizon
 
-        self.action_values = np.array([-4.5, 0, 2.6])
+        self.action_values = np.array([-4.5, -2.25, 0, 1.3, 2.6])
 
         self.qmix = self.env_params.additional_params['qmix']
         self.num_qmix_agents = self.env_params.additional_params['max_num_agents']
@@ -145,7 +146,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                    dtype=np.float32)
         # if using qmix, we'll have a Dict as an observation space
         if self.qmix:
-            obs_space = Dict({'obs': obs_space, "action_mask": Box(0, 1, shape=(self.action_space.n,))})
+            obs_space = Dict({'obs': obs_space, "action_mask": Box(0, 1, shape=(self.action_space.n,), dtype=np.int32)})
 
         return obs_space
 
@@ -158,7 +159,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             communicate = Discrete(2)
             return Tuple((accel, communicate))
         if self.qmix:
-            return Discrete(4)
+            return Discrete(6)
         else:
             return Box(
                 low=-4.0 / 8.0, high=2.6 / 8.0, shape=(1,), dtype=np.float32)
@@ -445,16 +446,18 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         else:
             if add_params["num_sample_seconds"] > 0.0:
                 reward = self.k.vehicle.get_outflow_rate(
-                    add_params["num_sample_seconds"]) / 2000.0
+                    add_params["num_sample_seconds"]) / 20000.0 + 0.1 # extra one is to ensure consistent positivity
 
             reward -= np.abs(self.env_params.additional_params["life_penalty"])
             if add_params["congest_penalty"]:
                 num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
                 if num_vehs > 30 * self.scaling:
-                    penalty = (num_vehs - 30 * self.scaling) / 10.0
+                    penalty = (num_vehs - 30 * self.scaling) / 300.0
                     reward -= penalty
 
             reward_dict = {rl_id: reward for rl_id in rl_ids}
+
+        self.rew_history += reward
 
         # # Return the outflow since the vehicle left
         # if int(self.time_counter/self.env_params.sims_per_step) == self.env_params.horizon:
@@ -472,6 +475,13 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
     def reset(self, new_inflow_rate=None):
         self.curr_rl_vehicles = {}
+        print('THE TOTAL REWARD FOR THIS ROUND WAS ', self.rew_history)
+        try:
+            print('THE TOTAL OUTFLOW FOR THIS ROUND WAS ', self.k.vehicle.get_outflow_rate(10000))
+        except:
+            pass
+
+        self.rew_history = 0
         self.update_curr_rl_vehicles()
 
         # dict tracking past actions

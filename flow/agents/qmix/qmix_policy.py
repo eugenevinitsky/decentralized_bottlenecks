@@ -128,7 +128,9 @@ class QMixLoss(nn.Module):
 
         # Mix
         if self.mixer is not None:
+            print('mean q vals before mixer', chosen_action_qvals.mean())
             chosen_action_qvals = self.mixer(chosen_action_qvals, state)
+            print('mean q vals after mixer', chosen_action_qvals.mean())
             target_max_qvals = self.target_mixer(target_max_qvals, next_state)
 
         # Calculate 1-step Q-Learning targets
@@ -379,12 +381,12 @@ class QMixTorchPolicy(Policy):
             "grad_norm": grad_norm
             if isinstance(grad_norm, float) else grad_norm.item(),
             "td_error_abs": masked_td_error.abs().sum().item() / mask_elems,
+
             "q_taken_mean": (chosen_action_qvals * mask).sum().item() /
             mask_elems,
             "target_mean": (targets * mask).sum().item() / mask_elems,
-            "per_agent_rew": rewards[:, :, 0].sum().item()
         }
-        return {LEARNER_STATS_KEY: stats}
+        return {LEARNER_STATS_KEY: stats, "td_error": masked_td_error[:, 0, 0]}
 
     @override(Policy)
     def get_initial_state(self):  # initial RNN state

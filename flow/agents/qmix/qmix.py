@@ -5,6 +5,7 @@ from __future__ import print_function
 from ray.rllib.agents.trainer import with_common_config
 from ray.rllib.agents.dqn.dqn import GenericOffPolicyTrainer
 from flow.agents.qmix.qmix_policy import QMixTorchPolicy
+from flow.agents.qmix.sync_replay_optimizer import SyncReplayOptimizer as SyncReplayPrioritizedOptimizer
 from ray.rllib.optimizers import SyncBatchReplayOptimizer
 
 # yapf: disable
@@ -99,26 +100,35 @@ def make_sync_batch_optimizer(workers, config):
         train_batch_size=config["train_batch_size"])
 
 
+def make_prioritized_sync_batch_optimizer(workers, config):
+    return SyncReplayPrioritizedOptimizer(
+        workers,
+        learning_starts=config["learning_starts"],
+        buffer_size=config["buffer_size"],
+        train_batch_size=config["train_batch_size"])
+
+
 QMixTrainer = GenericOffPolicyTrainer.with_updates(
     name="QMIX",
     default_config=DEFAULT_CONFIG,
     default_policy=QMixTorchPolicy,
     make_policy_optimizer=make_sync_batch_optimizer)
 
-QMIX_DEFAULT_CONFIG2 = DEFAULT_CONFIG.copy()
-QMIX_DEFAULT_CONFIG2["prioritized_replay"] = True
+QMIX_DEFAULT_CONFIG_PRIORITIZED = DEFAULT_CONFIG.copy()
+QMIX_DEFAULT_CONFIG_PRIORITIZED["prioritized_replay"] = True
 # Alpha parameter for prioritized replay buffer.
-QMIX_DEFAULT_CONFIG2["prioritized_replay_alpha"] = 0.6
+QMIX_DEFAULT_CONFIG_PRIORITIZED["prioritized_replay_alpha"] = 0.6
 # Beta parameter for sampling from prioritized replay buffer.
-QMIX_DEFAULT_CONFIG2["prioritized_replay_beta"] = 0.4
+QMIX_DEFAULT_CONFIG_PRIORITIZED["prioritized_replay_beta"] = 0.4
 # Fraction of entire training period over which the beta parameter is
 # annealed
-QMIX_DEFAULT_CONFIG2["beta_annealing_fraction"] = 0.2
+QMIX_DEFAULT_CONFIG_PRIORITIZED["beta_annealing_fraction"] = 0.2
 # Final value of beta
-QMIX_DEFAULT_CONFIG2["final_prioritized_replay_beta"] = 0.4
+QMIX_DEFAULT_CONFIG_PRIORITIZED["final_prioritized_replay_beta"] = 0.4
 # Epsilon to add to the TD errors when updating priorities.
-QMIX_DEFAULT_CONFIG2["prioritized_replay_eps"] = 1e-6
+QMIX_DEFAULT_CONFIG_PRIORITIZED["prioritized_replay_eps"] = 1e-6
 QMixTrainerPrioritizedReplay = GenericOffPolicyTrainer.with_updates(
     name="QMIX_prioritized",
-    default_config=QMIX_DEFAULT_CONFIG2,
-    default_policy=QMixTorchPolicy)
+    default_config=QMIX_DEFAULT_CONFIG_PRIORITIZED,
+    default_policy=QMixTorchPolicy,
+    make_policy_optimizer=make_prioritized_sync_batch_optimizer)
