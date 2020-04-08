@@ -104,3 +104,21 @@ QMixTrainer = GenericOffPolicyTrainer.with_updates(
     default_config=DEFAULT_CONFIG,
     default_policy=QMixTorchPolicy,
     make_policy_optimizer=make_sync_batch_optimizer)
+
+QMIX_DEFAULT_CONFIG2 = DEFAULT_CONFIG.copy()
+QMIX_DEFAULT_CONFIG2["prioritized_replay"] = True
+# Alpha parameter for prioritized replay buffer.
+QMIX_DEFAULT_CONFIG2["prioritized_replay_alpha"] = 0.6
+# Beta parameter for sampling from prioritized replay buffer.
+QMIX_DEFAULT_CONFIG2["prioritized_replay_beta"] = 0.4
+# Fraction of entire training period over which the beta parameter is
+# annealed
+QMIX_DEFAULT_CONFIG2["beta_annealing_fraction"] = 0.2
+# Final value of beta
+QMIX_DEFAULT_CONFIG2["final_prioritized_replay_beta"] = 0.4
+# Epsilon to add to the TD errors when updating priorities.
+QMIX_DEFAULT_CONFIG2["prioritized_replay_eps"] = 1e-6
+QMixTrainerPrioritizedReplay = GenericOffPolicyTrainer.with_updates(
+    name="QMIX_prioritized",
+    default_config=QMIX_DEFAULT_CONFIG2,
+    default_policy=QMixTorchPolicy)

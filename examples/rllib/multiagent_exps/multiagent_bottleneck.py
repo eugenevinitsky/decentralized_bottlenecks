@@ -18,7 +18,7 @@ import pytz
 import ray
 import ray.rllib.agents.ppo as ppo
 from ray.rllib.agents.ddpg.td3 import TD3_DEFAULT_CONFIG, TD3Trainer
-from flow.agents.qmix.qmix import DEFAULT_CONFIG as QMIX_DEFAULT_CONFIG, QMixTrainer
+from flow.agents.qmix.qmix import DEFAULT_CONFIG as QMIX_DEFAULT_CONFIG, QMixTrainer, QMixTrainerPrioritizedReplay, QMIX_DEFAULT_CONFIG2
 from ray.rllib.env.group_agents_wrapper import _GroupAgentsWrapper
 from ray import tune
 from ray.rllib.models import ModelCatalog
@@ -384,7 +384,12 @@ def setup_exps(args):
             config["n_step"] = tune.grid_search([1, 5])
     elif args.qmix:
         alg_run = 'QMIX'
-        config = deepcopy(QMIX_DEFAULT_CONFIG)
+        if args.use_lstm:
+            # no prioritized replay
+            config = deepcopy(QMIX_DEFAULT_CONFIG)
+        else:
+            # prioritized replay
+            config = deepcopy(QMIX_DEFAULT_CONFIG2)
         if args.local_mode:
             config["buffer_size"] = 1000000
             config["learning_starts"] = 4000
@@ -572,7 +577,10 @@ if __name__ == '__main__':
         alg_run = TD3Trainer
         run_name = "TD3"
     elif args.qmix:
-        alg_run = QMixTrainer
+        if args.use_lstm:
+            alg_run = QMixTrainer
+        else:
+            alg_run = QMixTrainerPrioritizedReplay
         run_name = "QMIX"
     else:
         alg_run = CustomPPOTrainer
