@@ -168,6 +168,7 @@ def setup_flow_params(args):
         "action_discretization": 5,
         "qmix": args.qmix,
         "max_num_agents": args.max_num_agents,
+        "order_agents": args.order_agents,
 
         # curriculum stuff
         "curriculum": args.curriculum,
@@ -392,10 +393,10 @@ def setup_exps(args):
             # prioritized replay
             config = deepcopy(QMIX_DEFAULT_CONFIG_PRIORITIZED)
         if args.local_mode:
-            config["buffer_size"] = 1000000
-            config["learning_starts"] = 100
+            config["buffer_size"] = 10000
+            config["learning_starts"] = 5000
         if args.grid_search:
-            config["buffer_size"] = tune.grid_search([100000, 1000000])
+            config["buffer_size"] = tune.grid_search([10000, 100000])
             config["learning_starts"] = 10000
             config["mixing_embed_dim"] = tune.grid_search([32, 320])
             config["exploration_fraction"] = tune.grid_search([0.1, 0.5])

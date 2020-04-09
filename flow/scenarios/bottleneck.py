@@ -237,7 +237,7 @@ class BottleneckScenario(Scenario):
 
     def specify_edge_starts(self):
         """See parent class."""
-        return [("1", 0), ("2", 100), ("3", 405), ("4", 425), ("5", 580)]
+        return [("1", 0), ("2", 100), ("3", 410), ("4", 550), ("5", 830)]
 
     def get_bottleneck_lanes(self, lane):
         """Return the reduced number of lanes."""

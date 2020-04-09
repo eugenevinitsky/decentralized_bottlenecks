@@ -84,6 +84,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         self.action_values = np.array([-4.5, -2.25, 0, 1.3, 2.6])
 
         self.qmix = self.env_params.additional_params['qmix']
+        self.order_agents = self.env_params.additional_params['order_agents']
         self.num_qmix_agents = self.env_params.additional_params['max_num_agents']
         if self.qmix:
             self.default_state = {idx: {"obs": np.zeros(self.observation_space.spaces['obs'].shape[0]),
@@ -119,8 +120,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                            self.k.scenario.num_lanes(segment[0])
             num_obs += 7
         elif self.simple_env:
-            # abs_position duration, time since stopped, number of vehicles in the bottleneck, speed, lead speed, headway
-            num_obs = 7
+            # abs_position, time since stopped, number of vehicles in the bottleneck, speed, lead speed, headway
+            num_obs = 6
         elif self.super_simple_env:
             num_obs = 3
         else:
@@ -194,14 +195,20 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                       self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
             for rl_id in rl_ids:
-                controller = self.curr_rl_vehicles[rl_id]['controller']
-                if self.k.vehicle.get_speed(rl_id) <= 0.2:
+                abs_position = self.k.vehicle.get_x_by_id(rl_id)
+                edge_ids = self.k.vehicle.get_ids_by_edge(self.k.vehicle.get_edge(rl_id))
+                positions = self.k.vehicle.get_x_by_id(edge_ids)
+                lanes = self.k.vehicle.get_lane(edge_ids)
+                rl_lane = self.k.vehicle.get_lane(rl_id)
+                positions = [position for position, lane in zip(positions, lanes) if lane == rl_lane]
+                is_edge_leader = np.sum([abs_position >= position for position in positions])
+
+                # only increment the counter if we're actually waiting
+                if self.k.vehicle.get_speed(rl_id) <= 0.2 and is_edge_leader and self.k.vehicle.get_edge(rl_id) == '3':
                     self.curr_rl_vehicles[rl_id]['time_since_stopped'] += 1.0
                 else:
                     self.curr_rl_vehicles[rl_id]['time_since_stopped'] = 0.0
 
-                duration = controller.duration
-                abs_position = self.k.vehicle.get_position(rl_id)
                 # if rl_actions and rl_id in rl_actions.keys():
                 #     print('RL ', rl_actions[rl_id])
                 #     print('Expert ', accel)
@@ -214,7 +221,6 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 veh_info[rl_id] = np.array([abs_position / 1000.0,
                                                         self.curr_rl_vehicles[rl_id][
                                                             'time_since_stopped'] / self.env_params.horizon,
-                                                        duration / 100.0,
                                                         congest_number,
                                                         speed / 50.0,
                                                         lead_speed / 50.0,
@@ -226,9 +232,16 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                       self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
             for rl_id in rl_ids:
-                abs_position = self.k.vehicle.get_position(rl_id)
+                abs_position = self.k.vehicle.get_x_by_id(rl_id)
+                edge_ids = self.k.vehicle.get_ids_by_edge(self.k.vehicle.get_edge(rl_id))
+                positions = self.k.vehicle.get_x_by_id(edge_ids)
+                lanes = self.k.vehicle.get_lane(edge_ids)
+                rl_lane = self.k.vehicle.get_lane(rl_id)
+                positions = [position for position, lane in zip(positions, lanes) if lane == rl_lane]
+                is_edge_leader = np.sum([abs_position >= position for position in positions])
 
-                if self.k.vehicle.get_speed(rl_id) <= 0.2:
+                # only increment the counter if we're actually waiting
+                if self.k.vehicle.get_speed(rl_id) <= 0.2 and is_edge_leader and self.k.vehicle.get_edge(rl_id) == '3':
                     self.curr_rl_vehicles[rl_id]['time_since_stopped'] += 1.0
                 else:
                     self.curr_rl_vehicles[rl_id]['time_since_stopped'] = 0.0
@@ -294,6 +307,9 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
         if self.qmix:
             # assert self.num_actions != 0
+            if self.order_agents:
+                abs_pos = self.k.vehicle.get_x_by_id(rl_ids)
+                rl_ids = [rl_id for _, rl_id in sorted(zip(abs_pos, rl_ids))]
             assert len(self.k.vehicle.get_rl_ids()) < self.num_qmix_agents
             veh_info_copy = deepcopy(self.default_state)
             veh_info_copy.update({rl_id_idx: {"obs": veh_info[rl_id],
@@ -446,7 +462,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         else:
             if add_params["num_sample_seconds"] > 0.0:
                 reward = self.k.vehicle.get_outflow_rate(
-                    add_params["num_sample_seconds"]) / 20000.0 + 0.1 # extra one is to ensure consistent positivity
+                    add_params["num_sample_seconds"] * self.env_params.sims_per_step) / 20000.0 + 0.1  # extra one is to ensure consistent positivity
 
             reward -= np.abs(self.env_params.additional_params["life_penalty"])
             if add_params["congest_penalty"]:
@@ -707,7 +723,7 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
     def observation_space(self):
         if self.simple_env:
             # abs_position duration, time since stopped, number of vehicles in the bottleneck, speed, lead speed, headway
-            new_obs = Box(low=-10.0, high=10.0, shape=(7,), dtype=np.float32)
+            new_obs = Box(low=-10.0, high=10.0, shape=(6,), dtype=np.float32)
         else:
             obs = super().observation_space
             # Extra keys "time since stop", duration
@@ -741,7 +757,6 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
 
                 if accel is None:
                     accel = -np.abs(self.action_space.low[0])
-                duration = controller.duration
                 abs_position = self.k.vehicle.get_position(rl_id)
                 # if rl_actions and rl_id in rl_actions.keys():
                 #     print('RL ', rl_actions[rl_id])
@@ -754,7 +769,6 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
                 headway = self.k.vehicle.get_headway(rl_id)
                 state_dict[rl_id] = {"a_obs": np.array([abs_position / 1000.0,
                                                       self.curr_rl_vehicles[rl_id]['time_since_stopped'] / self.env_params.horizon,
-                                                      duration / 100.0,
                                                       congest_number,
                                                       speed / 50.0,
                                                       lead_speed / 50.0,

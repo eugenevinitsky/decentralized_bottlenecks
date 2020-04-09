@@ -1653,10 +1653,20 @@
 #--qmix --grid_search --use_s3" \
 #--start --stop --cluster-name ev_0pen_16 --tmux
 
+######################################################################################
+# 4/08
+# Rerunning code to check that outflow rew works
 # this one has prioritized replay
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_qmix_senv_outflow_cpen_0p2_agg_h400_prior --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
+#--num_samples 1 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+#--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --congest_penalty \
+#--qmix --grid_search --use_s3" \
+#--start --stop --cluster-name ev_0pen_17 --tmux
+
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_qmix_senv_outflow_cpen_0p2_agg_h400_prior --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_qmix_senv_outflow_cpen_0p2_agg_h400_prior_ord --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
 --num_samples 1 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
 --sim_step 0.5 --create_inflow_graph --sims_per_step 5 --congest_penalty \
---qmix --grid_search --use_s3" \
---start --stop --cluster-name ev_0pen_17 --tmux
+--qmix --grid_search --use_s3 --order_agents" \
+--start --stop --cluster-name ev_0pen_18 --tmux

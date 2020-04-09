@@ -95,6 +95,9 @@ def get_multiagent_bottleneck_parser():
     # QMIX arguments
     parser.add_argument('--qmix', action='store_true', default=False,
                         help='Whether to use qmix')
+    parser.add_argument('--order_agents', action='store_true', default=False,
+                        help='If true, the agents are sorted by absolute position before being passed'
+                             'to the mixer')
 
     # Curriculum stuff
     parser.add_argument('--curriculum', action='store_true', help='If true, anneal the av_frac and inflow over '

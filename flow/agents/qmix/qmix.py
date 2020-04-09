@@ -20,6 +20,8 @@ DEFAULT_CONFIG = with_common_config({
     "double_q": True,
     # Optimize over complete episodes by default.
     "batch_mode": "complete_episodes",
+    # Whether to have two Q functions
+    "twin_q": False,
 
     # === Evaluation ===
     # Evaluate with epsilon=0 every `evaluation_interval` training iterations.
