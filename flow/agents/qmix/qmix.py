@@ -59,7 +59,7 @@ DEFAULT_CONFIG = with_common_config({
     # RMSProp epsilon
     "optim_eps": 0.00001,
     # If not None, clip gradients during optimization at this value
-    "grad_norm_clipping": 10,
+    "grad_norm_clipping": 40,
     # How many steps of the model to sample before learning starts.
     "learning_starts": 1000,
     # Update the replay buffer with this many samples at once. Note that
@@ -68,7 +68,7 @@ DEFAULT_CONFIG = with_common_config({
     # Size of a batched sampled from replay buffer for training. Note that
     # if async_updates is set, then each worker returns gradients for a
     # batch of this size.
-    "train_batch_size": 32,
+    "train_batch_size": 320,
 
     # === Parallelism ===
     # Number of workers for collecting samples with. This only makes sense

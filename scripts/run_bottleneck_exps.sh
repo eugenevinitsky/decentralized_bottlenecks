@@ -1678,9 +1678,35 @@
 #--qmix --grid_search --use_s3 --order_agents" \
 #--start --stop --cluster-name ev_0pen_19 --tmux
 
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_qmix_senv_speed_0p2_agg_h400_prior_ord --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
+#--num_samples 1 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+#--sim_step 0.5 --create_inflow_graph --sims_per_step 5 \
+#--qmix --grid_search --use_s3 --order_agents --speed_reward" \
+#--start --stop --cluster-name ev_0pen_19 --tmux
+
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_qmix_senv_speed_0p2_agg_h400_prior_ord_lstm --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
+#--num_samples 1 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+#--sim_step 0.5 --create_inflow_graph --sims_per_step 5 \
+#--qmix --grid_search --use_s3 --order_agents --speed_reward --use_lstm" \
+#--start --stop --cluster-name ev_0pen_20 --tmux
+
+######################################################################################
+# 4/09
+# Rerunning code to check that outflow rew works
+# this one has prioritized replay. Also comparing mixer to VDN.
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_qmix_senv_speed_0p2_agg_h400_prior_ord_lstm --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 \
+--qmix --grid_search --use_s3 --order_agents --speed_reward --use_lstm" \
+--start --stop --cluster-name ev_0pen_21 --tmux
+
 ray exec ray_autoscale.yaml \
 "python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_qmix_senv_speed_0p2_agg_h400_prior_ord --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
 --num_samples 1 --rollout_scale_factor 1.0 --horizon 200 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
 --sim_step 0.5 --create_inflow_graph --sims_per_step 5 \
 --qmix --grid_search --use_s3 --order_agents --speed_reward" \
---start --stop --cluster-name ev_0pen_19 --tmux
+--start --stop --cluster-name ev_0pen_22 --tmux

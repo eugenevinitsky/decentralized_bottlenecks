@@ -77,6 +77,7 @@ class ReplayBuffer(object):
 
     @DeveloperAPI
     def sample_idxes(self, batch_size):
+        print('THE NUMBER OF SAMPLES IN THE BUFFER IS ', len(self._storage))
         return [
             random.randint(0,
                            len(self._storage) - 1) for _ in range(batch_size)
@@ -185,6 +186,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 
     @DeveloperAPI
     def sample_idxes(self, batch_size):
+        print('THE NUMBER OF SAMPLES IN THE BUFFER IS ', len(self._storage))
         return self._sample_proportional(batch_size)
 
     @DeveloperAPI

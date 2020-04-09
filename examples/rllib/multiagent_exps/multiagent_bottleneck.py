@@ -290,6 +290,8 @@ def on_episode_start(info):
     episode = info["episode"]
     episode.user_data["outflow"] = []
     episode.user_data["n_crit"] = []
+    episode.user_data["speed_edge_4"] = []
+
     episode.user_data["n_veh_edge4_l0"] = []
     episode.user_data["n_veh_edge4_l1"] = []
 
@@ -302,6 +304,8 @@ def on_episode_end(info):
     time_step = 250
     episode = info["episode"]
     episode.custom_metrics["num_congested"] = np.mean(episode.user_data["n_crit"])
+    episode.custom_metrics["speed_edge_4"] = np.mean(episode.user_data["speed_edge_4"])
+
     episode.custom_metrics["n_veh_edge4_l0"] = np.mean(episode.user_data["n_veh_edge4_l0"])
     episode.custom_metrics["n_veh_edge4_l1"] = np.mean(episode.user_data["n_veh_edge4_l1"])
 
@@ -321,6 +325,7 @@ def on_episode_step(info):
     outflow = env.k.vehicle.get_outflow_rate(int(env.sim_step * env.env_params.sims_per_step))
     episode.user_data["outflow"].append(outflow)
     edge_4_veh = env.k.vehicle.get_ids_by_edge('4')
+    episode.user_data["speed_edge_4"].append(np.nan_to_num(np.mean(env.k.vehicle.get_speed(edge_4_veh))))
     episode.user_data["n_crit"].append(len(edge_4_veh))
     l0 = np.sum(["0" == env.k.vehicle.get_edge(veh_id) for veh_id in edge_4_veh])
     episode.user_data["n_veh_edge4_l0"].append(l0)
@@ -394,12 +399,14 @@ def setup_exps(args):
             config = deepcopy(QMIX_DEFAULT_CONFIG_PRIORITIZED)
         if args.local_mode:
             config["buffer_size"] = 10000
-            config["learning_starts"] = 5000
+            config["learning_starts"] = 1000
+            config["mixer"] = "vdn"
         if args.grid_search:
             config["buffer_size"] = tune.grid_search([10000, 100000])
             config["learning_starts"] = 10000
             config["mixing_embed_dim"] = tune.grid_search([32, 320])
             config["exploration_fraction"] = tune.grid_search([0.1, 0.5])
+            config["mixer"] = tune.grid_search(["vdn", "qmix"])
         if args.use_lstm:
             config["model"]["custom_options"]["is_rnn"] = True
         else:
