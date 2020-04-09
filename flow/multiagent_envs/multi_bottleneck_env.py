@@ -81,7 +81,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if self.curriculum:
             self.env_params.horizon = self.min_horizon
 
-        self.action_values = np.array([-4.5, -2.25, 0, 1.3, 2.6])
+        self.action_values = np.array([-4.5, 0, 2.6])
 
         self.qmix = self.env_params.additional_params['qmix']
         self.order_agents = self.env_params.additional_params['order_agents']
@@ -160,7 +160,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             communicate = Discrete(2)
             return Tuple((accel, communicate))
         if self.qmix:
-            return Discrete(6)
+            return Discrete(4)
         else:
             return Box(
                 low=-4.0 / 8.0, high=2.6 / 8.0, shape=(1,), dtype=np.float32)
@@ -458,11 +458,14 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     penalty = (num_vehs - 20 * self.scaling) / 100.0
                     reward_dict = {rl_id: reward - penalty if self.k.vehicle.get_edge(rl_id) in ['4', '5']
                                     else 0 for rl_id, reward in reward_dict.items()}
-            reward = np.nan_to_num(np.mean(np.array(self.k.vehicle.get_speed(self.k.vehicle.get_ids()))**2)) / 500
+            local_rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if
+                      self.k.vehicle.get_edge(veh_id) in ['4']]
+
+            reward = np.nan_to_num(np.mean(np.array(self.k.vehicle.get_speed(local_rl_ids))**2)) / 5000
         else:
             if add_params["num_sample_seconds"] > 0.0:
                 reward = self.k.vehicle.get_outflow_rate(
-                    add_params["num_sample_seconds"] * self.env_params.sims_per_step) / 20000.0 + 0.1  # extra one is to ensure consistent positivity
+                    add_params["num_sample_seconds"] * self.env_params.sims_per_step) / 20000.0 + 0.02  # extra one is to ensure consistent positivity
 
             reward -= np.abs(self.env_params.additional_params["life_penalty"])
             if add_params["congest_penalty"]:

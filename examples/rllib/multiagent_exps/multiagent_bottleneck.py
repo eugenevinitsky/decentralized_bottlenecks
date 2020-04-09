@@ -471,7 +471,10 @@ def setup_exps(args):
 
     config['gamma'] = 0.99  # discount rate
     config['horizon'] = args.horizon
-    config['no_done_at_end'] = True
+    if args.qmix:
+        config['no_done_at_end'] = False
+    else:
+        config['no_done_at_end'] = True
     # config["batch_mode"] = "truncate_episodes"
     # config["sample_batch_size"] = args.horizon
     # config["observation_filter"] = "MeanStdFilter"
