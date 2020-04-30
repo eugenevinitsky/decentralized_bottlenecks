@@ -79,6 +79,8 @@ def get_multiagent_bottleneck_parser():
                                                                            'is given to the agent as a terminal reward')
     parser.add_argument('--rew_n_crit', type=int, default=0, help='If set to a value above zero, we get rewarded if fewer than '
                                                               'n_crit AVs in the bottleneck, and penalized if above')
+    parser.add_argument('--reroute_on_exit', action='store_true', default=False,
+                        help='Put back RL vehicles that have left')
 
     # dqfd arguments
     parser.add_argument('--dqfd', action='store_true', default=False,

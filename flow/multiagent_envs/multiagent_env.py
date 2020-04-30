@@ -54,8 +54,10 @@ class MultiEnv(MultiAgentEnv, Env):
         done = {}
         states = {}
         reward = {}
-        self.observed_rl_cars.update(self.k.vehicle.get_rl_ids())
         for _ in range(self.env_params.sims_per_step):
+            self.observed_rl_cars.update(self.k.vehicle.get_rl_ids())
+            if self.time_counter < self.env_params.sims_per_step * self.env_params.warmup_steps:
+                self.observed_cars.update(self.k.vehicle.get_ids())
             self.time_counter += 1
 
             # perform acceleration actions for controlled human-driven vehicles
@@ -131,7 +133,7 @@ class MultiEnv(MultiAgentEnv, Env):
                     if isinstance(self.observation_space, Dict):
                         states[rl_id] = self.observation_space.sample()
                     else:
-                        states[rl_id] = np.zeros(self.observation_space.shape[0])
+                        states[rl_id] = -1 * np.ones(self.observation_space.shape[0])
 
         states.update(self.get_state(rl_actions))
         if crash:
@@ -181,6 +183,7 @@ class MultiEnv(MultiAgentEnv, Env):
         """
 
         self.observed_rl_cars = set()
+        self.observed_cars = set()
         self.left_av_time_dict = {}
         # set rendering to true
         self.num_resets += 1
@@ -188,6 +191,8 @@ class MultiEnv(MultiAgentEnv, Env):
             self.sim_params.render = True
             # got to restart the simulation to make it actually display anything
             self.restart_simulation(self.sim_params)
+            self.should_render = False
+
 
         # reset the time counter
         self.time_counter = 0

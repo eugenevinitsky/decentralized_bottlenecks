@@ -124,6 +124,9 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
     # Start the environment with the gui turned on and a path for the
     # emission file
     env_params = flow_params['env']
+    env_params.evaluate = True
+    env_params.warmup_steps = 0
+    flow_params['env'] = env_params
     # # TODO(@evinitsky) remove this this is a backwards compatibility hack
     # if 'life_penalty' not in env_params.additional_params.keys():
     #     env_params.additional_params['life_penalty'] = - 3

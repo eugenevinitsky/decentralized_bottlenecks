@@ -116,7 +116,7 @@ def setup_flow_params(args):
             num_vehicles=1)
 
     # flow rate
-    flow_rate = 1900 * args.scaling
+    flow_rate = 2400 * args.scaling
 
     controlled_segments = [('1', 1, False), ('2', 2, True), ('3', 2, True),
                            ('4', 2, True), ('5', 1, False)]
@@ -151,6 +151,7 @@ def setup_flow_params(args):
         "speed_reward": args.speed_reward,
         'fair_reward': False,  # This doesn't do anything, remove
         'exit_history_seconds': 0,  # This doesn't do anything, remove
+        'reroute_on_exit': args.reroute_on_exit,  # put back RL vehicles that have left
 
         # parameters for the staggering controller that we imitate
         "n_crit": 8,
@@ -227,6 +228,9 @@ def setup_flow_params(args):
     #     scenario = 'SimpleBottleneckScenario'
     # else:
     scenario='BottleneckScenario'
+    warmup_steps = 0
+    if args.reroute_on_exit:
+        warmup_steps = 300
 
     flow_params = dict(
         # name of the experiment
@@ -246,12 +250,12 @@ def setup_flow_params(args):
             sim_step=args.sim_step,
             render=args.render,
             print_warnings=False,
-            restart_instance=True,
+            restart_instance=True
         ),
 
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
-            warmup_steps=int(0 / args.sim_step),
+            warmup_steps=int(warmup_steps / args.sim_step),
             sims_per_step=args.sims_per_step,
             horizon=args.horizon,
             clip_actions=False,

@@ -78,6 +78,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         self.curriculum = env_params.additional_params["curriculum"]
         self.min_horizon = env_params.additional_params["min_horizon"]
         self.max_horizon = env_params.additional_params["horizon"]
+        self.reroute_on_exit = env_params.additional_params["reroute_on_exit"]
         if self.curriculum:
             self.env_params.horizon = self.min_horizon
 
@@ -87,7 +88,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         self.order_agents = self.env_params.additional_params['order_agents']
         self.num_qmix_agents = self.env_params.additional_params['max_num_agents']
         if self.qmix:
-            self.default_state = {idx: {"obs": np.zeros(self.observation_space.spaces['obs'].shape[0]),
+            self.default_state = {idx: {"obs": -1 * np.ones(self.observation_space.spaces['obs'].shape[0]),
                                         "action_mask": self.get_action_mask(valid_agent=False)}
                                   for idx in range(self.num_qmix_agents)}
 
@@ -201,10 +202,10 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 lanes = self.k.vehicle.get_lane(edge_ids)
                 rl_lane = self.k.vehicle.get_lane(rl_id)
                 positions = [position for position, lane in zip(positions, lanes) if lane == rl_lane]
-                is_edge_leader = np.sum([abs_position >= position for position in positions])
+                is_edge_leader = np.sum([abs_position >= position for position in positions]) == 1
 
                 # only increment the counter if we're actually waiting
-                if self.k.vehicle.get_speed(rl_id) <= 0.2 and is_edge_leader and self.k.vehicle.get_edge(rl_id) == '3':
+                if self.k.vehicle.get_speed(rl_id) <= 0.2 and is_edge_leader:
                     self.curr_rl_vehicles[rl_id]['time_since_stopped'] += 1.0
                 else:
                     self.curr_rl_vehicles[rl_id]['time_since_stopped'] = 0.0
@@ -464,8 +465,11 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             reward = np.nan_to_num(np.mean(np.array(self.k.vehicle.get_speed(local_ids))**2)) / 5000
         else:
             if add_params["num_sample_seconds"] > 0.0:
-                reward = self.k.vehicle.get_outflow_rate(
-                    add_params["num_sample_seconds"] * self.env_params.sims_per_step) / 20000.0 + 0.02  # extra one is to ensure consistent positivity
+                if self.reroute_on_exit:
+                    reward = len(self.k.vehicle.get_ids_by_edge('5')) / 5.0
+                else:
+                    reward = self.k.vehicle.get_outflow_rate(
+                        add_params["num_sample_seconds"] * self.env_params.sims_per_step) / 20000.0 + 0.02  # extra one is to ensure consistent positivity
 
             reward -= np.abs(self.env_params.additional_params["life_penalty"])
             if add_params["congest_penalty"]:
@@ -486,7 +490,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         #     reward_dict.update(left_vehicles_dict)
 
         if self.qmix:
-            temp_reward_dict = {idx: reward / 100 for idx in
+            temp_reward_dict = {idx: reward / self.num_qmix_agents for idx in
                            range(self.num_qmix_agents)}
             reward_dict = temp_reward_dict
 
@@ -673,6 +677,39 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         return np.concatenate((lane_headways, lane_tailways, lane_leader_speed,
                                lane_follower_speed, is_leader_rl,
                                is_follow_rl))
+
+    def additional_command(self):
+        super().additional_command()
+        if self.reroute_on_exit and self.time_counter > self.env_params.sims_per_step * self.env_params.warmup_steps\
+                and not self.env_params.evaluate:
+            veh_ids = self.k.vehicle.get_ids()
+            edges = self.k.vehicle.get_edge(veh_ids)
+            for veh_id, edge in zip(veh_ids, edges):
+                if edge == "":
+                    continue
+                if edge[0] == ":":  # center edge
+                    continue
+
+                if edge == '5':
+                    type_id = self.k.vehicle.get_type(veh_id)
+                    lane_index = self.k.vehicle.get_lane(veh_id)
+                    # remove the vehicle
+                    self.k.vehicle.remove(veh_id)
+                    lane = np.random.randint(low=0, high=MAX_LANES * self.scaling)
+                    # reintroduce it at the start of the network
+                    self.k.vehicle.add(
+                        veh_id=veh_id,
+                        edge='1',
+                        type_id=str(type_id),
+                        lane=str(lane),
+                        pos="0",
+                        speed="23.0")
+
+            departed_ids = self.k.vehicle.get_departed_ids()
+            if len(departed_ids) > 0:
+                for veh_id in departed_ids:
+                    if veh_id not in self.observed_cars:
+                        self.k.vehicle.remove(veh_id)
 
     def aggregate_statistics(self):
         ''' Returns the time-step, outflow over the last 10 seconds,
