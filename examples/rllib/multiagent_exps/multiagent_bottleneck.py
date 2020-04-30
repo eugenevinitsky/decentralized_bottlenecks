@@ -230,7 +230,7 @@ def setup_flow_params(args):
     scenario='BottleneckScenario'
     warmup_steps = 0
     if args.reroute_on_exit:
-        warmup_steps = 300
+        warmup_steps = int(300 / args.sims_per_step)
 
     flow_params = dict(
         # name of the experiment
