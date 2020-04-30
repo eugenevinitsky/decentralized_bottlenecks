@@ -680,7 +680,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
     def additional_command(self):
         super().additional_command()
-        if self.reroute_on_exit and self.time_counter > self.env_params.sims_per_step * self.env_params.warmup_steps\
+        if self.reroute_on_exit and self.time_counter >= self.env_params.sims_per_step * self.env_params.warmup_steps \
                 and not self.env_params.evaluate:
             veh_ids = self.k.vehicle.get_ids()
             edges = self.k.vehicle.get_edge(veh_ids)
@@ -692,7 +692,6 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
                 if edge == '5':
                     type_id = self.k.vehicle.get_type(veh_id)
-                    lane_index = self.k.vehicle.get_lane(veh_id)
                     # remove the vehicle
                     self.k.vehicle.remove(veh_id)
                     lane = np.random.randint(low=0, high=MAX_LANES * self.scaling)

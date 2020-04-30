@@ -88,7 +88,7 @@ def setup_flow_params(args):
             lane_change_params=SumoLaneChangeParams(
                 lane_change_mode=lc_mode,
             ),
-            num_vehicles=1)
+            num_vehicles=0)
         vehicles.add(
             veh_id="av",
             acceleration_controller=(RLController, {}),
@@ -100,7 +100,7 @@ def setup_flow_params(args):
             lane_change_params=SumoLaneChangeParams(
                 lane_change_mode=0,
             ),
-            num_vehicles=1)
+            num_vehicles=0)
     else:
         vehicles.add(
             veh_id="av",
