@@ -26,7 +26,7 @@ from ray.rllib.models import ModelCatalog
 from ray.tune import run
 from ray.tune.registry import register_env
 
-from flow.agents.custom_ppo import CustomPPOTrainer, CustomPPOTFPolicy
+# from flow.agents.custom_ppo import CustomPPOTrainer, CustomPPOTFPolicy
 from flow.agents.centralized_PPO import CentralizedCriticModel, CentralizedCriticModelRNN
 from flow.agents.centralized_PPO import CCTrainer
 from flow.agents.centralized_imitation_PPO import ImitationCentralizedTrainer
@@ -518,10 +518,10 @@ def setup_exps(args):
             grouping, obs_space=obs_space, act_space=act_space))
         policy_graphs = {'av': (None, obs_space, act_space, {})}
     else:
-        if alg_run == 'PPO':
-            policy_graphs = {'av': (CustomPPOTFPolicy, obs_space, act_space, {})}
-        else:
-            policy_graphs = {'av': (None, obs_space, act_space, {})}
+        # if alg_run == 'PPO':
+        #     policy_graphs = {'av': (CustomPPOTFPolicy, obs_space, act_space, {})}
+        # else:
+        policy_graphs = {'av': (None, obs_space, act_space, {})}
 
     def policy_mapping_fn(_):
         return 'av'
@@ -600,8 +600,9 @@ if __name__ == '__main__':
             alg_run = QMixTrainerPrioritizedReplay
         run_name = "QMIX"
     else:
-        alg_run = CustomPPOTrainer
-        run_name = "ppo_custom"
+        from ray.rllib.agents.ppo import PPOTrainer
+        alg_run = PPOTrainer
+        run_name = "PPO"
 
     config['env_config']['run'] = run_name
 
