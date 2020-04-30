@@ -1735,9 +1735,27 @@ ray exec ray_autoscale.yaml \
 --td3 --grid_search --use_s3" \
 --start --stop --cluster-name ev_0pen_10 --tmux
 
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_nc12_0p1_agg_h2000_reroute --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+#--num_samples 1 --rollout_scale_factor 1.0 --horizon 2000 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+#--sim_step 0.5 --create_inflow_graph --sims_per_step 1 --reroute_on_exit \
+#--td3 --grid_search --use_s3" \
+#--start --stop --cluster-name ev_0pen_11 --tmux
+
+
+######################################################################################
+# 4/30
+# Running rerouting code but w/ PPO
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_nc12_0p1_agg_h2000_reroute --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
---num_samples 1 --rollout_scale_factor 1.0 --horizon 2000 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
---sim_step 0.5 --create_inflow_graph --sims_per_step 1 --reroute_on_exit \
---td3 --grid_search --use_s3" \
---start --stop --cluster-name ev_0pen_11 --tmux
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_ppo_senv_nc12_0p1_agg_h400_reroute --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--n_cpus 20 --grid_search --use_s3" \
+--start --stop --cluster-name ev_0pen_12 --tmux
+
+#ray exec ray_autoscale.yaml \
+#"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_nc12_0p1_agg_h2000_reroute --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+#--num_samples 1 --rollout_scale_factor 1.0 --horizon 2000 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+#--sim_step 0.5 --create_inflow_graph --sims_per_step 1 --reroute_on_exit \
+#--td3 --grid_search --use_s3" \
+#--start --stop --cluster-name ev_0pen_11 --tmux
