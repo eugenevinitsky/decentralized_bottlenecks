@@ -121,12 +121,12 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
     elif render_mode == 'no_render':
         sim_params.render = False
 
-    # Start the environment with the gui turned on and a path for the
-    # emission file
+    # # Start the environment with the gui turned on and a path for the
+    # # emission file
     env_params = flow_params['env']
-    env_params.evaluate = True
-    env_params.warmup_steps = 0
-    flow_params['env'] = env_params
+    # env_params.evaluate = True
+    # env_params.warmup_steps = 0
+    # flow_params['env'] = env_params
     # # TODO(@evinitsky) remove this this is a backwards compatibility hack
     # if 'life_penalty' not in env_params.additional_params.keys():
     #     env_params.additional_params['life_penalty'] = - 3
@@ -149,25 +149,34 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
     agent.restore(checkpoint)
 
     policy_agent_mapping = default_policy_agent_mapping
-    if hasattr(agent, "workers"):
-        env = agent.workers.local_worker().env
-        multiagent = isinstance(env, MultiAgentEnv)
-        if agent.workers.local_worker().multiagent:
-            policy_agent_mapping = agent.config["multiagent"][
-                "policy_mapping_fn"]
+    # if hasattr(agent, "workers"):
+    #     env = agent.workers.local_worker().env
+    #     multiagent = isinstance(env, MultiAgentEnv)
+    #     if agent.workers.local_worker().multiagent:
+    #         policy_agent_mapping = agent.config["multiagent"][
+    #             "policy_mapping_fn"]
+    #
+    #     policy_map = agent.workers.local_worker().policy_map
+    #     state_init = {p: m.get_initial_state() for p, m in policy_map.items()}
+    #     use_lstm = {p: len(s) > 0 for p, s in state_init.items()}
+    #     action_init = {
+    #         p: m.action_space.sample()
+    #         for p, m in policy_map.items()
+    #     }
+    # else:
+    env = create_env()
+    multiagent = isinstance(env, MultiAgentEnv)
+    if agent.workers.local_worker().multiagent:
+        policy_agent_mapping = agent.config["multiagent"][
+            "policy_mapping_fn"]
 
-        policy_map = agent.workers.local_worker().policy_map
-        state_init = {p: m.get_initial_state() for p, m in policy_map.items()}
-        use_lstm = {p: len(s) > 0 for p, s in state_init.items()}
-        action_init = {
-            p: m.action_space.sample()
-            for p, m in policy_map.items()
-        }
-    else:
-        env = gym.make(env_name)
-        multiagent = False
-        use_lstm = {DEFAULT_POLICY_ID: False}
-
+    policy_map = agent.workers.local_worker().policy_map
+    state_init = {p: m.get_initial_state() for p, m in policy_map.items()}
+    use_lstm = {p: len(s) > 0 for p, s in state_init.items()}
+    action_init = {
+        p: m.action_space.sample()
+        for p, m in policy_map.items()
+    }
     if render_mode == 'sumo_gui':
         env.sim_params.render = True  # set to True after initializing agent and env
 
@@ -187,8 +196,11 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
     mapping_cache = {}  # in case policy_agent_mapping is stochastic
 
     sim_step = sim_params.sim_step
-    env_params.horizon = 2000
+    env.env_params.horizon = 2000
     env_params.sims_per_step = 1
+    env.env_params.warmup_steps = 0
+    if hasattr(env, 'reroute_on_exit'):
+        env.reroute_on_exit = False
 
     for j in range(num_trials):
         agent_states = DefaultMapping(
