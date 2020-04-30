@@ -312,6 +312,7 @@ def on_episode_end(info):
 
     episode.custom_metrics["n_veh_edge4_l0"] = np.mean(episode.user_data["n_veh_edge4_l0"])
     episode.custom_metrics["n_veh_edge4_l1"] = np.mean(episode.user_data["n_veh_edge4_l1"])
+    episode.custom_metrics["exit_counter"] = env.exit_counter * (3600 / total_time_step)
 
     for i in range(int(ceil(total_time_step / time_step))):
         total_outflow = env.k.vehicle.get_outflow_rate_between_times((i) * time_step, (i+1) * time_step)

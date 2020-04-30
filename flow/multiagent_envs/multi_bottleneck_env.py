@@ -74,6 +74,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
         self.curr_iter = 0
         self.rew_history = 0
+        self.exit_counter = 0
         self.num_curr_iters = env_params.additional_params["num_curr_iters"]
         self.curriculum = env_params.additional_params["curriculum"]
         self.min_horizon = env_params.additional_params["min_horizon"]
@@ -498,6 +499,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
     def reset(self, new_inflow_rate=None):
         self.curr_rl_vehicles = {}
+        self.exit_counter = 0
         print('THE TOTAL REWARD FOR THIS ROUND WAS ', self.rew_history)
         try:
             print('THE TOTAL OUTFLOW FOR THIS ROUND WAS ', self.k.vehicle.get_outflow_rate(10000))
@@ -691,6 +693,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     continue
 
                 if edge == '5':
+                    self.exit_counter += 1
                     type_id = self.k.vehicle.get_type(veh_id)
                     # remove the vehicle
                     self.k.vehicle.remove(veh_id)
