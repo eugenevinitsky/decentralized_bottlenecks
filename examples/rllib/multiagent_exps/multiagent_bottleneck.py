@@ -404,7 +404,7 @@ def setup_exps(args):
             config = deepcopy(QMIX_DEFAULT_CONFIG_PRIORITIZED)
         if args.local_mode:
             config["buffer_size"] = 10000
-            config["learning_starts"] = 1000
+            config["learning_starts"] = 10000
             config["mixer"] = "vdn"
         if args.grid_search:
             config["buffer_size"] = tune.grid_search([10000, 100000])
