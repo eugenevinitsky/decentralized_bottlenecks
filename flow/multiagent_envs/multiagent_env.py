@@ -198,7 +198,8 @@ class MultiEnv(MultiAgentEnv, Env):
         self.time_counter = 0
 
         # warn about not using restart_instance when using inflows
-        if len(self.net_params.inflows.get()) > 0:
+        if len(self.net_params.inflows.get()) > 0 and \
+                not self.sim_params.restart_instance:
             print(
                 "**********************************************************\n"
                 "**********************************************************\n"
