@@ -683,7 +683,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         super().additional_command()
         if self.reroute_on_exit and self.time_counter >= self.env_params.sims_per_step * self.env_params.warmup_steps \
                 and not self.env_params.evaluate:
-            veh_ids = self.k.vehicle.get_ids()
+            veh_ids = list(self.k.vehicle.get_ids())
             edges = self.k.vehicle.get_edge(veh_ids)
             for veh_id, edge in zip(veh_ids, edges):
                 if edge == "":
@@ -706,7 +706,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                         pos="0",
                         speed="23.0")
 
-            departed_ids = self.k.vehicle.get_departed_ids()
+            departed_ids = list(self.k.vehicle.get_departed_ids())
             if len(departed_ids) > 0:
                 for veh_id in departed_ids:
                     if veh_id not in self.observed_cars:
