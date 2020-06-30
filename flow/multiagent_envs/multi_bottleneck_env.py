@@ -683,7 +683,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         super().additional_command()
         if self.reroute_on_exit and self.time_counter >= self.env_params.sims_per_step * self.env_params.warmup_steps \
                 and not self.env_params.evaluate:
-            veh_ids = self.k.vehicle.get_ids()
+            veh_ids = list(self.k.vehicle.get_ids())
             edges = self.k.vehicle.get_edge(veh_ids)
             for veh_id, edge in zip(veh_ids, edges):
                 if edge == "":
@@ -691,6 +691,9 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 if edge[0] == ":":  # center edge
                     continue
 
+                if edge == '1':
+                    # remove vehicles added by inflow
+                    self.k.vehicle.remove(veh_id)
                 if edge == '5':
                     self.exit_counter += 1
                     type_id = self.k.vehicle.get_type(veh_id)
@@ -700,17 +703,17 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     # reintroduce it at the start of the network
                     self.k.vehicle.add(
                         veh_id=veh_id,
-                        edge='1',
+                        edge='2',
                         type_id=str(type_id),
                         lane=str(lane),
                         pos="0",
                         speed="23.0")
 
-            departed_ids = self.k.vehicle.get_departed_ids()
-            if len(departed_ids) > 0:
-                for veh_id in departed_ids:
-                    if veh_id not in self.observed_cars:
-                        self.k.vehicle.remove(veh_id)
+            # departed_ids = list(self.k.vehicle.get_departed_ids())
+            # if len(departed_ids) > 0:
+            #     for veh_id in departed_ids:
+            #         if veh_id not in self.observed_cars:
+            #             self.k.vehicle.remove(veh_id)
 
     def aggregate_statistics(self):
         ''' Returns the time-step, outflow over the last 10 seconds,
