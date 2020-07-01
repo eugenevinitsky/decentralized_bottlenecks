@@ -285,7 +285,6 @@ class TraCIVehicle(KernelVehicle):
         # add the vehicle's id to the list of vehicle ids
         if accel_controller[0] == RLController:
             self.__rl_ids.append(veh_id)
-            self.num_rl_vehicles += 1
         else:
             self.__human_ids.append(veh_id)
             if accel_controller[0] != SimCarFollowingController:
@@ -335,6 +334,7 @@ class TraCIVehicle(KernelVehicle):
 
         # make sure that the order of rl_ids is kept sorted
         self.__rl_ids.sort()
+        self.num_rl_vehicles = len(self.__rl_ids)
 
         # get the subscription results from the new vehicle
         new_obs = self.kernel_api.vehicle.getSubscriptionResults(veh_id)
@@ -954,6 +954,8 @@ class TraCIVehicle(KernelVehicle):
         if self.get_edge(veh_id) == '':
             # occurs when a vehicle crashes is teleported for some other reason
             return 0.
+        if isinstance(veh_id, (list, np.ndarray)):
+            return [self.get_x_by_id(vehID) for vehID in veh_id]
         return self.master_kernel.scenario.get_x(
             self.get_edge(veh_id), self.get_position(veh_id))
 

@@ -147,6 +147,7 @@ def setup_flow_params(args):
         "speed_reward": args.speed_reward,
         'fair_reward': False,  # This doesn't do anything, remove
         'exit_history_seconds': 0,  # This doesn't do anything, remove
+        'reroute_on_exit': args.reroute_on_exit,
 
         # parameters for the staggering controller that we imitate
         "n_crit": 8,
@@ -217,6 +218,9 @@ def setup_flow_params(args):
     #     scenario = 'SimpleBottleneckScenario'
     # else:
     scenario='BottleneckScenario'
+    warmup_steps = 0
+    if args.reroute_on_exit:
+        warmup_steps = int(300 / args.sims_per_step)
 
     flow_params = dict(
         # name of the experiment
@@ -236,12 +240,12 @@ def setup_flow_params(args):
             sim_step=args.sim_step,
             render=args.render,
             print_warnings=False,
-            restart_instance=True,
+            restart_instance=True
         ),
 
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
-            warmup_steps=int(0 / args.sim_step),
+            warmup_steps=int(warmup_steps / args.sim_step),
             sims_per_step=args.sims_per_step,
             horizon=args.horizon,
             clip_actions=False,
@@ -280,6 +284,7 @@ def on_episode_start(info):
     episode = info["episode"]
     episode.user_data["outflow"] = []
     episode.user_data["n_crit"] = []
+    episode.user_data["speed_edge_4"] = []
     episode.user_data["n_veh_edge4_l0"] = []
     episode.user_data["n_veh_edge4_l1"] = []
 
@@ -290,8 +295,10 @@ def on_episode_end(info):
     time_step = 250
     episode = info["episode"]
     episode.custom_metrics["num_congested"] = np.mean(episode.user_data["n_crit"])
+    episode.custom_metrics["speed_edge_4"] = np.mean(episode.user_data["speed_edge_4"])
     episode.custom_metrics["n_veh_edge4_l0"] = np.mean(episode.user_data["n_veh_edge4_l0"])
     episode.custom_metrics["n_veh_edge4_l1"] = np.mean(episode.user_data["n_veh_edge4_l1"])
+    episode.custom_metrics["exit_counter"] = env.exit_counter * (3600 / total_time_step)
 
     for i in range(int(ceil(total_time_step / time_step))):
         total_outflow = env.k.vehicle.get_outflow_rate_between_times((i) * time_step, (i+1) * time_step)
@@ -307,6 +314,7 @@ def on_episode_step(info):
     outflow = env.k.vehicle.get_outflow_rate(int(env.sim_step * env.env_params.sims_per_step))
     episode.user_data["outflow"].append(outflow)
     edge_4_veh = env.k.vehicle.get_ids_by_edge('4')
+    episode.user_data["speed_edge_4"].append(np.nan_to_num(np.mean(env.k.vehicle.get_speed(edge_4_veh))))
     episode.user_data["n_crit"].append(len(edge_4_veh))
     l0 = np.sum(["0" == env.k.vehicle.get_edge(veh_id) for veh_id in edge_4_veh])
     episode.user_data["n_veh_edge4_l0"].append(l0)

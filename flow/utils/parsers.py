@@ -45,7 +45,7 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument('--congest_penalty_start', type=int, default=30, help='If congest_penalty is true, this '
                                                                               'sets the number of vehicles in edge 4'
                                                                               'at which the penalty sets in')
-    parser.add_argument('--life_penalty', type=float, default=3, help='How much to subtract in the reward at each '
+    parser.add_argument('--life_penalty', type=float, default=0, help='How much to subtract in the reward at each '
                                                                      'time-step for remaining in the system.')
     parser.add_argument('--keep_past_actions', action='store_true', help='If true we append the agents past actions '
                                                                          'to its observations')
@@ -79,6 +79,8 @@ def get_multiagent_bottleneck_parser():
                                                                            'is given to the agent as a terminal reward')
     parser.add_argument('--rew_n_crit', type=int, default=0, help='If set to a value above zero, we get rewarded if fewer than '
                                                               'n_crit AVs in the bottleneck, and penalized if above')
+    parser.add_argument('--reroute_on_exit', action='store_true', default=False,
+                        help='Put back RL vehicles that have left')
 
     # dqfd arguments
     parser.add_argument('--dqfd', action='store_true', default=False,
@@ -91,6 +93,13 @@ def get_multiagent_bottleneck_parser():
     # TD3 arguments
     parser.add_argument('--td3', action='store_true', default=False,
                         help='Whether to use td3')
+
+    # QMIX arguments
+    parser.add_argument('--qmix', action='store_true', default=False,
+                        help='Whether to use qmix')
+    parser.add_argument('--order_agents', action='store_true', default=False,
+                        help='If true, the agents are sorted by absolute position before being passed'
+                             'to the mixer')
 
     # Curriculum stuff
     parser.add_argument('--curriculum', action='store_true', help='If true, anneal the av_frac and inflow over '

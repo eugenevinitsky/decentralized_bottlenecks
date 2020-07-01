@@ -73,10 +73,13 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         self.rew_n_crit = env_params.additional_params.get("rew_n_crit")
 
         self.curr_iter = 0
+        self.rew_history = 0
+        self.exit_counter = 0
         self.num_curr_iters = env_params.additional_params["num_curr_iters"]
         self.curriculum = env_params.additional_params["curriculum"]
         self.min_horizon = env_params.additional_params["min_horizon"]
         self.max_horizon = env_params.additional_params["horizon"]
+        self.reroute_on_exit = env_params.additional_params["reroute_on_exit"]
         if self.curriculum:
             self.env_params.horizon = self.min_horizon
 
@@ -363,50 +366,36 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
     def compute_reward(self, rl_actions, **kwargs):
         """Outflow rate over last ten seconds normalized to max of 1."""
-
-
         if self.env_params.evaluate:
+            # careful when reroute_on_exit is True (when is this condition true?)
             if int(self.time_counter/self.env_params.sims_per_step) == self.env_params.horizon:
                 reward = self.k.vehicle.get_outflow_rate(500)
                 return reward
             else:
                 return 0
 
-        add_params = self.env_params.additional_params
-        # reward is the mean AV speed
-        # reward is the outflow over "num_sample_seconds" seconds
-        reward = 0.0
-        # we get a reward if there are fewer vehicles in the network than rew_n_crit
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
+
         if self.rew_n_crit > 0:
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
-            reward += (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 100
+            reward = (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 100
         else:
-            if add_params["num_sample_seconds"] > 0.0:
-                reward = self.k.vehicle.get_outflow_rate(
-                    add_params["num_sample_seconds"]) / 2000.0
+            reward = len(self.k.vehicle.get_ids_by_edge('5')) / 5.0
 
-            reward -= np.abs(self.env_params.additional_params["life_penalty"])
-            if add_params["congest_penalty"]:
-                num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
-                if num_vehs > 30 * self.scaling:
-                    penalty = (num_vehs - 30 * self.scaling) / 10.0
-                    reward -= penalty
-
-        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
         reward_dict = {rl_id: reward for rl_id in rl_ids}
-        if add_params["speed_reward"]:
-            reward_dict = {rl_id: reward + (self.k.vehicle.get_speed(rl_id) / 10) for rl_id, reward in reward_dict.items()}
+        self.rew_history += reward
 
-        # # Return the outflow since the vehicle left
-        # if int(self.time_counter/self.env_params.sims_per_step) == self.env_params.horizon:
-        #     end_time = self.env_params.horizon * self.sim_params.sim_step
-        #     left_vehicles_dict = {veh_id: self.k.vehicle.get_outflow_rate(end_time - exit_time) / 2000.0
-        #                           for veh_id, exit_time in self.left_av_time_dict.items()}
-        #     reward_dict.update(left_vehicles_dict)
         return reward_dict
 
     def reset(self, new_inflow_rate=None):
         self.curr_rl_vehicles = {}
+        self.exit_counter = 0
+        print('THE TOTAL REWARD FOR THIS ROUND WAS ', self.rew_history)
+        try:
+            print('THE TOTAL OUTFLOW FOR THIS ROUND WAS ', self.k.vehicle.get_outflow_rate(10000))
+        except:
+            pass
+        self.rew_history = 0
         self.update_curr_rl_vehicles()
 
         # dict tracking past actions
@@ -614,6 +603,40 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             return signals
         else:
             return [-1 / 4.0 for _ in range(8)]
+
+    def additional_command(self):
+        super().additional_command()
+        if self.reroute_on_exit and self.time_counter >= self.env_params.sims_per_step * self.env_params.warmup_steps \
+                and not self.env_params.evaluate:
+            veh_ids = self.k.vehicle.get_ids()
+            edges = self.k.vehicle.get_edge(veh_ids)
+            for veh_id, edge in zip(veh_ids, edges):
+                if edge == "":
+                    continue
+                if edge[0] == ":":  # center edge
+                    continue
+
+                if edge == '5':
+                    self.exit_counter += 1
+                    type_id = self.k.vehicle.get_type(veh_id)
+                    # remove the vehicle
+                    self.k.vehicle.remove(veh_id)
+                    lane = np.random.randint(low=0, high=MAX_LANES * self.scaling)
+                    # reintroduce it at the start of the network
+                    self.k.vehicle.add(
+                        veh_id=veh_id,
+                        edge='1',
+                        type_id=str(type_id),
+                        lane=str(lane),
+                        pos="0",
+                        speed="23.0")
+
+            departed_ids = self.k.vehicle.get_departed_ids()
+            if len(departed_ids) > 0:
+                for veh_id in departed_ids:
+                    if veh_id not in self.observed_cars:
+                        self.k.vehicle.remove(veh_id)
+
 
 
 class MultiBottleneckImitationEnv(MultiBottleneckEnv):
