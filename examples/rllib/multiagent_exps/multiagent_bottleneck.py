@@ -493,7 +493,7 @@ if __name__ == '__main__':
     eastern = pytz.timezone('US/Eastern')
     date = datetime.now(tz=pytz.utc)
     date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
-    s3_string = "s3://eugene.experiments/trb_bottleneck_paper/" \
+    s3_string = "s3://nathan.experiments/trb_bottleneck_paper/" \
                 + date + '/' + args.exp_title
     config['env'] = env_name
 
@@ -588,7 +588,7 @@ if __name__ == '__main__':
                     for i in range(4):
                         try:
                             p1 = subprocess.Popen("aws s3 sync {} {}".format(output_path,
-                                                                             "s3://eugene.experiments/trb_bottleneck_paper/graphs/{}/{}/{}".format(date,
+                                                                             "s3://nathan.experiments/trb_bottleneck_paper/graphs/{}/{}/{}".format(date,
                                                                                                                               args.exp_title,
                                                                                                                               tune_name)).split(
                                 ' '))
