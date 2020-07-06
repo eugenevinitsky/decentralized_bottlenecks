@@ -605,8 +605,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
     def additional_command(self):
         super().additional_command()
-        if self.reroute_on_exit and self.time_counter > self.env_params.sims_per_step * self.env_params.warmup_steps \
-                and not self.env_params.evaluate:
+        if self.reroute_on_exit and self.step_counter > self.env_params.warmup_steps and not self.env_params.evaluate:
             veh_ids = self.k.vehicle.get_ids()
             edges = self.k.vehicle.get_edge(veh_ids)
             for veh_id, edge in zip(veh_ids, edges):
