@@ -567,7 +567,7 @@ if __name__ == '__main__':
 
     # run(**exp_dict, queue_trials=False, raise_on_failed_trial=False)
     os.makedirs(os.path.expanduser("~/ray_results"))
-    p1 = subprocess.Popen("aws s3 sync {} {}".format("s3://nathan.experiments/trb_bottleneck_paper/graphs/07-06-2020/i2400_td3_senv_0p1_h400_reroute",
+    p1 = subprocess.Popen("aws s3 sync {} {}".format("s3://nathan.experiments/trb_bottleneck_paper/07-06-2020/i2400_td3_senv_0p1_h400_reroute",
                                                      os.path.expanduser("~/ray_results")).split(' '))
     p1.wait(5000)
 
