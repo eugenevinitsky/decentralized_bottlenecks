@@ -594,7 +594,7 @@ if __name__ == '__main__':
                         ray.init()
 
                 run_bottleneck_results(400, 3600, 100, args.num_test_trials, output_path, args.exp_title, checkpoint_path,
-                                       gen_emission=False, render_mode='no_render', checkpoint_num=dirpath.split('_')[-1],
+                                       gen_emission=False, render_mode='no_render', checkpoint_num=350, #dirpath.split('_')[-1],
                                        horizon=max(args.horizon, int(1000 / (args.sims_per_step * args.sim_step))), end_len=500)
 
                 if args.use_s3:
