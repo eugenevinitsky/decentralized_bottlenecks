@@ -302,7 +302,7 @@ def on_episode_end(info):
 
     step_offset = env.env_params.warmup_steps * env.sim_step * env.env_params.sims_per_step
     for i in range(int(ceil(total_time_step / time_step))):
-        total_outflow = env.k.vehicle.get_outflow_rate_between_times(step_offset + (i) * time_step, step_offset + (i+1) * time_step)
+        total_outflow = env.k.vehicle.get_outflow_rate_between_times(step_offset + (i) * time_step, step_offset (i+1) * time_step)
         inflow = env.inflow
         # round it to 100
         inflow = int(inflow / 100) * 100
@@ -565,7 +565,11 @@ if __name__ == '__main__':
     if args.use_s3:
         exp_dict['upload_dir'] = s3_string
 
-    run(**exp_dict, queue_trials=False, raise_on_failed_trial=False)
+    # run(**exp_dict, queue_trials=False, raise_on_failed_trial=False)
+    os.makedirs(os.path.expanduser("~/ray_results"))
+    p1 = subprocess.Popen("aws s3 sync {} {}".format("s3://nathan.experiments/trb_bottleneck_paper/graphs/07-06-2020/i2400_td3_senv_0p1_h400_reroute",
+                                                     os.path.expanduser("~/ray_results")).split(' '))
+    p1.wait(5000)
 
     # Now we add code to loop through the results and create scores of the results
     if args.create_inflow_graph:
@@ -583,11 +587,11 @@ if __name__ == '__main__':
                 tune_name = folder.split("/")[-1]
                 checkpoint_path = os.path.dirname(dirpath)
 
-                ray.shutdown()
-                if args.local_mode:
-                    ray.init(local_mode=True)
-                else:
-                    ray.init()
+                if not ray.is_initialized():
+                    if args.local_mode:
+                        ray.init(local_mode=True)
+                    else:
+                        ray.init()
 
                 run_bottleneck_results(400, 3600, 100, args.num_test_trials, output_path, args.exp_title, checkpoint_path,
                                        gen_emission=False, render_mode='no_render', checkpoint_num=dirpath.split('_')[-1],
