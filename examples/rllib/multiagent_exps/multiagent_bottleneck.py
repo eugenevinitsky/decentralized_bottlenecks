@@ -302,11 +302,11 @@ def on_episode_end(info):
 
     step_offset = env.env_params.warmup_steps * env.sim_step * env.env_params.sims_per_step
     for i in range(int(ceil(total_time_step / time_step))):
-        total_outflow = env.k.vehicle.get_outflow_rate_between_times(step_offset + (i) * time_step, step_offset (i+1) * time_step)
+        total_outflow = env.k.vehicle.get_outflow_rate_between_times(step_offset + i * time_step, step_offset + (i+1) * time_step)
         inflow = env.inflow
         # round it to 100
         inflow = int(inflow / 100) * 100
-        episode.custom_metrics["net_outflow_{}_time0_{}_time1_{}".format(inflow, time_step * (i), time_step * (i+1))] = total_outflow
+        episode.custom_metrics["net_outflow_{}_time0_{}_time1_{}".format(inflow, time_step * i, time_step * (i+1))] = total_outflow
 
 
 def on_episode_step(info):
