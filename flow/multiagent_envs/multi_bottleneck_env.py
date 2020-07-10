@@ -380,8 +380,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
             reward = (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 100
         else:
-            reward = len(self.k.vehicle.get_ids_by_edge('5')) / 5.0
-            print('reward =', reward)
+            reward = self.k.vehicle.get_num_arrived() / 5.0
+            # reward = len(self.k.vehicle.get_ids_by_edge('5')) / 5.0
 
         reward_dict = {rl_id: reward for rl_id in rl_ids}
         self.rew_history += reward
@@ -608,11 +608,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
     def additional_command(self):
         super().additional_command()
 
-        print('step =', self.step_counter)
-
         if self.reroute_on_exit and self.step_counter > self.env_params.warmup_steps and not self.env_params.evaluate:
-            print('reroute is on')
-            veh_ids = self.k.vehicle.get_ids()
+            veh_ids = list(self.k.vehicle.get_ids())
             edges = self.k.vehicle.get_edge(veh_ids)
             for veh_id, edge in zip(veh_ids, edges):
                 if edge == "":
@@ -635,7 +632,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                         pos="0",
                         speed="23.0")
 
-            departed_ids = self.k.vehicle.get_departed_ids()
+            departed_ids = list(self.k.vehicle.get_departed_ids())
             if len(departed_ids) > 0:
                 for veh_id in departed_ids:
                     if veh_id not in self.observed_cars:
