@@ -587,11 +587,11 @@ if __name__ == '__main__':
                 tune_name = folder.split("/")[-1]
                 checkpoint_path = os.path.dirname(dirpath)
 
-                if not ray.is_initialized():
-                    if args.local_mode:
-                        ray.init(local_mode=True)
-                    else:
-                        ray.init()
+                ray.shutdown()            
+                if args.local_mode:
+                    ray.init(local_mode=True)
+                else:
+                    ray.init()
 
                 run_bottleneck_results(400, 3600, 100, args.num_test_trials, output_path, args.exp_title, checkpoint_path,
                                        gen_emission=False, render_mode='no_render', checkpoint_num=str(1), #dirpath.split('_')[-1],
