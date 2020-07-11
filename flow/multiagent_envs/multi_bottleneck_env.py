@@ -75,6 +75,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         self.curr_iter = 0
         self.rew_history = 0
         self.exit_counter = 0
+        self.last_exit_counter = 0
         self.num_curr_iters = env_params.additional_params["num_curr_iters"]
         self.curriculum = env_params.additional_params["curriculum"]
         self.min_horizon = env_params.additional_params["min_horizon"]
@@ -380,7 +381,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
             reward = (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 100
         else:
-            reward = self.k.vehicle.get_num_arrived() / 5.0
+            # only if reroute_on_exit is on
+            reward = self.self.last_exit_counter / 20.0
             # reward = len(self.k.vehicle.get_ids_by_edge('5')) / 5.0
 
         reward_dict = {rl_id: reward for rl_id in rl_ids}
@@ -609,6 +611,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         super().additional_command()
 
         if self.reroute_on_exit and self.step_counter > self.env_params.warmup_steps and not self.env_params.evaluate:
+            self.last_exit_counter = 0
             veh_ids = list(self.k.vehicle.get_ids())
             edges = self.k.vehicle.get_edge(veh_ids)
             for veh_id, edge in zip(veh_ids, edges):
@@ -622,6 +625,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     total_time_step = self.env_params.horizon * self.env_params.sims_per_step
                     if self.time_counter > total_time_step - 500 / self.sim_step:
                         self.exit_counter += 1
+                    self.last_exit_counter += 1
 
                     type_id = self.k.vehicle.get_type(veh_id)
                     # remove the vehicle
