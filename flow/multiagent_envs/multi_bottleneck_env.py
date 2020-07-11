@@ -382,7 +382,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             reward = (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 100
         else:
             # only if reroute_on_exit is on
-            reward = self.self.last_exit_counter / 20.0
+            reward = self.last_exit_counter / 20.0
             # reward = len(self.k.vehicle.get_ids_by_edge('5')) / 5.0
 
         reward_dict = {rl_id: reward for rl_id in rl_ids}
