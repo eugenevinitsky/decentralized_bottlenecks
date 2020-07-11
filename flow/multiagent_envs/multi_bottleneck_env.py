@@ -618,7 +618,11 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     continue
 
                 if edge == '5':
-                    self.exit_counter += 1
+                    # only count exited vehicles during the last 500s
+                    total_time_step = self.env_params.horizon * self.env_params.sims_per_step
+                    if self.time_counter > total_time_step - 500 / self.sim_step:
+                        self.exit_counter += 1
+
                     type_id = self.k.vehicle.get_type(veh_id)
                     # remove the vehicle
                     self.k.vehicle.remove(veh_id)
