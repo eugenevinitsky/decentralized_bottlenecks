@@ -68,7 +68,7 @@ class BottleneckScenario(Scenario):
         nodes = [
             {
                 "id": "1",
-                "x": 0,
+                "x": -200,
                 "y": 0
             },  # pre-toll
             {
@@ -125,7 +125,7 @@ class BottleneckScenario(Scenario):
                 "id": "1",
                 "from": "1",
                 "to": "2",
-                "length": 100,
+                "length": 300,
                 "spreadType": "center",
                 "numLanes": 4 * scaling,
                 "speed": speed
@@ -211,7 +211,7 @@ class BottleneckScenario(Scenario):
             "id": "1",
             "from": None,
             "to": "1",
-            "x": -30,
+            "x": -230,
             "y": 0,
         }]
         centroids += [{
@@ -237,7 +237,7 @@ class BottleneckScenario(Scenario):
 
     def specify_edge_starts(self):
         """See parent class."""
-        return [("1", 0), ("2", 100), ("3", 405), ("4", 425), ("5", 580)]
+        return [("1", -200), ("2", 100), ("3", 405), ("4", 425), ("5", 580)]
 
     def get_bottleneck_lanes(self, lane):
         """Return the reduced number of lanes."""

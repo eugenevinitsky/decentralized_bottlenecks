@@ -169,6 +169,12 @@ def visualizer_rllib(args):
         multiagent = False
         use_lstm = {DEFAULT_POLICY_ID: False}
 
+    # env.env_params.horizon = 2000
+    # env_params.sims_per_step = 1
+    # env.env_params.warmup_steps = int(300/0.5/5) #0
+    # if hasattr(env, 'reroute_on_exit'):
+    #     env.reroute_on_exit = False
+
     steps = 0
     for i in range(args.num_rollouts):
         vel = []

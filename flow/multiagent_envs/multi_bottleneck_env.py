@@ -76,6 +76,9 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         self.rew_history = 0
         self.exit_counter = 0
         self.last_exit_counter = 0
+        self.total_exit_counter = 0
+        self.total_reward = defaultdict(float)
+        self.total_reward_sum = 0
         self.num_curr_iters = env_params.additional_params["num_curr_iters"]
         self.curriculum = env_params.additional_params["curriculum"]
         self.min_horizon = env_params.additional_params["min_horizon"]
@@ -169,7 +172,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         # vehicles for all of the avs
         self.update_curr_rl_vehicles()
         add_params = self.env_params.additional_params
-        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
 
         if add_params['centralized_obs']:
             state = self.get_centralized_state()
@@ -178,7 +181,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             self.update_curr_rl_vehicles()
             veh_info = {}
             rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if
-                      self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
+                      self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
             for rl_id in rl_ids:
                 controller = self.curr_rl_vehicles[rl_id]['controller']
@@ -210,7 +213,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             self.update_curr_rl_vehicles()
             veh_info = {}
             rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if
-                      self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
+                      self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
             for rl_id in rl_ids:
                 abs_position = self.k.vehicle.get_position(rl_id)
@@ -375,15 +378,20 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             else:
                 return 0
 
-        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
 
         if self.rew_n_crit > 0:
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
             reward = (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 100
         else:
             # only if reroute_on_exit is on
-            reward = self.last_exit_counter / 20.0
+            reward = self.last_exit_counter / 5.0
             self.last_exit_counter = 0
+            for rl_id in rl_ids:
+                self.total_reward[rl_id] += reward
+            self.total_reward_sum += reward
+            # print('total_reward=', self.total_reward)
+            # print('total_reward_sum=', self.total_reward_sum)
             # reward = len(self.k.vehicle.get_ids_by_edge('5')) / 5.0
 
         reward_dict = {rl_id: reward for rl_id in rl_ids}
@@ -407,7 +415,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             self.past_actions_dict = defaultdict(lambda: [np.zeros(self.num_past_actions), 0])
 
         add_params = self.env_params.additional_params
-        if add_params.get("reset_inflow") and self.sim_params.restart_instance:
+        if True:#add_params.get("reset_inflow") and self.sim_params.restart_instance:
             inflow_range = add_params.get("inflow_range")
             if new_inflow_rate:
                 flow_rate = new_inflow_rate
@@ -471,6 +479,9 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                             vehs_per_hour=flow_rate * (1 - add_params.get("av_frac")),
                             departLane="random",
                             departSpeed=23.0)
+                        # print('INFLOWS')
+                        # print(f'av/h = {flow_rate * add_params.get("av_frac")}')
+                        # print(f'veh/h = {flow_rate * (1 - add_params.get("av_frac"))}')
                     else:
                         inflow.add(
                             veh_type="av",
@@ -611,6 +622,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
     def additional_command(self):
         super().additional_command()
 
+        # print(f'step={self.step_counter}, warmup_step={self.env_params.warmup_steps}')
         if self.reroute_on_exit and self.step_counter > self.env_params.warmup_steps and not self.env_params.evaluate:
             veh_ids = list(self.k.vehicle.get_ids())
             edges = self.k.vehicle.get_edge(veh_ids)
@@ -626,7 +638,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     if self.time_counter > total_time_step - 500 / self.sim_step:
                         self.exit_counter += 1
                     self.last_exit_counter += 1
-
+                    self.total_exit_counter += 1
+                    # print(self.total_exit_counter)
                     type_id = self.k.vehicle.get_type(veh_id)
                     # remove the vehicle
                     self.k.vehicle.remove(veh_id)
@@ -685,7 +698,7 @@ class MultiBottleneckImitationEnv(MultiBottleneckEnv):
         self.update_curr_rl_vehicles()
         if self.simple_env:
             state_dict = {}
-            rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['2', '3', '4', '5']]
+            rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
             for rl_id in rl_ids:
                 controller = self.curr_rl_vehicles[rl_id]['controller']
