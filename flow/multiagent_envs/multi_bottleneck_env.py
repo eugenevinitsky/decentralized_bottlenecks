@@ -175,6 +175,9 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         add_params = self.env_params.additional_params
         rl_ids = self.rl_ids_reroute #[veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
 
+        if not self.simple_env:
+            raise ValueError('only handling simple_env case now -- otherwise need to care of states of agents that are not in the network')
+
         if add_params['centralized_obs']:
             state = self.get_centralized_state()
             veh_info = {rl_id: np.concatenate((self.veh_statistics(rl_id), state)) for rl_id in rl_ids}
@@ -185,31 +188,37 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                       # self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
             for rl_id in rl_ids:
-                controller = self.curr_rl_vehicles[rl_id]['controller']
-                if self.k.vehicle.get_speed(rl_id) <= 0.2:
-                    self.curr_rl_vehicles[rl_id]['time_since_stopped'] += 1.0
+                # if rl_id out of network
+                if rl_id not in self.k.vehicle.get_rl_ids():
+                    veh_info[rl_id] = np.array([-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0])
                 else:
-                    self.curr_rl_vehicles[rl_id]['time_since_stopped'] = 0.0
+                    controller = self.curr_rl_vehicles[rl_id]['controller']
+                    if self.k.vehicle.get_speed(rl_id) <= 0.2:
+                        self.curr_rl_vehicles[rl_id]['time_since_stopped'] += 1.0
+                    else:
+                        self.curr_rl_vehicles[rl_id]['time_since_stopped'] = 0.0
 
-                duration = controller.duration
-                abs_position = self.k.vehicle.get_position(rl_id)
-                # if rl_actions and rl_id in rl_actions.keys():
-                #     print('RL ', rl_actions[rl_id])
-                #     print('Expert ', accel)
-                speed = self.k.vehicle.get_speed(rl_id)
-                lead_id = self.k.vehicle.get_leader(rl_id)
-                lead_speed = self.k.vehicle.get_speed(lead_id)
-                if lead_speed == -1001:
-                    lead_speed = -10
-                headway = self.k.vehicle.get_headway(rl_id)
-                veh_info[rl_id] = np.array([abs_position / 1000.0,
-                                                        self.curr_rl_vehicles[rl_id][
-                                                            'time_since_stopped'] / self.env_params.horizon,
-                                                        duration / 100.0,
-                                                        congest_number,
-                                                        speed / 50.0,
-                                                        lead_speed / 50.0,
-                                                        headway / 1000.0])
+                    duration = controller.duration
+                    abs_position = self.k.vehicle.get_position(rl_id)
+                    # if rl_actions and rl_id in rl_actions.keys():
+                    #     print('RL ', rl_actions[rl_id])
+                    #     print('Expert ', accel)
+                    speed = self.k.vehicle.get_speed(rl_id)
+                    lead_id = self.k.vehicle.get_leader(rl_id)
+                    lead_speed = self.k.vehicle.get_speed(lead_id)
+                    if lead_speed == -1001:
+                        lead_speed = -10
+                    headway = self.k.vehicle.get_headway(rl_id)
+                    veh_info[rl_id] = np.array([abs_position / 1000.0,
+                                                            self.curr_rl_vehicles[rl_id][
+                                                                'time_since_stopped'] / self.env_params.horizon,
+                                                            duration / 100.0,
+                                                            congest_number,
+                                                            speed / 50.0,
+                                                            lead_speed / 50.0,
+                                                            headway / 1000.0])
+                    veh_info[rl_id] = np.clip(veh_info[rl_id], -10, 10)
+                    
         elif self.super_simple_env:
             self.update_curr_rl_vehicles()
             veh_info = {}
