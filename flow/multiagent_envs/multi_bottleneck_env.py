@@ -218,7 +218,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                                                             lead_speed / 50.0,
                                                             headway / 1000.0])
                     veh_info[rl_id] = np.clip(veh_info[rl_id], -10, 10)
-                    
+
         elif self.super_simple_env:
             self.update_curr_rl_vehicles()
             veh_info = {}

@@ -565,11 +565,11 @@ if __name__ == '__main__':
     if args.use_s3:
         exp_dict['upload_dir'] = s3_string
 
-    # run(**exp_dict, queue_trials=False, raise_on_failed_trial=False)
-    os.makedirs(os.path.expanduser("~/ray_results"))
-    p1 = subprocess.Popen("aws s3 sync {} {}".format("s3://nathan.experiments/trb_bottleneck_paper/07-12-2020/i2400_td3_senv_0p1_h400_reroute_rwd_e3",
-                                                     os.path.expanduser("~/ray_results")).split(' '))
-    p1.wait(5000)
+    run(**exp_dict, queue_trials=False, raise_on_failed_trial=False)
+    # os.makedirs(os.path.expanduser("~/ray_results"))
+    # p1 = subprocess.Popen("aws s3 sync {} {}".format("s3://nathan.experiments/trb_bottleneck_paper/07-12-2020/i2400_td3_senv_0p1_h400_reroute_rwd_e3",
+    #                                                  os.path.expanduser("~/ray_results")).split(' '))
+    # p1.wait(5000)
 
     # Now we add code to loop through the results and create scores of the results
     if args.create_inflow_graph:
