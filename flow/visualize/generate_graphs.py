@@ -18,10 +18,10 @@ def aws_sync(src, dest):
 EXP_TITLE_LIST = ["i2400_td3_senv_0p1_h400_reroute_rwd_e3_check",
                   "i2400_td3_senv_0p2_h400_reroute_rwd_e3",
                   "i2400_td3_senv_0p4_h400_reroute_rwd_e3"]
-NUM_TEST_TRIALS = 1 #20
+NUM_TEST_TRIALS = 20
 
-OUTFLOW_MIN = 2000 #400
-OUTFLOW_MAX = 2050 #3600
+OUTFLOW_MIN = 400
+OUTFLOW_MAX = 3600
 OUTFLOW_STEP = 100
 
 DATE = "07-14-2020"
