@@ -108,6 +108,10 @@ worker_start_ray_commands:
       ray start
       --redis-address=$RAY_HEAD_IP:6379
       --object-manager-port=8076
-      --object-store-memory=80000000000
+      --object-store-memory=20000000000
 
 
+
+
+
+      
