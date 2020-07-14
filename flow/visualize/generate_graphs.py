@@ -33,6 +33,8 @@ if __name__ == '__main__':
     aws_sync('s3://nathan.experiments/trb_bottleneck_paper/07-13-2020',
              os.path.expanduser("~/ray_results"))
 
+    ray.init()
+
     for EXP_TITLE in EXP_TITLE_LIST:
         # create output dir
         output_path = os.path.join(os.path.expanduser('~/bottleneck_results'), EXP_TITLE)
@@ -52,9 +54,6 @@ if __name__ == '__main__':
                 folder = os.path.dirname(dirpath)
                 tune_name = folder.split("/")[-1]
                 checkpoint_path = os.path.dirname(dirpath)
-
-                ray.shutdown()
-                ray.init()
 
                 print('GENERATING GRAPHS')
                 run_bottleneck_results(OUTFLOW_MIN, OUTFLOW_MAX, OUTFLOW_STEP, NUM_TEST_TRIALS, output_path, EXP_TITLE, checkpoint_path,
