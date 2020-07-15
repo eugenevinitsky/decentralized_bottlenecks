@@ -220,7 +220,7 @@ def setup_flow_params(args):
     scenario='BottleneckScenario'
     warmup_steps = 0
     if args.reroute_on_exit:
-        warmup_steps = int(300 / args.sims_per_step)
+        warmup_steps = int(400 / args.sims_per_step)
 
     flow_params = dict(
         # name of the experiment
@@ -386,13 +386,17 @@ def setup_exps(args):
         config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
         config["entropy_coeff"] = args.entropy_coeff
 
+        # tmp
+        config["clip_param"] = 0.2
+        config["lambda"] = 0.97
+
         # if we have a centralized vf we can't use big batch sizes or we eat up all the system memory
         config['sgd_minibatch_size'] = 128
         if args.use_lstm:
             config['vf_loss_coeff'] = args.vf_loss_coeff
             # Grid search things
         if args.grid_search:
-            config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
+            config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3, 5e-2])
         else:
             config['num_sgd_iter'] = 10
 
