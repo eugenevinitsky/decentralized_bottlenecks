@@ -588,9 +588,7 @@ if __name__ == '__main__':
                 checkpoint_path = os.path.dirname(dirpath)
 
                 ray.shutdown()
-                if args.multi_node:
-                    ray.init(redis_address='localhost:6379')
-                elif args.local_mode:
+                if args.local_mode:
                     ray.init(local_mode=True)
                 else:
                     ray.init()
