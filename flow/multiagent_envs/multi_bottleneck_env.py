@@ -173,7 +173,10 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         # vehicles for all of the avs
         self.update_curr_rl_vehicles()
         add_params = self.env_params.additional_params
-        rl_ids = self.rl_ids_reroute #[veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
+        if self.reroute_on_exit:
+            rl_ids = self.rl_ids_reroute
+        else:
+            rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
 
         if not self.simple_env:
             raise ValueError('only handling simple_env case now -- otherwise need to care of states of agents that are not in the network')
@@ -184,8 +187,10 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         elif self.simple_env:
             self.update_curr_rl_vehicles()
             veh_info = {}
-            rl_ids = self.rl_ids_reroute #[veh_id for veh_id in self.k.vehicle.get_rl_ids() if
-                      # self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
+            if self.reroute_on_exit:
+                rl_ids = self.rl_ids_reroute
+            else:
+                rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
             for rl_id in rl_ids:
                 # if rl_id out of network
@@ -222,8 +227,10 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         elif self.super_simple_env:
             self.update_curr_rl_vehicles()
             veh_info = {}
-            rl_ids = self.rl_ids_reroute #[veh_id for veh_id in self.k.vehicle.get_rl_ids() if
-                      #self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
+            if self.reroute_on_exit:
+                rl_ids = self.rl_ids_reroute
+            else:
+                rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
             for rl_id in rl_ids:
                 abs_position = self.k.vehicle.get_position(rl_id)
@@ -388,7 +395,10 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             else:
                 return 0
 
-        rl_ids = self.rl_ids_reroute # [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
+        if self.reroute_on_exit:
+            rl_ids = self.rl_ids_reroute
+        else:
+            rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
 
         if self.rew_n_crit > 0:
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
@@ -658,6 +668,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     total_time_step = self.env_params.horizon * self.env_params.sims_per_step
                     if self.time_counter > total_time_step - 500 / self.sim_step:
                         self.exit_counter += 1
+                        # print('exit_counter/500*3600=', self.exit_counter*3.6)
                     self.last_exit_counter += 1
                     self.total_exit_counter += 1
                     # print(self.total_exit_counter)
