@@ -419,7 +419,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 total_rwd += reward
                 reward_dict[rl_id] = reward
 
-            reward = total_rwd / len(rl_ids)
+            reward = 0 if len(rl_ids) == 0 else total_rwd / len(rl_ids)
             
             # reward = self.last_exit_counter / 50.0
             # self.last_exit_counter = 0
