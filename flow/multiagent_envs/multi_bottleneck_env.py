@@ -75,7 +75,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         self.curr_iter = 0
         self.rew_history = 0
         self.exit_counter = 0
-        self.last_exit_counter = 0
+        self.last_exit_counter = defaultdict(int)
         self.total_exit_counter = 0
         self.total_reward = defaultdict(float)
         self.total_reward_sum = 0
@@ -395,18 +395,35 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             else:
                 return 0
 
+        
+
         if self.reroute_on_exit:
             rl_ids = self.rl_ids_reroute
         else:
             rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
 
+        reward_dict = {}
+        reward = 0
         if self.rew_n_crit > 0:
             num_vehs = len(self.k.vehicle.get_ids_by_edge('4'))
             reward = (self.rew_n_crit - np.abs(self.rew_n_crit - num_vehs)) / 100
+            reward_dict = {rl_id: reward for rl_id in rl_ids}
         else:
             # only if reroute_on_exit is on
-            reward = self.last_exit_counter / 50.0
-            self.last_exit_counter = 0
+            total_rwd = 0
+            for rl_id in rl_ids:
+                reward = 0
+                if self.k.vehicle.get_edge(rl_id) == '3':
+                    reward = self.last_exit_counter[rl_id] / 50.0
+                    self.last_exit_counter[rl_id] = 0
+                total_rwd += reward
+                reward_dict[rl_id] = reward
+
+            reward = total_rwd / len(rl_ids)
+            
+            # reward = self.last_exit_counter / 50.0
+            # self.last_exit_counter = 0
+
             for rl_id in rl_ids:
                 self.total_reward[rl_id] += reward
             self.total_reward_sum += reward
@@ -414,7 +431,6 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             # print('total_reward_sum=', self.total_reward_sum)
             # reward = len(self.k.vehicle.get_ids_by_edge('5')) / 5.0
 
-        reward_dict = {rl_id: reward for rl_id in rl_ids}
         self.rew_history += reward
 
         return reward_dict
@@ -669,7 +685,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     if self.time_counter > total_time_step - 500 / self.sim_step:
                         self.exit_counter += 1
                         # print('exit_counter/500*3600=', self.exit_counter*3.6)
-                    self.last_exit_counter += 1
+                    for rl_id in self.rl_ids_reroute:
+                        self.last_exit_counter[rl_id] += 1
                     self.total_exit_counter += 1
                     # print(self.total_exit_counter)
                     type_id = self.k.vehicle.get_type(veh_id)
