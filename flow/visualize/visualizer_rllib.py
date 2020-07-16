@@ -34,6 +34,7 @@ from flow.utils.registry import make_create_env
 from flow.utils.rllib import get_flow_params
 from flow.utils.rllib import get_rllib_pkl
 
+
 EXAMPLE_USAGE = """
 example usage:
     python ./visualizer_rllib.py /ray_results/experiment_dir/result_dir 1
@@ -86,7 +87,14 @@ def visualizer_rllib(args):
     if args.run:
         agent_cls = get_agent_class(args.run)
     elif config_run:
-        agent_cls = get_agent_class(config_run)
+        if config_run == 'central_trainer':
+            from flow.agents.centralized_PPO import CCTrainer
+            from ray.rllib.models import ModelCatalog
+            from flow.agents.centralized_PPO import CentralizedCriticModel
+            agent_cls = CCTrainer
+            ModelCatalog.register_custom_model("cc_model", CentralizedCriticModel)
+        else:
+            agent_cls = get_agent_class(config_run)
     else:
         print('visualizer_rllib.py: error: could not find flow parameter '
               '\'run\' in params.json, '
@@ -138,6 +146,7 @@ def visualizer_rllib(args):
     register_env(env_name, create_env)
 
     # create the agent that will be used to compute the actions
+    print(env_name, config)
     agent = agent_cls(env=env_name, config=config)
     checkpoint = result_dir + '/checkpoint_' + args.checkpoint_num
     checkpoint = checkpoint + '/checkpoint-' + args.checkpoint_num

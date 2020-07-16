@@ -287,6 +287,10 @@ def on_episode_start(info):
     episode.user_data["speed_edge_4"] = []
     episode.user_data["n_veh_edge4_l0"] = []
     episode.user_data["n_veh_edge4_l1"] = []
+    episode.user_data["mean_speed_edge2_l0"] = []
+    episode.user_data["mean_speed_edge2_l1"] = []
+    episode.user_data["mean_speed_edge2_l2"] = []
+    episode.user_data["mean_speed_edge2_l3"] = []
 
 
 def on_episode_end(info):
@@ -298,6 +302,10 @@ def on_episode_end(info):
     episode.custom_metrics["speed_edge_4"] = np.mean(episode.user_data["speed_edge_4"])
     episode.custom_metrics["n_veh_edge4_l0"] = np.mean(episode.user_data["n_veh_edge4_l0"])
     episode.custom_metrics["n_veh_edge4_l1"] = np.mean(episode.user_data["n_veh_edge4_l1"])
+    episode.custom_metrics["mean_speed_edge2_l0"] = np.mean(episode.user_data["mean_speed_edge2_l0"])
+    episode.custom_metrics["mean_speed_edge2_l1"] = np.mean(episode.user_data["mean_speed_edge2_l1"])
+    episode.custom_metrics["mean_speed_edge2_l2"] = np.mean(episode.user_data["mean_speed_edge2_l2"])
+    episode.custom_metrics["mean_speed_edge2_l3"] = np.mean(episode.user_data["mean_speed_edge2_l3"])
     episode.custom_metrics["exit_counter"] = env.exit_counter * (3600 / 500)
 
     step_offset = env.env_params.warmup_steps * env.sim_step * env.env_params.sims_per_step
@@ -317,10 +325,21 @@ def on_episode_step(info):
     edge_4_veh = env.k.vehicle.get_ids_by_edge('4')
     episode.user_data["speed_edge_4"].append(np.nan_to_num(np.mean(env.k.vehicle.get_speed(edge_4_veh))))
     episode.user_data["n_crit"].append(len(edge_4_veh))
-    l0 = np.sum(["0" == env.k.vehicle.get_edge(veh_id) for veh_id in edge_4_veh])
+    l0 = np.sum(["0" == env.k.vehicle.get_lane(veh_id) for veh_id in edge_4_veh])
     episode.user_data["n_veh_edge4_l0"].append(l0)
-    l1 = np.sum(["1" == env.k.vehicle.get_edge(veh_id) for veh_id in edge_4_veh])
+    l1 = np.sum(["1" == env.k.vehicle.get_lane(veh_id) for veh_id in edge_4_veh])
     episode.user_data["n_veh_edge4_l1"].append(l1)
+
+    edge_2_veh = env.k.vehicle.get_ids_by_edge('2')
+    l0_edge2 = ["0" == env.k.vehicle.get_lane(veh_id) for veh_id in edge_2_veh]
+    l1_edge2 = ["1" == env.k.vehicle.get_lane(veh_id) for veh_id in edge_2_veh]
+    l2_edge2 = ["2" == env.k.vehicle.get_lane(veh_id) for veh_id in edge_2_veh]
+    l3_edge2 = ["3" == env.k.vehicle.get_lane(veh_id) for veh_id in edge_2_veh]
+    episode.user_data["mean_speed_edge2_l0"].append(np.nan_to_num(np.mean(env.k.vehicle.get_speed(l0_edge2))))
+    episode.user_data["mean_speed_edge2_l1"].append(np.nan_to_num(np.mean(env.k.vehicle.get_speed(l1_edge2))))
+    episode.user_data["mean_speed_edge2_l2"].append(np.nan_to_num(np.mean(env.k.vehicle.get_speed(l2_edge2))))
+    episode.user_data["mean_speed_edge2_l3"].append(np.nan_to_num(np.mean(env.k.vehicle.get_speed(l3_edge2))))
+
 
 
 def on_train_result(info):
@@ -386,15 +405,19 @@ def setup_exps(args):
         config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
         config["entropy_coeff"] = args.entropy_coeff
 
-        # if we have a centralized vf we can't use big batch sizes or we eat up all the system memory
-        config['sgd_minibatch_size'] = 128
         if args.use_lstm:
             config['vf_loss_coeff'] = args.vf_loss_coeff
-            # Grid search things
+
+        # if we have a centralized vf we can't use big batch sizes or we eat up all the system memory
+        config['sgd_minibatch_size'] = 128
+        config['num_sgd_iter'] = 15  # 30
+
+        # Grid search things
         if args.grid_search:
             config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
-        else:
-            config['num_sgd_iter'] = 10
+            config['sgd_minibatch_size'] = tune.grid_search([128, 256, 512])
+
+
 
             # LSTM Things
         if args.use_lstm and args.use_gru:
