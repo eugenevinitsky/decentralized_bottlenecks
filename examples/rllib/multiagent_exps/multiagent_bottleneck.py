@@ -410,14 +410,12 @@ def setup_exps(args):
 
         # if we have a centralized vf we can't use big batch sizes or we eat up all the system memory
         config['sgd_minibatch_size'] = 128
-        config['num_sgd_iter'] = 15  # 30
 
         # Grid search things
         if args.grid_search:
             config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
-            config['sgd_minibatch_size'] = tune.grid_search([128, 256, 512])
-
-
+        else:
+            config['num_sgd_iter'] = 10
 
             # LSTM Things
         if args.use_lstm and args.use_gru:

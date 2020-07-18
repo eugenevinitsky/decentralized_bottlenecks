@@ -109,3 +109,6 @@ flow.ang
 *.ang.old
 *.sang
 
+awscli*
+*.yaml
+*.sh

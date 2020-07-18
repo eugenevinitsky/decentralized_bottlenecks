@@ -173,10 +173,11 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         # vehicles for all of the avs
         self.update_curr_rl_vehicles()
         add_params = self.env_params.additional_params
-        if self.reroute_on_exit:
-            rl_ids = self.rl_ids_reroute
-        else:
-            rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
+        # if self.reroute_on_exit:
+        #     rl_ids = self.rl_ids_reroute
+        # else:
+        #     rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['3']]
 
         if not self.simple_env:
             raise ValueError('only handling simple_env case now -- otherwise need to care of states of agents that are not in the network')
@@ -187,10 +188,11 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         elif self.simple_env:
             self.update_curr_rl_vehicles()
             veh_info = {}
-            if self.reroute_on_exit:
-                rl_ids = self.rl_ids_reroute
-            else:
-                rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
+            # if self.reroute_on_exit:
+            #     rl_ids = self.rl_ids_reroute
+            # else:
+            #     rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
+            rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['3']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
             for rl_id in rl_ids:
                 # if rl_id out of network
@@ -397,10 +399,11 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
         
 
-        if self.reroute_on_exit:
-            rl_ids = self.rl_ids_reroute
-        else:
-            rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
+        # if self.reroute_on_exit:
+        #     rl_ids = self.rl_ids_reroute
+        # else:
+        #     rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
+        rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['3']]
 
         reward_dict = {}
         reward = 0
