@@ -425,7 +425,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             for rl_id in rl_ids:
                 reward = 0
                 if True:#self.k.vehicle.get_edge(rl_id) == '3' or self.step_counter == self.env_params.warmup_steps + self.env_params.horizon:
-                    reward = self.last_exit_counter[rl_id] / 50.0
+                    reward = self.last_exit_counter[rl_id] / 30.0
                     self.last_exit_counter[rl_id] = 0
                 total_rwd += reward
                 reward_dict[rl_id] = reward
