@@ -464,7 +464,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             self.past_actions_dict = defaultdict(lambda: [np.zeros(self.num_past_actions), 0])
 
         add_params = self.env_params.additional_params
-        if True:#add_params.get("reset_inflow") and self.sim_params.restart_instance:
+        if add_params.get("reset_inflow") and self.sim_params.restart_instance:
             inflow_range = add_params.get("inflow_range")
             if new_inflow_rate:
                 flow_rate = new_inflow_rate
