@@ -7,6 +7,7 @@ import json
 from copy import deepcopy
 import os
 
+import flow.config
 from flow.core.params import SumoLaneChangeParams, SumoCarFollowingParams, \
     SumoParams, InitialConfig, EnvParams, NetParams, InFlows
 from flow.core.params import TrafficLightParams
@@ -137,12 +138,11 @@ def get_flow_params(config):
     net.inflows = InFlows()
     if flow_params["net"]["inflows"]:
         net.inflows.__dict__ = flow_params["net"]["inflows"].copy()
-    # if len(net.template) > 0:
-    #     dirname = os.getcwd()
-    #     filename = os.path.join(dirname, '../../examples')
-    #     split = net.template.split('examples')[1][1:]
-    #     path = os.path.abspath(os.path.join(filename, split))
-    #     net.template = path
+    if len(net.template) > 0:
+        filename = os.path.join(flow.config.PROJECT_PATH, 'examples')
+        split = net.template.split('examples')[1][1:]
+        path = os.path.abspath(os.path.join(filename, split))
+        net.template = path
 
     env = EnvParams()
     env.__dict__ = flow_params["env"].copy()
