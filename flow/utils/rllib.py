@@ -138,7 +138,7 @@ def get_flow_params(config):
     net.inflows = InFlows()
     if flow_params["net"]["inflows"]:
         net.inflows.__dict__ = flow_params["net"]["inflows"].copy()
-    if len(net.template) > 0:
+    if net.template is not None and len(net.template) > 0:
         filename = os.path.join(flow.config.PROJECT_PATH, 'examples')
         split = net.template.split('examples')[1][1:]
         path = os.path.abspath(os.path.join(filename, split))
