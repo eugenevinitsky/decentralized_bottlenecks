@@ -61,4 +61,4 @@ if __name__ == '__main__':
                                         horizon=400, end_len=500)
 
                 aws_sync(output_path,
-                        "s3://nathan.experiments/trb_bottleneck_paper/graphs_test_2/{}/{}/{}".format(DATE, EXP_TITLE, tune_name))
+                        "s3://nathan.experiments/trb_bottleneck_paper/graphs_test/{}/{}/{}".format(DATE, EXP_TITLE, tune_name))
