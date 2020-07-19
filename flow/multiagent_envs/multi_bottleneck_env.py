@@ -444,7 +444,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
         self.rew_history += reward
 
-        print('REWARDS =', reward_dict)
+        # print('REWARDS =', reward_dict)
 
         return reward_dict
 
