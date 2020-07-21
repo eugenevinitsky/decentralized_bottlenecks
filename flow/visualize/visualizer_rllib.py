@@ -146,7 +146,6 @@ def visualizer_rllib(args):
     register_env(env_name, create_env)
 
     # create the agent that will be used to compute the actions
-    print(env_name, config)
     agent = agent_cls(env=env_name, config=config)
     checkpoint = result_dir + '/checkpoint_' + args.checkpoint_num
     checkpoint = checkpoint + '/checkpoint-' + args.checkpoint_num

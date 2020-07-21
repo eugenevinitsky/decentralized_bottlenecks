@@ -331,10 +331,10 @@ def on_episode_step(info):
     episode.user_data["n_veh_edge4_l1"].append(l1)
 
     edge_2_veh = env.k.vehicle.get_ids_by_edge('2')
-    l0_edge2 = ["0" == env.k.vehicle.get_lane(veh_id) for veh_id in edge_2_veh]
-    l1_edge2 = ["1" == env.k.vehicle.get_lane(veh_id) for veh_id in edge_2_veh]
-    l2_edge2 = ["2" == env.k.vehicle.get_lane(veh_id) for veh_id in edge_2_veh]
-    l3_edge2 = ["3" == env.k.vehicle.get_lane(veh_id) for veh_id in edge_2_veh]
+    l0_edge2 = [veh_id for veh_id in edge_2_veh if env.k.vehicle.get_lane(veh_id) == "0"]
+    l1_edge2 = [veh_id for veh_id in edge_2_veh if env.k.vehicle.get_lane(veh_id) == "1"]
+    l2_edge2 = [veh_id for veh_id in edge_2_veh if env.k.vehicle.get_lane(veh_id) == "2"]
+    l3_edge2 = [veh_id for veh_id in edge_2_veh if env.k.vehicle.get_lane(veh_id) == "3"]
     episode.user_data["mean_speed_edge2_l0"].append(np.nan_to_num(np.mean(env.k.vehicle.get_speed(l0_edge2))))
     episode.user_data["mean_speed_edge2_l1"].append(np.nan_to_num(np.mean(env.k.vehicle.get_speed(l1_edge2))))
     episode.user_data["mean_speed_edge2_l2"].append(np.nan_to_num(np.mean(env.k.vehicle.get_speed(l2_edge2))))
@@ -405,13 +405,11 @@ def setup_exps(args):
         config['train_batch_size'] = args.horizon * rllib_params['n_rollouts']
         config["entropy_coeff"] = args.entropy_coeff
 
-        if args.use_lstm:
-            config['vf_loss_coeff'] = args.vf_loss_coeff
-
         # if we have a centralized vf we can't use big batch sizes or we eat up all the system memory
         config['sgd_minibatch_size'] = 128
-
-        # Grid search things
+        if args.use_lstm:
+            config['vf_loss_coeff'] = args.vf_loss_coeff
+            # Grid search things
         if args.grid_search:
             config['lr'] = tune.grid_search([5e-5, 5e-4, 5e-3])
         else:
@@ -587,10 +585,6 @@ if __name__ == '__main__':
         exp_dict['upload_dir'] = s3_string
 
     run(**exp_dict, queue_trials=False, raise_on_failed_trial=False)
-    # os.makedirs(os.path.expanduser("~/ray_results"))
-    # p1 = subprocess.Popen("aws s3 sync {} {}".format("s3://nathan.experiments/trb_bottleneck_paper/07-12-2020/i2400_td3_senv_0p1_h400_reroute_rwd_e3",
-    #                                                  os.path.expanduser("~/ray_results")).split(' '))
-    # p1.wait(5000)
 
     # Now we add code to loop through the results and create scores of the results
     if args.create_inflow_graph:
@@ -615,7 +609,7 @@ if __name__ == '__main__':
                     ray.init()
 
                 run_bottleneck_results(400, 3600, 100, args.num_test_trials, output_path, args.exp_title, checkpoint_path,
-                                       gen_emission=False, render_mode='no_render', checkpoint_num=str(500), #dirpath.split('_')[-1], TMP HARDCODED
+                                       gen_emission=False, render_mode='no_render', checkpoint_num=str(700), #dirpath.split('_')[-1], TMP HARDCODED
                                        horizon=max(args.horizon, int(1000 / (args.sims_per_step * args.sim_step))), end_len=500)
 
                 if args.use_s3:
