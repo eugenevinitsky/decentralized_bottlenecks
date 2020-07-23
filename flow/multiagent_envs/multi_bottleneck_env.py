@@ -178,9 +178,6 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         else:
             rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
 
-        if not self.simple_env:
-            raise ValueError('only handling simple_env case now -- otherwise need to care of states of agents that are not in the network')
-
         if add_params['centralized_obs']:
             state = self.get_centralized_state()
             veh_info = {rl_id: np.concatenate((self.veh_statistics(rl_id), state)) for rl_id in rl_ids}
@@ -245,23 +242,38 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                                             congest_number,
                                             ])
         else:
-            if self.env_params.additional_params.get('communicate', False):
-                veh_info = {rl_id: np.concatenate((self.veh_statistics(rl_id),
-                                                   self.state_util(rl_id),
-                                                   self.get_signal(rl_id,
-                                                                   rl_actions)
-                                                   )
-                                                  )
-                            for rl_id in rl_ids}
-            else:
-                veh_info = {rl_id: np.concatenate((self.veh_statistics(rl_id),
-                                                    self.state_util(rl_id),
-                                                   ))
-                            for rl_id in rl_ids}
-            if self.env_params.additional_params.get('aggregate_info'):
-                agg_statistics = self.aggregate_statistics()
-                veh_info = {rl_id: np.concatenate((val, agg_statistics))
-                            for rl_id, val in veh_info.items()}
+            veh_info = {}
+            for rl_id in rl_ids:
+                if rl_id not in self.k.vehicle.get_rl_ids():
+                    if self.env_params.additional_params['communicate']:
+                        # eight possible signals if above
+                        if self.env_params.additional_params.get('aggregate_info'):
+                            num_obs = 6 * MAX_LANES * self.scaling + 22
+                        else:
+                            num_obs = 6 * MAX_LANES * self.scaling + 16
+                    else:
+                        if self.env_params.additional_params.get('aggregate_info'):
+                            num_obs = 6 * MAX_LANES * self.scaling + 14
+                        else:
+                            num_obs = 6 * MAX_LANES * self.scaling + 8
+                    veh_info[rl_id] = np.array([-1.0] * num_obs)
+                else:
+                    if self.env_params.additional_params.get('communicate', False):
+                        veh_info[rl_id] = np.concatenate((self.veh_statistics(rl_id),
+                                                        self.state_util(rl_id),
+                                                        self.get_signal(rl_id,
+                                                                        rl_actions)
+                                                        )
+                                                    )
+                    else:
+                        veh_info[rl_id] = np.concatenate((self.veh_statistics(rl_id),
+                                                            self.state_util(rl_id),
+                                                        ))
+
+                    if self.env_params.additional_params.get('aggregate_info'):
+                        agg_statistics = self.aggregate_statistics()
+                        veh_info[rl_id] = np.concatenate((veh_info[rl_id], agg_statistics))
+
 
         if self.env_params.additional_params.get('keep_past_actions', False):
             # update the actions history with the most recent actions
