@@ -394,11 +394,11 @@ def setup_exps(args):
             config["learning_starts"] = 10000
             config["pure_exploration_steps"] = 10000
         if args.grid_search:
-            config["prioritized_replay"] = tune.grid_search(['True', 'False'])
-            config["actor_lr"] = tune.grid_search([1e-3, 1e-4])
-            config["critic_lr"] = tune.grid_search([1e-3, 1e-4])
-            config["n_step"] = tune.grid_search([1, 5])
-        config["seed"] = 0
+            config["prioritized_replay"] = True # tune.grid_search(['True', 'False'])
+            config["actor_lr"] = 0.001 # tune.grid_search([1e-3, 1e-4])
+            config["critic_lr"] = 0.0001 # tune.grid_search([1e-3, 1e-4])
+            config["n_step"] = 5 # tune.grid_search([1, 5])
+            config["seed"] = tune.grid_search(list(range(1, 342, 10)))
     else:
         alg_run = 'PPO'
         config = ppo.DEFAULT_CONFIG.copy()
