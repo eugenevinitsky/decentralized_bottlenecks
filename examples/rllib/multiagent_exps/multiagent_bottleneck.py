@@ -397,7 +397,7 @@ def setup_exps(args):
             config["prioritized_replay"] = args.td3_prioritized_replay # tune.grid_search(['True', 'False'])
             config["actor_lr"] = args.td3_actor_lr # tune.grid_search([1e-3, 1e-4])
             config["critic_lr"] = args.td3_critic_lr # tune.grid_search([1e-3, 1e-4])
-            config["n_step"] = args.n_step # tune.grid_search([1, 5])
+            config["n_step"] = args.td3_n_step # tune.grid_search([1, 5])
             config["seed"] = tune.grid_search([None] + list(range(34)))
     else:
         alg_run = 'PPO'
