@@ -115,4 +115,10 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument('--create_inflow_graph', action='store_true', default=False)
     parser.add_argument('--num_test_trials', type=int, default=20)
 
+    # TD3 hyperparams (for doing faster seed search)
+    parser.add_argument('--td3_prioritized_replay', action='store_true', default=False)
+    parser.add_argument('--td3_actor_lr', type=float, default=0.001)
+    parser.add_argument('--td3_critic_lr', type=float, default=0.001)
+    parser.add_argument('--td3_n_step', type=int, default=5)
+
     return parser
