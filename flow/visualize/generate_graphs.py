@@ -16,7 +16,7 @@ def aws_sync(src, dest):
             print('This is the error ', e)
 
 
-NUM_TEST_TRIALS = 1
+NUM_TEST_TRIALS = 20
 
 OUTFLOW_MIN = 400
 OUTFLOW_MAX = 3600
