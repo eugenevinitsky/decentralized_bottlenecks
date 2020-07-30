@@ -10,8 +10,8 @@ def aws_sync(src, dest):
     print('AWS S3 SYNC FROM >>> {} <<< TO >>> {} <<<'.format(src, dest))
     for _ in range(4):
         try:
-            p1 = subprocess.Popen("aws s3 sync {} {}".format(src, dest).split(' '))
-            p1.wait(60)
+            p1 = subprocess.Popen('aws s3 sync {} {} --exclude="*" --include="*.csv" --include="*.png" --include="*.err"'.format(src, dest).split(' '))
+            p1.wait(3600)
         except Exception as e:
             print('This is the error ', e)
 
