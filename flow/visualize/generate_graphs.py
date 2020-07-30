@@ -31,8 +31,8 @@ if __name__ == '__main__':
 
     # download checkpoints from AWS
     os.makedirs(os.path.expanduser("~/ray_results"))
-    aws_sync('s3://nathan.experiments/trb_bottleneck_paper/',
-             os.path.expanduser("~/ray_results"))
+    aws_sync('s3://nathan.experiments/trb_bottleneck_paper/07-26-2020',
+             os.path.expanduser("~/ray_results/trb_bottleneck_paper/07-26-2020"))
 
     ray.init()
 
