@@ -16,7 +16,7 @@ def aws_sync(src, dest):
             print('This is the error ', e)
 
 
-NUM_TEST_TRIALS = 20
+NUM_TEST_TRIALS = 1
 
 OUTFLOW_MIN = 400
 OUTFLOW_MAX = 3600
@@ -24,7 +24,7 @@ OUTFLOW_STEP = 100
 
 if __name__ == '__main__':
     exp_cp_path = sys.argv[1]
-    print("exp title: ", exp_title)
+    print("exp cp path: ", exp_cp_path)
     exp_title = exp_cp_path.replace('/', '_')
 
     # download checkpoints from AWS
