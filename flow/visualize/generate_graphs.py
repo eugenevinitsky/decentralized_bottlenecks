@@ -3,6 +3,7 @@ import ray
 from flow.visualize.bottleneck_results import run_bottleneck_results
 import subprocess
 import errno
+import sys
 
 
 def aws_sync(src, dest):
@@ -15,22 +16,22 @@ def aws_sync(src, dest):
             print('This is the error ', e)
 
 
-EXP_TITLE_LIST = ["i2400_td3_senv_0p1_h400_reroute_rwd_e3_check",
-                  "i2400_td3_senv_0p2_h400_reroute_rwd_e3",
-                  "i2400_td3_senv_0p4_h400_reroute_rwd_e3"]
 NUM_TEST_TRIALS = 20
 
 OUTFLOW_MIN = 400
 OUTFLOW_MAX = 3600
 OUTFLOW_STEP = 100
 
-DATE = "07-14-2020"
+DATE = "07-30-2020"
 
 
 if __name__ == '__main__':
+    EXP_TITLE_LIST = [sys.argv[1]]
+    print("exp title: ", EXP_TITLE_LIST)
+
     # download checkpoints from AWS
     os.makedirs(os.path.expanduser("~/ray_results"))
-    aws_sync('s3://nathan.experiments/trb_bottleneck_paper/07-13-2020',
+    aws_sync('s3://nathan.experiments/trb_bottleneck_paper/',
              os.path.expanduser("~/ray_results"))
 
     ray.init()
@@ -45,9 +46,9 @@ if __name__ == '__main__':
                 if exc.errno != errno.EEXIST:
                     raise
 
-        # for each grid search, find checkpoint 350
+        # for each grid search, find checkpoint 2000
         for (dirpath, dirnames, filenames) in os.walk(os.path.expanduser("~/ray_results")):
-            if "checkpoint_350" in dirpath and dirpath.split('/')[-3] == EXP_TITLE:
+            if "checkpoint_2000" in dirpath and EXP_TITLE in dirpath: #dirpath.split('/')[-3] == EXP_TITLE:
                 print('FOUND CHECKPOINT {}'.format(dirpath))
 
                 # grab the experiment name
@@ -56,9 +57,9 @@ if __name__ == '__main__':
                 checkpoint_path = os.path.dirname(dirpath)
 
                 print('GENERATING GRAPHS')
-                run_bottleneck_results(OUTFLOW_MIN, OUTFLOW_MAX, OUTFLOW_STEP, NUM_TEST_TRIALS, output_path, EXP_TITLE, checkpoint_path,
-                                        gen_emission=False, render_mode='no_render', checkpoint_num="350",
+                run_bottleneck_results(OUTFLOW_MIN, OUTFLOW_MAX, OUTFLOW_STEP, NUM_TEST_TRIALS, output_path, EXP_TITLE.replace('/', '_'), checkpoint_path,
+                                        gen_emission=False, render_mode='no_render', checkpoint_num="2000",
                                         horizon=400, end_len=500)
 
                 aws_sync(output_path,
-                        "s3://nathan.experiments/trb_bottleneck_paper/graphs_test/{}/{}/{}".format(DATE, EXP_TITLE, tune_name))
+                        "s3://nathan.experiments/trb_bottleneck_paper/seed_graphs/{}/{}/{}".format(DATE, EXP_TITLE.replace('/', '_'), tune_name))
