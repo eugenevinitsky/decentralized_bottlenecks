@@ -24,8 +24,9 @@ OUTFLOW_STEP = 100
 
 if __name__ == '__main__':
     exp_cp_path = sys.argv[1]
+    cp = sys.argv[2]
     print("exp cp path: ", exp_cp_path)
-    exp_title = exp_cp_path.replace('/', '_')
+    exp_title = exp_cp_path.replace('/', '_') + "_CHECKPOINT_" + str(cp)
 
     # download checkpoints from AWS
     os.makedirs(os.path.expanduser("~/ray_results"))
@@ -39,7 +40,7 @@ if __name__ == '__main__':
 
     local_cp_path = os.path.join(os.path.expanduser("~/ray_results/trb_bottleneck_paper"), exp_cp_path)
     run_bottleneck_results(OUTFLOW_MIN, OUTFLOW_MAX, OUTFLOW_STEP, NUM_TEST_TRIALS, output_path, exp_title, local_cp_path,
-                            gen_emission=False, render_mode='no_render', checkpoint_num="2000",
+                            gen_emission=False, render_mode='no_render', checkpoint_num=str(cp),
                             horizon=400, end_len=500)  
 
     aws_sync(output_path,
