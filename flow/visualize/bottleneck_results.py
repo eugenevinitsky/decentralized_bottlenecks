@@ -239,14 +239,16 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
                             state=agent_states[agent_id],
                             prev_action=prev_actions[agent_id],
                             prev_reward=prev_rewards[agent_id],
-                            policy_id=policy_id)
+                            policy_id=policy_id,
+                            explore=False)
                         agent_states[agent_id] = p_state
                     else:
                         a_action = agent.compute_action(
                             a_obs,
                             prev_action=prev_actions[agent_id],
                             prev_reward=prev_rewards[agent_id],
-                            policy_id=policy_id)
+                            policy_id=policy_id,
+                            explore=False)
                     a_action = _flatten_action(a_action)  # tuple actions
                     action_dict[agent_id] = a_action
                     prev_actions[agent_id] = a_action
