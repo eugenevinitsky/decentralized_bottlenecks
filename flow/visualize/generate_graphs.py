@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     local_cp_path = os.path.join(os.path.expanduser("~/ray_results/trb_bottleneck_paper"), exp_cp_path)
     run_bottleneck_results(OUTFLOW_MIN, OUTFLOW_MAX, OUTFLOW_STEP, NUM_TEST_TRIALS, output_path, exp_title, local_cp_path,
-                            gen_emission=True, render_mode='no_render', checkpoint_num="2000",
+                            gen_emission=False, render_mode='no_render', checkpoint_num="2000",
                             horizon=400, end_len=500)  
 
     aws_sync(output_path,
