@@ -176,12 +176,24 @@ def visualizer_rllib(args):
         env = gym.make(env_name)
         multiagent = False
         use_lstm = {DEFAULT_POLICY_ID: False}
+        
+    
+    # env.env_params.horizon = 2000
+    # env.env_params.sims_per_step = 1
+    # env_params.horizon = 2000
+    env.env_params.warmup_steps = 0 # int(300/0.5/5)
+    if hasattr(env, 'reroute_on_exit'):
+        env.reroute_on_exit = False
+
+    # print('ENV PARAMS')
+    # print(f'horizon={env_params.horizon}, sims_per_step={env_params.sims_per_step}')
 
     # env.env_params.horizon = 2000
     # env_params.sims_per_step = 1
-    env.env_params.warmup_steps = 0#int(300/0.5/5) #0
-    if hasattr(env, 'reroute_on_exit'):
-        env.reroute_on_exit = False
+    # env.env_params.warmup_steps = int(1200/5/0.5) #0
+    # if hasattr(env, 'reroute_on_exit'):
+    #     env.reroute_on_exit = False
+    #     print('HORIZON=', env.env_params.horizon, env_params.sims_per_step)
 
     steps = 0
     for i in range(args.num_rollouts):

@@ -448,7 +448,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             self.past_actions_dict = defaultdict(lambda: [np.zeros(self.num_past_actions), 0])
 
         add_params = self.env_params.additional_params
-        if add_params.get("reset_inflow") and self.sim_params.restart_instance: # True?
+        if True: #add_params.get("reset_inflow") and self.sim_params.restart_instance: # True?
             inflow_range = add_params.get("inflow_range")
             if new_inflow_rate:
                 flow_rate = new_inflow_rate
@@ -623,7 +623,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             and average velocity of segments 3,4,5,6
         '''
         time_step = self.time_counter / (self.env_params.horizon * self.env_params.sims_per_step)
-        outflow = self.k.vehicle.get_outflow_rate(10) / 3600
+        # print('OUTFLOW =', self.k.vehicle.get_outflow_rate(10) / 3600)
+        outflow = 0  # self.k.vehicle.get_outflow_rate(10) / 3600
         valid_edges = ['3', '4', '5']
         congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
         avg_speeds = np.zeros(len(valid_edges))
@@ -655,6 +656,35 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
     def additional_command(self):
         super().additional_command()
 
+        # if not self.reroute_on_exit:
+        #     if True:
+        #         print(f'len(_num_arrived)={len(self.k.vehicle._num_arrived)}, last 10={self.k.vehicle._num_arrived[-10:]}, ' \
+        #             f'sum(_num_arrived)={np.sum(self.k.vehicle._num_arrived)}, ' \
+        #             f'outflow_500(_num_arrived)={np.sum(self.k.vehicle._num_arrived[-1000:])/500*3600}')
+
+        #     else:
+        #         print("arrived", self.k.vehicle.get_arrived_ids())
+        #         veh_ids = list(self.k.vehicle.get_ids())
+        #         edges = self.k.vehicle.get_edge(veh_ids)
+        #         for veh_id, edge in zip(veh_ids, edges):
+        #             if edge == "":
+        #                 continue
+        #             if edge[0] == ":": 
+        #                 continue
+
+        #             if edge == '5' and self.k.vehicle.get_position(veh_id) > 120:
+        #                 # only count exited vehicles during the last 500s
+        #                 total_time_step = self.env_params.horizon * self.env_params.sims_per_step
+        #                 print(f'|| time_counter={self.time_counter}, step_counter={self.step_counter}, horizon={self.env_params.horizon}, sims_per_step={self.env_params.sims_per_step}, sim_step={self.sim_step}, total_time_step={total_time_step}')
+        #                 if self.time_counter > total_time_step - 500 / self.sim_step: # if time(0->2000) > 1000
+        #                     self.exit_counter += 1
+        #                     print('exit_counter/500*3600 = ', self.exit_counter/500*3600)
+        #                 self.last_exit_counter += 1
+        #                 self.total_exit_counter += 1
+        #                 print("total exit counter = ", self.total_exit_counter)
+        #                 self.k.vehicle.remove(veh_id)
+
+            
         # print(f'step={self.step_counter}, warmup_step={self.env_params.warmup_steps}')
         if self.reroute_on_exit and self.step_counter > self.env_params.warmup_steps and not self.env_params.evaluate:
             if len(self.rl_ids_reroute) == 0:
@@ -676,15 +706,16 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 if edge[0] == ":":  # center edge
                     continue
 
-                if edge == '5':
+                if edge == '5' and self.k.vehicle.get_position(veh_id) > 60:
                     # only count exited vehicles during the last 500s
-                    total_time_step = self.env_params.horizon * self.env_params.sims_per_step
+                    total_time_step = 2000 #self.env_params.horizon * self.env_params.sims_per_step
+                    # print('time_counter=', self.time_counter, self.step_counter)
                     if self.time_counter > total_time_step - 500 / self.sim_step:
                         self.exit_counter += 1
-                        # print('exit_counter/500*3600=', self.exit_counter*3.6)
+                        # print('exit_counter/500*3600 = ', self.exit_counter/500*3600)
                     self.last_exit_counter += 1
                     self.total_exit_counter += 1
-                    # print(self.total_exit_counter)
+                    # print("total exit counter = ", self.total_exit_counter)
                     type_id = self.k.vehicle.get_type(veh_id)
                     # remove the vehicle
                     self.k.vehicle.remove(veh_id)
