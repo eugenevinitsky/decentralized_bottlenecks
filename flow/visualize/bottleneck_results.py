@@ -183,7 +183,7 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
     vel = []
     mapping_cache = {}  # in case policy_agent_mapping is stochastic
 
-    # sim_step = sim_params.sim_step
+    sim_step = sim_params.sim_step
     # env.env_params.horizon = 2000
     # env_params.sims_per_step = 1
     env.env_params.warmup_steps = 0
