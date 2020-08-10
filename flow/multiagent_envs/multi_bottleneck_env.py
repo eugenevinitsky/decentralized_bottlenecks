@@ -119,7 +119,11 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             num_obs += 7
         elif self.simple_env:
             # abs_position duration, time since stopped, number of vehicles in the bottleneck, speed, lead speed, headway
-            num_obs = 7
+            # num_obs = 7
+            if self.env_params.additional_params.get('aggregate_info'):
+                num_obs = 7 + 6
+            else:
+                num_obs = 7
         elif self.super_simple_env:
             num_obs = 3
         else:
@@ -192,7 +196,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             for rl_id in rl_ids:
                 # if rl_id out of network
                 if rl_id not in self.k.vehicle.get_rl_ids():
-                    veh_info[rl_id] = np.array([-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0])
+                    veh_info[rl_id] = np.array([-1.0] * (7+6 if self.env_params.additional_params.get('aggregate_info') else 7))
                 else:
                     controller = self.curr_rl_vehicles[rl_id]['controller']
                     if self.k.vehicle.get_speed(rl_id) <= 0.2:
@@ -219,7 +223,12 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                                                             speed / 50.0,
                                                             lead_speed / 50.0,
                                                             headway / 1000.0])
+
+                    if self.env_params.additional_params.get('aggregate_info'):
+                        agg_statistics = self.aggregate_statistics()
+                        veh_info[rl_id] = np.concatenate((veh_info[rl_id], agg_statistics))
                     veh_info[rl_id] = np.clip(veh_info[rl_id], -10, 10)
+                
 
         elif self.super_simple_env:
             self.update_curr_rl_vehicles()
@@ -273,6 +282,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     if self.env_params.additional_params.get('aggregate_info'):
                         agg_statistics = self.aggregate_statistics()
                         veh_info[rl_id] = np.concatenate((veh_info[rl_id], agg_statistics))
+                veh_info[rl_id] = np.clip(veh_info[rl_id], -10, 10)
 
 
         if self.env_params.additional_params.get('keep_past_actions', False):
