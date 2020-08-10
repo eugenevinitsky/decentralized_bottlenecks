@@ -448,7 +448,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             self.past_actions_dict = defaultdict(lambda: [np.zeros(self.num_past_actions), 0])
 
         add_params = self.env_params.additional_params
-        if True: #add_params.get("reset_inflow") and self.sim_params.restart_instance: # True?
+        if add_params.get("reset_inflow") and self.sim_params.restart_instance: # True?
             inflow_range = add_params.get("inflow_range")
             if new_inflow_rate:
                 flow_rate = new_inflow_rate
@@ -706,9 +706,9 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                 if edge[0] == ":":  # center edge
                     continue
 
-                if edge == '5' and self.k.vehicle.get_position(veh_id) > 60:
+                if edge == '5': # and self.k.vehicle.get_position(veh_id) > 60:
                     # only count exited vehicles during the last 500s
-                    total_time_step = 2000 #self.env_params.horizon * self.env_params.sims_per_step
+                    total_time_step = self.env_params.horizon * self.env_params.sims_per_step  # 2000
                     # print('time_counter=', self.time_counter, self.step_counter)
                     if self.time_counter > total_time_step - 500 / self.sim_step:
                         self.exit_counter += 1
