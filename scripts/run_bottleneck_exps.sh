@@ -1565,11 +1565,11 @@
 #--start --stop --cluster-name ev_0pen_11 --tmux
 
 ray exec ray_autoscale.yaml \
-"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3senv_ncrit12_0p1 --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_nc12_0p1_h400 --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
 --num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
 --sim_step 0.5 --create_inflow_graph --sims_per_step 5 --rew_n_crit 12 \
 --td3 --grid_search --use_s3" \
---start --stop --cluster-name ev_0pen_10 --tmux
+--start --stop --cluster-name nathan_bottleneck_td3_old --tmux
 
 ray exec ray_autoscale.yaml \
 "python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3senv_ncrit12_0p2 --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
@@ -1584,3 +1584,386 @@ ray exec ray_autoscale.yaml \
 --sim_step 0.5 --create_inflow_graph --sims_per_step 5 --rew_n_crit 12 \
 --td3 --grid_search --use_s3" \
 --start --stop --cluster-name ev_0pen_12 --tmux
+
+
+
+### 01/07/2020
+
+# TD3 no reroute (= rew_n_crit)
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_nc12_0p1_h400 --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --rew_n_crit 12 \
+--td3 --grid_search --use_s3" \
+--start --stop --cluster-name nathan_bottleneck_td3_nc12 --tmux
+
+# TD3 reroute (= inflow proxy)
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_0p1_h400_reroute --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--td3 --grid_search --use_s3" \
+--start --stop --cluster-name nathan_bottleneck_td3_outflow --tmux
+
+# PPO no reroute (= rew_n_crit)
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_ppo_senv_nc12_0p1_h400 --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --rew_n_crit 12 \
+--grid_search --use_s3 --n_cpus 20" \
+--start --stop --cluster-name nathan_bottleneck_ppo_nc12 --tmux
+
+# PPO reroute (= inflow proxy)
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_ppo_senv_0p1_h400_reroute --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --n_cpus 20" \
+--start --stop --cluster-name nathan_bottleneck_ppo_outflow --tmux
+
+
+
+python examples/rllib/multiagent_exps/multiagent_bottleneck.py TMP_i2400_ppo_senv_0p1_h400_reroute --num_iters 1 --checkpoint_freq 50 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --sims_per_step 5 --render --reroute_on_exit
+
+
+
+
+# running 20% and 40% penetration with TD3 with reroute
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_0p2_h400_reroute --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--td3 --grid_search --use_s3" \
+--start --stop --cluster-name nathan_bottleneck_td3_20 --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_0p4_h400_reroute --num_iters 350 --checkpoint_freq 50 --av_frac 0.4 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--td3 --grid_search --use_s3" \
+--start --stop --cluster-name nathan_bottleneck_td3_40 --tmux
+
+
+
+# debug why graphs don't work
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_0p1_h400_reroute_test_00 --num_iters 1 --checkpoint_freq 1 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--td3 --grid_search --use_s3" \
+--start --cluster-name nathan_graph_test_to_stop_00
+
+
+python examples/rllib/multiagent_exps/multiagent_bottleneck.py test --num_iters 1 --checkpoint_freq 1 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --sims_per_step 5 --reroute_on_exit --render
+
+
+
+
+# try PPO/TD3 after fixing reward
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_ppo_senv_0p1_h400_reroute_rwd_e3 --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --multi_node --n_cpus 17" \
+--start --cluster-name nathan_ppo_bottleneck_rwd_edge3 --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_0p1_h400_reroute_rwd_e3 --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --multi_node --td3" \
+--start --cluster-name nathan_td3_bottleneck_rwd_edge3 --tmux
+
+
+
+
+ray exec ray_autoscale.yaml \
+"echo hi" \
+--start --cluster-name nathan_test
+
+
+
+
+# 13/07/2020 20:22:56
+# this is the command that worked with 10% penetration, fixed reroute, reward shared everywhere, and control on edge 3 only
+# trying it with 20% and 40% penetration now
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_0p1_h400_reroute_rwd_e3_check --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --multi_node --td3" \
+--start --cluster-name nathan_td3_bottleneck_rwd_edge_0p1 --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_0p2_h400_reroute_rwd_e3 --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --multi_node --td3" \
+--start --cluster-name nathan_td3_bottleneck_rwd_edge_0p2 --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_0p4_h400_reroute_rwd_e3 --num_iters 350 --checkpoint_freq 50 --av_frac 0.4 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --multi_node --td3" \
+--start --cluster-name nathan_td3_bottleneck_rwd_edge_0p4 --tmux
+
+# compute the graphs
+ray exec ray_autoscale.yaml \
+"python flow/flow/visualize/generate_graphs.py" \
+--start --cluster-name nathan_td3_bottleneck_graphs_0p1_2_4
+
+
+
+# 15/07/2020 11:02:27
+# try 20% and 40% penetration, same as before but with centralized PPO (and doubled rollout_scale_factor)
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_cppo_senv_0p2_h400_reroute_rwd_e3 --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
+--num_samples 1 --rollout_scale_factor 2.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --multi_node --centralized_vf --n_cpus 17" \
+--start --cluster-name nathan2_cppo_bottleneck_rwd_e3_0p2 --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_cppo_senv_0p4_h400_reroute_rwd_e3 --num_iters 350 --checkpoint_freq 50 --av_frac 0.4 \
+--num_samples 1 --rollout_scale_factor 2.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --multi_node --centralized_vf --n_cpus 17" \
+--start --cluster-name nathan2_cppo_bottleneck_rwd_e3_0p4 --tmux
+
+# 15/07/2020 16:43:29
+# try 20% penetration with and without centralized_vf (changes: cf commit "try things")
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_cppo_senv_0p2_h400_reroute_rwd_e3_try --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
+--num_samples 1 --rollout_scale_factor 2.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --multi_node --centralized_vf --n_cpus 17" \
+--start --cluster-name nathan2_cppo_bottleneck_rwd_e3_0p2_try --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_ppo_senv_0p2_h400_reroute_rwd_e3_try --num_iters 350 --checkpoint_freq 50 --av_frac 0.2 \
+--num_samples 1 --rollout_scale_factor 2.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --multi_node --n_cpus 17" \
+--start --cluster-name nathan2_ppo_bottleneck_rwd_e3_0p2_try --tmux
+
+
+# 17/07/2020 00:46:10
+# change num_sgd_iter from 30 to 15, and perform grid search over minibatch size
+# changed machines to higher memory ones with 40 cpus 
+# aim for 2 workers ie 120 cpus total, and we have 9 grid searches
+# so lets set num cpus to 12 and rollout scale factor to 3
+# also back to 10%
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_cppo_0p1_reroute_rwd_e3_sgd_fixed --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 2.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --multi_node --centralized_vf --n_cpus 12" \
+--start --cluster-name nathan_cppo_bottleneck_sgd_fixed --tmux
+
+# same as above but try to give cumulated reward of agents at the start of edge 3 (instead of all along)
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_cppo_0p1_reroute_sgd_cumrew_fixed2 --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 2.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --multi_node --centralized_vf --n_cpus 12" \
+--start --cluster-name nathan_cppo_bottleneck_sgd_cumrew_fixed2 --tmuxux
+
+
+# 18/07/2020 17h
+# same but vehicles are only RL on edge 3
+# and try both cppo and td3
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_cppo_0p1_reroute_cumrewe3 --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 2.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --multi_node --centralized_vf --n_cpus 17" \
+--start --cluster-name nathan_cppo_bottleneck_cumrewe3only --tmux
+
+# same as above but try to give cumulated reward of agents at the start of edge 3 (instead of all along)
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_0p1_reroute_cumrewe3 --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --td3" \
+--start --cluster-name nathan_td3_bottleneck_cumrewe3only --tmux
+
+
+
+# 18/07/2020 22:40:05
+# same but vehicles get their cumulated reward once episode ends
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_cppo_0p1_reroute_cumrewe3_end --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 2.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --multi_node --centralized_vf --n_cpus 17" \
+--start --cluster-name nathan_cppo_bottleneck_cumrewe3only_end --tmux
+
+# same as above but try to give cumulated reward of agents at the start of edge 3 (instead of all along)
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_0p1_reroute_cumrewe3_end --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --td3" \
+--start --cluster-name nathan_td3_bottleneck_cumrewe3only_end --tmux
+
+
+# 19/07/20 -- this is what was supposed to work before (TD3 10%)
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_0p1_h400_reroute_rwd_e3 --num_iters 350 --checkpoint_freq 50 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --multi_node --td3" \
+--start --cluster-name nathan_td3_bottleneck_rwd_edge_0p1 --tmux
+
+# 19/07/20 -- test graph generation
+ray exec ray_autoscale.yaml "python flow/flow/visualize/generate_graphs" --start --cluster-name nathan_debug_graphs --tmux
+
+
+# 20/07/20 01h29 -- this is same as previous one (TD3 10% reward shared everywhere control on edge 3) but 500 iters and rwd /50->/30
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_0p1_h400_reroute_rwd_e3_500iter --num_iters 500 --checkpoint_freq 100 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --multi_node --td3" \
+--start --cluster-name nathan_td3_bottleneck_rwd_edge_0p1_500iter --tmux
+
+# keeping that last settings and starting sweep
+# first w/ simple-env at 5, 10, 20 and 40%
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_agg_0p05_h400_reroute --num_iters 500 --checkpoint_freq 100 --av_frac 0.05 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --td3" \
+--start --stop --cluster-name nathan_td3_bottleneck_0p05 --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_agg_0p1_h400_reroute --num_iters 500 --checkpoint_freq 100 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --td3" \
+--start --stop --cluster-name nathan_td3_bottleneck_0p1 --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_agg_0p2_h400_reroute --num_iters 500 --checkpoint_freq 100 --av_frac 0.2 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --td3" \
+--start --stop --cluster-name nathan_td3_bottleneck_0p2 --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_agg_0p4_h400_reroute --num_iters 500 --checkpoint_freq 100 --av_frac 0.4 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --create_inflow_graph --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --td3" \
+--start --stop --cluster-name nathan_td3_bottleneck_0p4 --tmux
+
+
+# 21/07/2020 23h??
+# copied from 13/07 after partially reverting to commit from 13/07 (which gave better results!)
+# https://github.com/eugenevinitsky/cdc_bottlenecks/compare/ef5f2bf..a5f655f
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_0p05_h400_reroute_rwd_e3 --num_iters 700 --checkpoint_freq 100 --av_frac 0.05 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --td3" \
+--start --stop --cluster-name nathan_td3_bottleneck_rwd_edge_0p05 --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_0p1_h400_reroute_rwd_e3 --num_iters 700 --checkpoint_freq 100 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --td3" \
+--start --stop --cluster-name nathan_td3_bottleneck_rwd_edge_0p1 --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_0p2_h400_reroute_rwd_e3 --num_iters 700 --checkpoint_freq 100 --av_frac 0.2 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --td3" \
+--start --stop --cluster-name nathan_td3_bottleneck_rwd_edge_0p2 --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_0p4_h400_reroute_rwd_e3 --num_iters 700 --checkpoint_freq 100 --av_frac 0.4 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --td3" \
+--start --stop --cluster-name nathan_td3_bottleneck_rwd_edge_0p4 --tmux
+
+# 23/07/2020 03h06
+# running w/ and w/o lane changing: w/ simple env, w/o simple env, w/o --aggregate info flag
+./run_new_exps.sh
+
+
+# 25/07/20 04h10 -- test with config['seed'] = 0 to see if both runs yield the exact same rewards
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py T2_i2400_td3_seed0_test1 --num_iters 50 --checkpoint_freq 50 --av_frac 0.3 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --sims_per_step 5 --reroute_on_exit \
+--use_s3 --td3" \
+--start --stop --cluster-name nathan_td3_seed0_test3 --tmux
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py T2_i2400_td3_seed0_test2 --num_iters 50 --checkpoint_freq 50 --av_frac 0.3 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --sims_per_step 5 --reroute_on_exit \
+--use_s3 --td3" \
+--start --stop --cluster-name nathan_td3_seed0_test4 --tmux
+
+
+
+python examples/rllib/multiagent_exps/multiagent_bottleneck.py test_seed0 --num_iters 10 --checkpoint_freq 20 --av_frac 0.05 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --sims_per_step 5 --reroute_on_exit --td3
+
+
+
+# 25/07/20 - 18h50 -- test normal 10% (ae83i) with seed search (range(1, 342, 10))
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py S1_SEED_i2400_td3_senv_agg_0p1_h400_reroute_rwd_nfk0d --num_iters 1000 --checkpoint_freq 100 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --td3" \
+--start --stop --cluster-name nathan_td3_bottleneck_0p1_nfk0d --tmux
+
+
+##### 26/07/20 - seed search on the 12 exps w/o lane change
+seed_search.sh
+
+
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py tmp --num_iters 2000 --checkpoint_freq 400 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
+--sim_step 0.5 --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --td3 \
+--td3_actor_lr 0.0001 --td3_critic_lr 0.001 --td3_n_step 5" \
+--start --stop --cluster-name nathan_tmp
+
+
+
+python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py i2400_td3_senv_0p1_h400_reroute_rwd_e3 --num_iters 1000 --checkpoint_freq 200 --av_frac 0.1 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info \
+--sim_step 0.5 --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --td3
+
+
+
+
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py tmptmp --num_iters 1 --checkpoint_freq 400 --av_frac 0.4 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --simple_env \
+--sim_step 0.5 --sims_per_step 5 --reroute_on_exit \
+--grid_search --td3 \
+--td3_actor_lr 0.0001 --td3_critic_lr 0.0001 --td3_n_step 5" \
+--start --cluster-name nathan_td3_bottleneck_seedsearch_dqzj2_0p4_f --tmux
+
+
+
+
+ray exec ray_autoscale.yaml "" --start --cluster-name nathan_test1 --tmux
