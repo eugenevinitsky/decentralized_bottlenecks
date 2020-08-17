@@ -57,7 +57,8 @@ def default_policy_agent_mapping(unused_agent_id):
 def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render_mode,
                    checkpoint_num,
                    end_len,
-                   horizon=None):
+                   horizon=None,
+                   penetration=None):
     checkpoint_dir = checkpoint_dir if checkpoint_dir[-1] != '/' \
         else checkpoint_dir[:-1]
 
@@ -65,6 +66,16 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
 
     # Run on only one cpu for rendering purposes
     config['num_workers'] = 0
+
+    if penetration is not None:
+        flow_params_str = config['env_config']['flow_params'].split(',')
+        for i, param in enumerate(flow_params_str):
+            if 'av_frac' in param:
+                param_split = param.split(':')
+                param_split[1] = str(penetration)
+                flow_params_str[i] = ': '.join(param_split)
+        flow_params_str = ','.join(flow_params_str)
+        config['env_config']['flow_params'] = flow_params_str
 
     flow_params = get_flow_params(config)
 
@@ -332,6 +343,8 @@ def create_parser():
     parser.add_argument('--outflow_min', type=int, default=400, help='Lowest inflow to evaluate over')
     parser.add_argument('--outflow_max', type=int, default=2500, help='Lowest inflow to evaluate over')
     parser.add_argument('--step_size', type=int, default=100, help='The size of increments to sweep over inflow in')
+    parser.add_argument('--penetration', type=float, default=None, help='The fraction of AVs to evaluate over (by '
+                                                        'default it will use the penetration used during training)')
     parser.add_argument('--num_trials', type=int, default=20, help='How many samples of each inflow to take')
     parser.add_argument('--end_len', type=int, default=500, help='How many last seconds of the run to use for '
                                                                  'calculating the outflow statistics')
@@ -344,11 +357,12 @@ def create_parser():
 def run_bottleneck_results(outflow_min, outflow_max, step_size, num_trials, output_path, filename,
                            checkpoint_dir, gen_emission, render_mode, checkpoint_num,
                            horizon=None,
-                           end_len=500):
+                           end_len=500,
+                           penetration=None):
     inflow_grid = list(range(outflow_min, outflow_max + step_size,
                              step_size))
     temp_output = [run_bottleneck.remote(checkpoint_dir, inflow, num_trials, gen_emission,
-                                         render_mode, checkpoint_num, end_len, horizon) for inflow in inflow_grid]
+                                         render_mode, checkpoint_num, end_len, horizon, penetration) for inflow in inflow_grid]
     final_output = ray.get(temp_output)
 
     outflow_arr = np.asarray([elem[0] for elem in final_output])
@@ -478,4 +492,5 @@ if __name__ == '__main__':
                            args.checkpoint_dir, args.gen_emission, args.render_mode, args.checkpoint_num,
                            end_len=args.end_len,
                            horizon=horizon,
+                           penetration=args.penetration,
                            )
