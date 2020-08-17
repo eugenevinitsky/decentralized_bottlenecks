@@ -33,6 +33,8 @@ if __name__ == '__main__':
         penetration = None  # keep penetration used during training
 
     print("exp cp path: ", exp_cp_path)
+    print("cp: ", cp)
+    print("penetration: ", penetration)
     exp_title = exp_cp_path.replace('/', '_') + "_CHECKPOINT_" + str(cp)
     if penetration is not None:
         exp_title += f'_PENETRATION_{penetration}'
