@@ -40,14 +40,20 @@ if __name__ == '__main__':
         exp_title += f'_PENETRATION_{penetration}'
 
     # download checkpoints from AWS
-    os.makedirs(os.path.expanduser("~/ray_results"))
+    try:
+        os.makedirs(os.path.expanduser("~/ray_results"))
+    except:
+        pass
     aws_sync('s3://nathan.experiments/trb_bottleneck_paper/' + exp_cp_path,
              os.path.expanduser("~/ray_results/trb_bottleneck_paper/" + exp_cp_path))
 
     ray.init()
     
     output_path = os.path.join(os.path.expanduser('~/bottleneck_results'))
-    os.makedirs(output_path)
+    try:
+        os.makedirs(output_path)
+    except:
+        pass
 
     local_cp_path = os.path.join(os.path.expanduser("~/ray_results/trb_bottleneck_paper"), exp_cp_path)
     run_bottleneck_results(OUTFLOW_MIN, OUTFLOW_MAX, OUTFLOW_STEP, NUM_TEST_TRIALS, output_path, exp_title, local_cp_path,
