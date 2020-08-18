@@ -112,3 +112,5 @@ flow.ang
 awscli*
 *.yaml
 *.sh
+
+generate_graphs
