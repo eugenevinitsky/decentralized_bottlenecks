@@ -52,6 +52,10 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument('--num_sample_seconds', type=float, default=0.5,
                         help='How many seconds back in time the outflow reward should sample over. It defaults to '
                              'only looking at the current step')
+    parser.add_argument('--c0', type=float, default=1.0)
+    parser.add_argument('--c1', type=float, default=1.0)
+    parser.add_argument('--c2', type=float, default=1.0)
+    parser.add_argument('--c3', type=float, default=1.0)
     parser.add_argument('--speed_reward', action='store_true', default=False,
                         help='If true the reward is the mean AV speed. If not set the reward is outflow')
     parser.add_argument('--imitate', action='store_true', default=False,
