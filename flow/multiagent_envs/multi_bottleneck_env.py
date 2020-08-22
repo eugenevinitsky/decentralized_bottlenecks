@@ -88,6 +88,10 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if self.curriculum:
             self.env_params.horizon = self.min_horizon
 
+        self.past_edge4 = []
+        self.n_speeds = 0
+        self.mean_speeds = np.array([0,0,0,0], dtype=np.float32)
+
 
     def increase_curr_iter(self):
         self.curr_iter += 1
@@ -193,6 +197,16 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             else:
                 rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
+
+            # robustness check on edge 4 value delaying
+            # self.past_edge4.append(congest_number)
+            # n_past = 30
+            # if len(self.past_edge4) < n_past:
+            #     congest_number = 0
+            # else:
+            #     congest_number = self.past_edge4[-n_past]
+            # print(f'congest number = {congest_number} (real = {self.past_edge4[-1]})')
+
             for rl_id in rl_ids:
                 # if rl_id out of network
                 if rl_id not in self.k.vehicle.get_rl_ids():
@@ -228,7 +242,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                         agg_statistics = self.aggregate_statistics()
                         veh_info[rl_id] = np.concatenate((veh_info[rl_id], agg_statistics))
                     veh_info[rl_id] = np.clip(veh_info[rl_id], -10, 10)
-                
+
 
         elif self.super_simple_env:
             self.update_curr_rl_vehicles()
@@ -458,7 +472,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             self.past_actions_dict = defaultdict(lambda: [np.zeros(self.num_past_actions), 0])
 
         add_params = self.env_params.additional_params
-        if add_params.get("reset_inflow") and self.sim_params.restart_instance: # True?
+        if True:#add_params.get("reset_inflow") and self.sim_params.restart_instance: # True?
             inflow_range = add_params.get("inflow_range")
             if new_inflow_rate:
                 flow_rate = new_inflow_rate
@@ -470,6 +484,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             for _ in range(100):
                 try:
                     vehicles = VehicleParams()
+                    print('HELLO ALL GOOD')
                     if not np.isclose(add_params.get("av_frac"), 1):
                         vehicles.add(
                             veh_id="human",
@@ -479,7 +494,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                                 speed_mode=31,
                             ),
                             lane_change_params=SumoLaneChangeParams(
-                                lane_change_mode=add_params.get("lc_mode"),
+                                lane_change_mode=add_params.get("lc_mode"),  # 1621 : 0
                             ),
                             num_vehicles=1)
                         vehicles.add(
@@ -665,6 +680,26 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
     def additional_command(self):
         super().additional_command()
+
+        # if self.step_counter > self.env_params.warmup_steps + 100:
+        #     means = np.array([0, 0, 0, 0], dtype=np.float32)
+        #     counts = np.array([1, 1, 1, 1])
+
+        #     for veh_id in self.k.vehicle.get_ids():
+        #         # print('E,L,S', self.k.vehicle.get_edge(veh_id), self.k.vehicle.get_lane(veh_id), self.k.vehicle.get_speed(veh_id))
+        #         if self.k.vehicle.get_edge(veh_id) == "3":
+        #             lane = int(self.k.vehicle.get_lane(veh_id))
+        #             counts[lane] += 1
+        #             means[lane] += self.k.vehicle.get_speed(veh_id)
+            
+
+
+
+        #     self.n_speeds += 1
+
+        #     self.mean_speeds += means / counts
+
+        #     print('mean_speeds', self.mean_speeds / self.n_speeds)
 
         # if not self.reroute_on_exit:
         #     if True:

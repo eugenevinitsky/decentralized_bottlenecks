@@ -72,6 +72,11 @@ def visualizer_rllib(args):
     # Run on only one cpu for rendering purposes
     config['num_workers'] = 0
 
+    config['seed'] = 999
+    print(config['seed'])
+
+    # exit(0)
+
     flow_params = get_flow_params(config)
 
     # Determine agent and checkpoint
@@ -209,6 +214,7 @@ def visualizer_rllib(args):
         done = False
         reward_total = 0.0
         while not done and steps < (env_params.horizon or steps + 1):
+            print(steps)
             vehicles = env.unwrapped.k.vehicle
             vel.append(np.mean(vehicles.get_speed(vehicles.get_ids())))
             multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}

@@ -47,3 +47,35 @@ if false; then
         done
     done
 fi
+
+
+# to download all best policies locally
+if false; then
+    for exp in 07-26-2020/seedsearch_dqzj2_0p05/seedsearch_dqzj2_0p05/TD3_25_seed=24_2020-07-26_20-03-240trecw9h \
+            07-26-2020/seedsearch_dqzj2_0p1/seedsearch_dqzj2_0p1/TD3_30_seed=29_2020-07-26_20-07-11oe2hv4gz \
+            07-26-2020/seedsearch_dqzj2_0p2/seedsearch_dqzj2_0p2/TD3_16_seed=15_2020-07-26_20-10-47m7h7gge_ \
+            07-26-2020/seedsearch_dqzj2_0p4/seedsearch_dqzj2_0p4/TD3_10_seed=9_2020-07-26_20-14-55k__w7kmt \
+            08-14-2020/seedsearch_pos09_0p05/seedsearch_pos09_0p05/TD3_29_seed=28_2020-08-14_08-39-16tmtj4mkr \
+            08-14-2020/seedsearch_pos09_0p1/seedsearch_pos09_0p1/TD3_4_seed=3_2020-08-14_08-44-22pa20pu0_ \
+            08-14-2020/seedsearch_pos09_0p2/seedsearch_pos09_0p2/TD3_0_seed=None_2020-08-14_08-49-0145nytugu \
+            08-14-2020/seedsearch_pos09_0p4/seedsearch_pos09_0p4/TD3_10_seed=9_2020-08-14_08-53-25o0bkk0id \
+            07-26-2020/seedsearch_o9di2_0p05/seedsearch_o9di2_0p05/TD3_15_seed=14_2020-07-26_19-50-079dxaty9f \
+            07-26-2020/seedsearch_o9di2_0p1/seedsearch_o9di2_0p1/TD3_17_seed=16_2020-07-26_19-53-16cx7riof4 \
+            07-26-2020/seedsearch_o9di2_0p2/seedsearch_o9di2_0p2/TD3_18_seed=17_2020-07-26_19-56-22fcx3lomy \
+            07-26-2020/seedsearch_o9di2_0p4/seedsearch_o9di2_0p4/TD3_20_seed=19_2020-07-26_19-59-47qydk6h9_
+    do
+        echo ${exp}
+
+        dir_name=""
+        if [[ $exp =~ "dqzj2" ]]; then dir_name="simple_no_agg" fi
+        if [[ $exp =~ "pos09" ]]; then dir_name="simple_agg" fi
+        if [[ $exp =~ "o9di2" ]]; then dir_name="complex_agg" fi
+
+        if [[ $exp =~ "0p05" ]]; then dir_name="${dir_name}_0p05" fi
+        if [[ $exp =~ "0p1" ]]; then dir_name="${dir_name}_0p1" fi
+        if [[ $exp =~ "0p2" ]]; then dir_name="${dir_name}_0p2" fi
+        if [[ $exp =~ "0p4" ]]; then dir_name="${dir_name}_0p4" fi
+
+        aws s3 sync s3://nathan.experiments/trb_bottleneck_paper/${exp} ~/s3/trb_best/${dir_name}
+    done
+fi
