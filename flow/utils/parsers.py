@@ -29,7 +29,8 @@ def get_multiagent_bottleneck_parser():
     parser.add_argument('--sim_step', type=float, default=0.5, help='dt of a timestep')
     parser.add_argument('--low_inflow', type=int, default=800, help='the lowest inflow to sample from')
     parser.add_argument('--high_inflow', type=int, default=2200, help='the highest inflow to sample from')
-    parser.add_argument('--av_frac', type=float, default=0.1, help='What fraction of the vehicles should be autonomous')
+    parser.add_argument('--av_frac', type=float, default=0.1, help='What fraction of the vehicles should be autonomous.'
+        'If < 0, will be trained on random penetrations between 5% and 40%')
     parser.add_argument('--scaling', type=int, default=1, help='How many lane should we start with. Value of 1 -> 4, '
                                                                '2 -> 8, etc.')
     parser.add_argument('--lc_on', action='store_true', help='If true, lane changing is enabled.')

@@ -463,6 +463,13 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             self.past_actions_dict = defaultdict(lambda: [np.zeros(self.num_past_actions), 0])
 
         add_params = self.env_params.additional_params
+
+        # if av_frac < 0, set it random between 5% and 40%
+        av_frac = add_params.get("av_frac")
+        if av_frac < 0:
+            av_frac = float(np.random.uniform(0.05, 0.4))
+            print('TRAINING WITH AV_FRAC ', str(av_frac))
+
         if add_params.get("reset_inflow") and self.sim_params.restart_instance: # True?
             inflow_range = add_params.get("inflow_range")
             if new_inflow_rate:
@@ -475,7 +482,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             for _ in range(100):
                 try:
                     vehicles = VehicleParams()
-                    if not np.isclose(add_params.get("av_frac"), 1):
+                    if not np.isclose(av_frac, 1):
                         vehicles.add(
                             veh_id="human",
                             lane_change_controller=(SimLaneChangeController, {}),
@@ -514,22 +521,22 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                             num_vehicles=1)
 
                     inflow = InFlows()
-                    if not np.isclose(add_params.get("av_frac"), 1.0):
+                    if not np.isclose(av_frac, 1.0):
                         inflow.add(
                             veh_type="av",
                             edge="1",
-                            vehs_per_hour=flow_rate * add_params.get("av_frac"),
+                            vehs_per_hour=flow_rate * av_frac,
                             departLane="random",
                             departSpeed=23.0)
                         inflow.add(
                             veh_type="human",
                             edge="1",
-                            vehs_per_hour=flow_rate * (1 - add_params.get("av_frac")),
+                            vehs_per_hour=flow_rate * (1 - av_frac),
                             departLane="random",
                             departSpeed=23.0)
                         # print('INFLOWS')
-                        # print(f'av/h = {flow_rate * add_params.get("av_frac")}')
-                        # print(f'veh/h = {flow_rate * (1 - add_params.get("av_frac"))}')
+                        # print(f'av/h = {flow_rate * av_frac}')
+                        # print(f'veh/h = {flow_rate * (1 - av_frac)}')
                     else:
                         inflow.add(
                             veh_type="av",

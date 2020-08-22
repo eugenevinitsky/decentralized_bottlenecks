@@ -106,7 +106,7 @@ def setup_flow_params(args):
             car_following_params=SumoCarFollowingParams(
                 speed_mode=31,
             ),
-            lane_change_params=SumoLaneChangeParams(
+            lane_change_params=SumoLaneChangeParams(            
                 lane_change_mode=0,
             ),
             num_vehicles=1)
@@ -166,13 +166,7 @@ def setup_flow_params(args):
         "num_curr_iters": args.num_curr_iters,
         "min_horizon": args.min_horizon,
         "horizon": args.horizon,
-        "rew_n_crit": args.rew_n_crit,
-
-        # try stuff
-        "c0": args.c0,
-        "c1": args.c1,
-        "c2": args.c2,
-        "c3": args.c3,
+        "rew_n_crit": args.rew_n_crit
     }
 
     if args.dqfd:

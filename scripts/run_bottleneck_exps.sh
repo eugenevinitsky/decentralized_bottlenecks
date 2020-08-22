@@ -1967,3 +1967,14 @@ ray exec ray_autoscale.yaml \
 
 
 ray exec ray_autoscale.yaml "" --start --cluster-name nathan_test1 --tmux
+
+
+
+ray exec ray_autoscale.yaml \
+"python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py seedsearch_pos09_0p4 --num_iters 2000 --checkpoint_freq 400 --av_frac 0.4 \
+--num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --aggregate_info --simple_env \
+--sim_step 0.5 --sims_per_step 5 --reroute_on_exit \
+--grid_search --use_s3 --td3"
+--start --cluster-name nathan_td3_bottleneck_seedsearch_pos09_0p4_f --tmux
+
+
