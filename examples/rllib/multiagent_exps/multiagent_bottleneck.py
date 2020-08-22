@@ -166,7 +166,12 @@ def setup_flow_params(args):
         "num_curr_iters": args.num_curr_iters,
         "min_horizon": args.min_horizon,
         "horizon": args.horizon,
-        "rew_n_crit": args.rew_n_crit
+        "rew_n_crit": args.rew_n_crit,
+
+        "c0": args.c0,
+        "c1": args.c1,
+        "c2": args.c2,
+        "c3": args.c3,
     }
 
     if args.dqfd:
