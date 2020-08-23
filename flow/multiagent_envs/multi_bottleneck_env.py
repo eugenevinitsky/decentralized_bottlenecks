@@ -403,11 +403,14 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         Per-vehicle accelerations
         """
         if rl_actions:
+            # print('RL ACTIONS', rl_actions)
             accel_list = []
             rl_ids = []
             for rl_id, action in rl_actions.items():
                 if self.env_params.additional_params.get('communicate', False):
-                    accel = np.concatenate([action[0] for action in action])
+                    # print('ACTIONS', action)
+                    accel = [action[0]]
+                    # accel = np.concatenate([action[0] for action in action])
                 else:
                     accel = [val * 8.0 for val in action]
                 if self.k.vehicle.get_edge(rl_id) in ['3']:
