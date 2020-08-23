@@ -392,6 +392,8 @@ def setup_exps(args):
         config = deepcopy(TD3_DEFAULT_CONFIG)
         config["buffer_size"] = 100000
         config["sample_batch_size"] = 5
+        if args.use_lstm:
+            config['model']["use_lstm"] = True
         if args.local_mode:
             config["learning_starts"] = 1000
             config["pure_exploration_steps"] = 1000

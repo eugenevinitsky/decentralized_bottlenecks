@@ -156,10 +156,12 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
     def action_space(self):
         """See class definition."""
         if self.env_params.additional_params['communicate']:
-            accel = Box(
-                low=-4.0 / 8.0, high=2.6 / 8.0, shape=(1,), dtype=np.float32)
-            communicate = Discrete(2)
-            return Tuple((accel, communicate))
+            # accel = Box(
+            #     low=-4.0 / 8.0, high=2.6 / 8.0, shape=(1,), dtype=np.float32)
+            # communicate = Discrete(2)
+            # return Tuple((accel, communicate))            
+            return Box(
+                low=-4.0 / 8.0, high=2.6 / 8.0, shape=(2,), dtype=np.float32)
         else:
             return Box(
                 low=-4.0 / 8.0, high=2.6 / 8.0, shape=(1,), dtype=np.float32)
