@@ -61,4 +61,4 @@ if __name__ == '__main__':
                             horizon=400, end_len=500, penetration=penetration)  
 
     aws_sync(output_path,
-            os.path.join("s3://nathan.experiments/trb_bottleneck_paper/graphs_data/", exp_title))
+            os.path.join("s3://nathan.experiments/trb_bottleneck_paper/quick_graphs_random_pen/", exp_title))

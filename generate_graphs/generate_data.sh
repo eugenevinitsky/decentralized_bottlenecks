@@ -79,3 +79,16 @@ if false; then
         aws s3 sync s3://nathan.experiments/trb_bottleneck_paper/${exp} ~/s3/trb_best/${dir_name}
     done
 fi
+
+
+# generate graphs for best policy trained at random penetration
+for exp in 08-22-2020/simple_agg_random_pen_gjdhr/simple_agg_random_pen_gjdhr/TD3_15_actor_lr=0.0001,critic_lr=0.0001,n_step=5,prioritized_replay=False_2020-08-22_23-50-10n21ily9j
+do
+    for pen in 0.05 0.1 0.2 0.4
+    do
+        echo ${exp} ${pen}
+        ray exec ray_autoscale.yaml \
+        "python flow/flow/visualize/generate_graphs.py ${exp} 2000 ${pen}" \
+        --start --stop --tmux --cluster-name nathan_graphs_${pen}_$(od -N 4 -t uL -An /dev/urandom | tr -d " ") &
+    done
+done
