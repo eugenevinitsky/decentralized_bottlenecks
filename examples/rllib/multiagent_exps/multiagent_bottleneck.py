@@ -168,10 +168,7 @@ def setup_flow_params(args):
         "horizon": args.horizon,
         "rew_n_crit": args.rew_n_crit,
 
-        "c0": args.c0,
-        "c1": args.c1,
-        "c2": args.c2,
-        "c3": args.c3,
+        "no_congest_number": args.no_congest_number,
     }
 
     if args.dqfd:

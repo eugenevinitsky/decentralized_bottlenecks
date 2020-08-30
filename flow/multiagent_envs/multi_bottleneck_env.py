@@ -88,10 +88,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         if self.curriculum:
             self.env_params.horizon = self.min_horizon
 
-        self.c0 = env_params.additional_params["c0"]
-        self.c1 = env_params.additional_params["c1"]
-        self.c2 = env_params.additional_params["c2"]
-        self.c3 = env_params.additional_params["c3"]
+        self.no_congest_number = env_params.additional_params["no_congest_number"]
 
 
     def increase_curr_iter(self):
@@ -200,6 +197,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             else:
                 rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
+            if self.no_congest_number:
+                congest_number = 0
             for rl_id in rl_ids:
                 # if rl_id out of network
                 if rl_id not in self.k.vehicle.get_rl_ids():
@@ -222,14 +221,14 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     if lead_speed == -1001:
                         lead_speed = -10
                     headway = self.k.vehicle.get_headway(rl_id)
-                    veh_info[rl_id] = np.array([self.c0 * abs_position / 1000.0,
-                                                            self.c1 * self.curr_rl_vehicles[rl_id][
-                                                                'time_since_stopped'] / self.env_params.horizon,
-                                                            self.c2 * duration / 100.0,
-                                                            self.c3 * congest_number,
-                                                            speed / 50.0,
-                                                            lead_speed / 50.0,
-                                                            headway / 1000.0])
+                    veh_info[rl_id] = np.array([abs_position / 1000.0,
+                                                self.curr_rl_vehicles[rl_id][
+                                                    'time_since_stopped'] / self.env_params.horizon,
+                                                duration / 100.0,
+                                                congest_number,
+                                                speed / 50.0,
+                                                lead_speed / 50.0,
+                                                headway / 1000.0])
 
                     if self.env_params.additional_params.get('aggregate_info'):
                         agg_statistics = self.aggregate_statistics()
