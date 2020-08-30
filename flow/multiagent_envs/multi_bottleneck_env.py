@@ -664,14 +664,14 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
 
     def get_signal(self, rl_id, rl_actions):
         ''' Returns the communication signals that should be
-            pass to the autonomous vehicles
+            passed to the autonomous vehicles
         '''
         lead_ids = self.k.vehicle.get_lane_leaders(rl_id)
         follow_ids = self.k.vehicle.get_lane_followers(rl_id)
         comm_ids = lead_ids + follow_ids
         if rl_actions:
-            signals = [rl_actions[av_id][1] / 4.0 if av_id in
-                                                     rl_actions.keys() else -1 / 4.0 for av_id in comm_ids]
+            signals = [rl_actions[av_id][1] / 4.0 if av_id in rl_actions.keys() \
+                       else -1 / 4.0 for av_id in comm_ids]
             if len(signals) < 8:
                 # the -2 disambiguates missing cars from missing lanes
                 signals += (8 - len(signals)) * [-2 / 4.0]
