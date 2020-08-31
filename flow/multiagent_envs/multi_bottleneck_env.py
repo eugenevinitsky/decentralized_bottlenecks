@@ -244,6 +244,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             else:
                 rl_ids = [veh_id for veh_id in self.k.vehicle.get_rl_ids() if self.k.vehicle.get_edge(veh_id) in ['1', '2', '3', '4', '5']]
             congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
+            if self.no_congest_number:
+                congest_number = 0
             for rl_id in rl_ids:
                 abs_position = self.k.vehicle.get_position(rl_id)
 
@@ -653,6 +655,8 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         outflow = 0  # self.k.vehicle.get_outflow_rate(10) / 3600
         valid_edges = ['3', '4', '5']
         congest_number = len(self.k.vehicle.get_ids_by_edge('4')) / 50
+        if self.no_congest_number:
+            congest_number = 0
         avg_speeds = np.zeros(len(valid_edges))
         for i, edge in enumerate(valid_edges):
             edge_veh = self.k.vehicle.get_ids_by_edge(edge)
