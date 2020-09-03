@@ -132,9 +132,9 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             if self.env_params.additional_params['communicate']:
                 # eight possible signals if above
                 if self.env_params.additional_params.get('aggregate_info'):
-                    num_obs = 6 * MAX_LANES * self.scaling + 22
+                    num_obs = 6 * MAX_LANES * self.scaling + 22 + 2
                 else:
-                    num_obs = 6 * MAX_LANES * self.scaling + 16
+                    num_obs = 6 * MAX_LANES * self.scaling + 16 + 2
             else:
                 if self.env_params.additional_params.get('aggregate_info'):
                     num_obs = 6 * MAX_LANES * self.scaling + 14
@@ -265,9 +265,9 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
                     if self.env_params.additional_params['communicate']:
                         # eight possible signals if above
                         if self.env_params.additional_params.get('aggregate_info'):
-                            num_obs = 6 * MAX_LANES * self.scaling + 22
+                            num_obs = 6 * MAX_LANES * self.scaling + 22 + 2
                         else:
-                            num_obs = 6 * MAX_LANES * self.scaling + 16
+                            num_obs = 6 * MAX_LANES * self.scaling + 16 + 2
                     else:
                         if self.env_params.additional_params.get('aggregate_info'):
                             num_obs = 6 * MAX_LANES * self.scaling + 14
@@ -410,7 +410,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             for rl_id, action in rl_actions.items():
                 if self.env_params.additional_params.get('communicate', False):
                     # print('ACTIONS', action)
-                    accel = [action[0]]
+                    accel = [action[0] * 8.0]
                     # accel = np.concatenate([action[0] for action in action])
                 else:
                     accel = [val * 8.0 for val in action]
@@ -670,18 +670,62 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
         ''' Returns the communication signals that should be
             passed to the autonomous vehicles
         '''
-        lead_ids = self.k.vehicle.get_lane_leaders(rl_id)
-        follow_ids = self.k.vehicle.get_lane_followers(rl_id)
-        comm_ids = lead_ids + follow_ids
-        if rl_actions:
-            signals = [rl_actions[av_id][1] / 4.0 if av_id in rl_actions.keys() \
-                       else -1 / 4.0 for av_id in comm_ids]
-            if len(signals) < 8:
-                # the -2 disambiguates missing cars from missing lanes
-                signals += (8 - len(signals)) * [-2 / 4.0]
-            return signals
-        else:
-            return [-1 / 4.0 for _ in range(8)]
+        if not rl_actions or self.k.vehicle.get_edge(rl_id) != '3':
+            return [-2.8 / 4.0 for _ in range(10)]
+
+        # print('current edge:', self.k.vehicle.get_edge(rl_id))
+
+        rl_ids = self.k.vehicle.get_rl_ids()
+        edges = self.k.vehicle.get_edge(rl_ids)
+        lanes = self.k.vehicle.get_lane(rl_ids)
+        positions = self.k.vehicle.get_position(rl_ids)
+
+        pos = self.k.vehicle.get_position(rl_id)
+
+        # only w/ complex av
+        # edges are 2 (4 lanes), 3 (4 lanes, control) and 4 (2 lanes, bottleneck)
+
+        # ahead (lanes 0 -> 3), behind (lanes 0 -> 3), bottleneck (lanes 0 -> 1)
+        closest_ids = [-1] * 10
+        closest_pos = [1e9, 1e9, 1e9, 1e9, -1e9, -1e9, -1e9, -1e9, 1e9, 1e9]
+
+        for i in range(len(rl_ids)):
+            if rl_ids[i] != rl_id:
+                # ahead
+                if edges[i] == '3' and positions[i] > pos and positions[i] < closest_pos[lanes[i]]:
+                    closest_ids[lanes[i]] = rl_ids[i]
+                    closest_pos[lanes[i]] = positions[i]
+                # behind same edge
+                if edges[i] == '3' and positions[i] < pos and positions[i] > closest_pos[4 + lanes[i]]:
+                    closest_ids[4 + lanes[i]] = rl_ids[i]
+                    closest_pos[4 + lanes[i]] = positions[i]
+                # behind edge before
+                if edges[i] == '2' and positions[i] - 5000 > closest_pos[4 + lanes[i]]:
+                    closest_ids[4 + lanes[i]] = rl_ids[i]
+                    closest_pos[4 + lanes[i]] = positions[i] - 5000
+                # in bottleneck
+                if edges[i] == '4' and positions[i] < closest_pos[8 + lanes[i]]:
+                    closest_ids[8 + lanes[i]] = rl_ids[i]
+                    closest_pos[8 + lanes[i]] = positions[i]
+
+        # print(f'rl_id = {rl_id}, closest_ids = {closest_ids}')
+
+        # print('\nrl_ids', rl_ids)
+        # print('edges', edges)
+        # print('lanes', lanes)
+
+        signals = [rl_actions[av_id][1] / 4.0 if av_id in rl_actions.keys() and av_id != -1 \
+                    else -3 / 4.0 for av_id in closest_ids]
+
+        # print(signals)
+
+        if len(signals) < 10:
+            print('ERROR: MISSING SIGNALS')
+            # the -2 disambiguates missing cars from missing lanes
+            signals += (10 - len(signals)) * [-2.9 / 4.0]
+
+        return signals
+
 
     def additional_command(self):
         super().additional_command()
