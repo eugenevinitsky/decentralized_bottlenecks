@@ -23,6 +23,8 @@ OUTFLOW_MAX = 3600
 OUTFLOW_STEP = 100
 
 if __name__ == '__main__':
+    
+    
     if len(sys.argv) <= 3:
         print('usage: generate_graphs.py exp_cp_path cp_number [new_penetration_fraction]')
     exp_cp_path = sys.argv[1]
