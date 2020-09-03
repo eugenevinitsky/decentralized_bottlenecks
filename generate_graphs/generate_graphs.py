@@ -2,6 +2,7 @@ import os
 import os.path
 import numpy as np
 from matplotlib import pyplot as plt
+from collections import defaultdict
 
 
 class Data(object):
@@ -132,7 +133,38 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
         save_plt_figure(f'outflow2400_penetration_{state_type.replace(" ", "_")}', save_dir='figs/outflow2400_penetration')
 
 
+def get_outflows_at_3500_inflow(data_rl):
+    """Print outflows at 3500 inflow as a function of penetration and state space."""
+    data_print = defaultdict(dict)
+
+    for state_type in ['simple no agg', 'simple agg', 'complex agg']:
+        all_data = []
+        for data in data_rl:
+            if data.type == state_type and not data.transferred:
+                all_data.append(data)
+        assert(list(set([d.unique_inflows[31] for d in all_data]))[0] == 3500.0)
+        mean_outflows = np.array([d.mean_outflows[31] for d in all_data])
+        std_outflows = np.array([d.std_outflows[31] for d in all_data])
+        penetrations = np.array([100 * d.penetration for d in all_data], dtype=np.int)
+
+        print(f'\nState space: {state_type}')
+        for i in np.argsort(penetrations):
+            print(f'\tpenetration={penetrations[i]}%; outflow(3500)={mean_outflows[i]}; std_outflow(3500)={std_outflows[i]}')
+            data_print[state_type][penetrations[i]] = (mean_outflows[i], std_outflows[i])
+    
+    if True:
+        # print in latex table syntax
+        for penetration in [5, 10, 20, 40]:
+            print(fr'{penetration}\%', end=' ')
+            for state_type in ['simple no agg', 'simple agg', 'complex agg']:
+                mean_outflow, std_outflow = data_print[state_type][penetration]
+                print(f'& {int(mean_outflow)} ({int(std_outflow)})', end=' ')
+            print(r'\\ \hline')
+
+
 if __name__ == '__main__':
+    generate_plots = False
+
     # load data
     data_rl = []
     for (dirpath, dirnames, filenames) in os.walk('./data'):
@@ -141,7 +173,7 @@ if __name__ == '__main__':
                 data_rl.append(Data(filename=os.path.join(dirpath, filename)))
     type_order = {'simple no agg': 0, 'simple agg': 1, 'complex agg': 2}
     data_rl.sort(key=lambda x: [x.penetration, x.eval_penetration, type_order[x.type], x.label])
-    
+        
     data_baseline = []
     data_baseline.append(Data(filename='data/alinea_vs_controller/alinea.csv', label='ALINEA'))
     data_baseline.append(Data(filename='data/alinea_vs_controller/human.csv', label='human'))
@@ -150,6 +182,10 @@ if __name__ == '__main__':
     print('Data loaded:', [d.label for d in data_rl + data_baseline])
     print(f'{len(data_rl)} RL data + {len(data_baseline)} baseline data')
 
-    # generate graphs
-    generate_outflow_inflow_graphs(data_rl, data_baseline)
-    generate_outflow2400_penetration_graphs(data_rl, data_baseline)
+    if generate_plots:
+        # generate graphs
+        generate_outflow_inflow_graphs(data_rl, data_baseline)
+        generate_outflow2400_penetration_graphs(data_rl, data_baseline)
+    else:
+        # print stuff
+        get_outflows_at_3500_inflow(data_rl)
