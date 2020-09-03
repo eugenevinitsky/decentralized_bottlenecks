@@ -11,7 +11,7 @@ class Data(object):
 
         if label is None:
             self.type = 'simple no agg' if 'dqzj2' in filename \
-                else 'simple agg' if 'pos09' in filename \
+                else 'simple agg' if 'pos09' in filename or 'simple_agg' in filename \
                 else 'complex agg' if 'o9di2' in filename \
                 else None
 
@@ -19,6 +19,7 @@ class Data(object):
                         else 0.1 if '0p1' in filename \
                         else 0.2 if '0p2' in filename \
                         else 0.4 if '0p4' in filename \
+                        else -1 if 'random_pen' in filename \
                         else None
 
             self.eval_penetration = 0.05 if '0.05' in filename \
@@ -30,8 +31,10 @@ class Data(object):
             assert(None not in [self.type, self.penetration, self.eval_penetration])
 
             self.transferred = self.penetration != self.eval_penetration
+            self.random_pen = self.penetration == -1
 
-            self.label = f'{self.type} {self.penetration * 100} %'
+            self.label = f'{self.type} '
+            self.label += f'{self.penetration * 100} %' if not self.random_pen else 'random pen'
             if self.penetration != self.eval_penetration:
                 self.label = f'{self.label} (eval at {self.eval_penetration * 100} %)'
         else:
@@ -62,7 +65,7 @@ class Data(object):
         self.std_outflows = std_outflows
 
 
-def init_plt_figure(xlabel, ylabel):
+def init_plt_figure(ylabel, xlabel):
     plt.figure(figsize=(10, 5))
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
@@ -111,6 +114,15 @@ def generate_outflow_inflow_graphs(data_rl, data_baseline):
         plot_outflow_inflow(data_baseline)
         save_plt_figure(f'outflow_inflow_{state_type.replace(" ", "_")}', save_dir='figs/outflow_inflow_no_transfer')
 
+    # outflow as a function of inflow (by penetration) for training on random penetration
+    init_plt_figure('Outflow' + r'$ \ \frac{vehs}{hour}$', 'Inflow' + r'$ \ \frac{vehs}{hour}$')
+    for eval_penetration in [0.05, 0.1, 0.2, 0.4]:
+        for data in data_rl:
+            if data.random_pen and data.eval_penetration == eval_penetration:
+                plot_outflow_inflow(data)
+    plot_outflow_inflow(data_baseline)
+    save_plt_figure(f'outflow_inflow_random_pen', save_dir='figs/outflow_inflow_all')
+
 
 def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
     """Outflow at 2400 inflow as a function of penetration."""
@@ -126,11 +138,31 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
         penetrations = np.array([100 * d.penetration for d in all_data], dtype=np.int)
         idx = np.argsort(penetrations)
 
-        plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label='?') #, color='orange')
+        plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=state_type) #, color='orange')
         plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
                          mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
 
         save_plt_figure(f'outflow2400_penetration_{state_type.replace(" ", "_")}', save_dir='figs/outflow2400_penetration')
+
+    # merge all 3 graphs into 1
+    init_plt_figure('Outflow' + r'$ \ \frac{vehs}{hour}$', 'Penetration' + r'$ \ \%$')
+    for state_type in ['simple no agg', 'simple agg', 'complex agg']:
+        all_data = []
+        for data in data_rl:
+            if data.type == state_type and not data.transferred:
+                all_data.append(data)
+        assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
+        mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
+        std_outflows = np.array([d.std_outflows[20] for d in all_data])
+        penetrations = np.array([100 * d.penetration for d in all_data], dtype=np.int)
+        idx = np.argsort(penetrations)
+
+        plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=state_type) #, color='orange')
+        plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
+                         mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
+
+    save_plt_figure(f'outflow2400_penetration_all', save_dir='figs/outflow2400_penetration')
+
 
 
 def get_outflows_at_3500_inflow(data_rl):
@@ -182,10 +214,9 @@ if __name__ == '__main__':
     print('Data loaded:', [d.label for d in data_rl + data_baseline])
     print(f'{len(data_rl)} RL data + {len(data_baseline)} baseline data')
 
-    if generate_plots:
-        # generate graphs
-        generate_outflow_inflow_graphs(data_rl, data_baseline)
-        generate_outflow2400_penetration_graphs(data_rl, data_baseline)
-    else:
-        # print stuff
-        get_outflows_at_3500_inflow(data_rl)
+    # generate graphs
+    generate_outflow_inflow_graphs(data_rl, data_baseline)
+    generate_outflow2400_penetration_graphs(data_rl, data_baseline)
+
+    # print stuff
+    get_outflows_at_3500_inflow(data_rl)

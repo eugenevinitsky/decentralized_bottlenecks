@@ -1,10 +1,13 @@
 #!/bin/bash
 
-# download graphs data
+# download graphs data (if no access to S3, generate them using visualize/generate_graphs.py script, cf below)
+
+# regular graphs
 aws s3 sync s3://nathan.experiments/trb_bottleneck_paper/graphs_data ./data/
 # including alinea_vs_controller (baseline)
 aws s3 sync s3://nathan.experiments/trb_bottleneck_paper/alinea_vs_controller ./data/alinea_vs_controller
-
+# graphs trained at random penetration
+aws s3 sync s3://nathan.experiments/trb_bottleneck_paper/graphs_random_pen ./data/
 
 
 # the following is to generate all graphs on AWS for the following experiments
@@ -82,13 +85,15 @@ fi
 
 
 # generate graphs for best policy trained at random penetration
-for exp in 08-22-2020/simple_agg_random_pen_gjdhr/simple_agg_random_pen_gjdhr/TD3_15_actor_lr=0.0001,critic_lr=0.0001,n_step=5,prioritized_replay=False_2020-08-22_23-50-10n21ily9j
-do
-    for pen in 0.05 0.1 0.2 0.4
+if false; then
+    for exp in 08-22-2020/simple_agg_random_pen_gjdhr/simple_agg_random_pen_gjdhr/TD3_15_actor_lr=0.0001,critic_lr=0.0001,n_step=5,prioritized_replay=False_2020-08-22_23-50-10n21ily9j
     do
-        echo ${exp} ${pen}
-        ray exec ray_autoscale.yaml \
-        "python flow/flow/visualize/generate_graphs.py ${exp} 2000 ${pen}" \
-        --start --stop --tmux --cluster-name nathan_graphs_${pen}_$(od -N 4 -t uL -An /dev/urandom | tr -d " ") &
+        for pen in 0.05 0.1 0.2 0.4
+        do
+            echo ${exp} ${pen}
+            ray exec ray_autoscale.yaml \
+            "python flow/flow/visualize/generate_graphs.py ${exp} 2000 ${pen}" \
+            --start --stop --tmux --cluster-name nathan_graphs_${pen}_$(od -N 4 -t uL -An /dev/urandom | tr -d " ") &
+        done
     done
-done
+fi
