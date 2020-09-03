@@ -61,9 +61,13 @@ class Data(object):
                     self.pretty_label += f' (evaluated at {int(self.eval_penetration * 100)}% penetration)'
             else:
                 self.pretty_label += f', evaluated at {int(self.eval_penetration * 100)}% penetration'
+
+            self.label_type, self.label_penetration = self.pretty_label.split(',')
         else:
             self.label = label
             self.pretty_label = self.label
+            self.label_type = self.label
+            self.label_penetration = self.label
 
         self.load_data()
 
@@ -108,12 +112,16 @@ def save_plt_figure(title, filename, save_dir='fig', legend_loc='lower left'):
 
 def generate_outflow_inflow_graphs(data_rl, data_baseline):
     """Outflow as a function of inflow."""
-    def plot_outflow_inflow(data, std=True):
+    def plot_outflow_inflow(data, label_type, std=True):
         if isinstance(data, list):
             for d in data:
-                plot_outflow_inflow(d)
+                plot_outflow_inflow(d, label_type, std)
             return
-        plt.plot(data.unique_inflows, data.mean_outflows, linewidth=2, label=data.pretty_label) #, color='orange')
+        if label_type == 'type':
+            label = data.label_type
+        if label_type == 'penetration':
+            label = data.label_penetration
+        plt.plot(data.unique_inflows, data.mean_outflows, linewidth=2, label=label) #, color='orange')
         if std:
             plt.fill_between(data.unique_inflows, data.mean_outflows - data.std_outflows,
                              data.mean_outflows + data.std_outflows, alpha=0.25) #, color='orange')
@@ -122,7 +130,7 @@ def generate_outflow_inflow_graphs(data_rl, data_baseline):
     init_plt_figure('Outflow' + r'$ \ \frac{vehs}{hour}$', 'Inflow' + r'$ \ \frac{vehs}{hour}$')
     for data in data_baseline:
         if data.label == 'human':
-            plot_outflow_inflow(data)
+            plot_outflow_inflow(data, 'type')
     save_plt_figure('Inflow vs. Outflow Baseline',
         f'outflow_inflow_baseline', save_dir='figs/outflow_inflow_all', legend_loc='lower right')
 
@@ -132,8 +140,8 @@ def generate_outflow_inflow_graphs(data_rl, data_baseline):
             init_plt_figure('Outflow' + r'$ \ \frac{vehs}{hour}$', 'Inflow' + r'$ \ \frac{vehs}{hour}$')
             for data in data_rl:
                 if data.penetration == penetration and data.eval_penetration == eval_penetration:
-                    plot_outflow_inflow(data)
-            plot_outflow_inflow(data_baseline)
+                    plot_outflow_inflow(data, 'type')
+            plot_outflow_inflow(data_baseline, 'type')
             title = f'Inflow vs. Outflow for controllers trained at {int(penetration * 100)}% and evaluated at {int(eval_penetration * 100)}% penetration' \
                 if penetration != eval_penetration \
                 else f'Inflow vs. Outflow at {int(penetration * 100)}% Penetration'
@@ -145,8 +153,8 @@ def generate_outflow_inflow_graphs(data_rl, data_baseline):
         init_plt_figure('Outflow' + r'$ \ \frac{vehs}{hour}$', 'Inflow' + r'$ \ \frac{vehs}{hour}$')
         for data in data_rl:
             if data.type == state_type and not data.transferred:
-                plot_outflow_inflow(data)
-        plot_outflow_inflow(data_baseline)
+                plot_outflow_inflow(data, 'penetration')
+        plot_outflow_inflow(data_baseline, 'penetration')
         save_plt_figure(f'Inflow vs. Outflow for {state_type} State Space',
             f'outflow_inflow_{state_type.replace(" ", "_")}', save_dir='figs/outflow_inflow_no_transfer', legend_loc='lower right')
 
@@ -155,8 +163,8 @@ def generate_outflow_inflow_graphs(data_rl, data_baseline):
     for eval_penetration in [0.05, 0.1, 0.2, 0.4]:
         for data in data_rl:
             if data.random_pen and data.eval_penetration == eval_penetration:
-                plot_outflow_inflow(data)
-    plot_outflow_inflow(data_baseline)
+                plot_outflow_inflow(data, 'penetration')
+    plot_outflow_inflow(data_baseline, 'penetration')
     save_plt_figure('Inflow vs. Outflow for Universal Controller',
         f'outflow_inflow_random_pen', save_dir='figs/outflow_inflow_all', legend_loc='lower right')
 
@@ -176,7 +184,7 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
         idx = np.argsort(penetrations)
 
         pretty_state = state_type.replace('simple no agg', 'minimal').replace('simple agg', 'minimal + aggregate').replace('complex agg', 'radar + aggregate')
-        plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=pretty_state + ' state space') #, color='orange')
+        plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=pretty_state) #, color='orange')
         plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
                          mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
 
@@ -198,7 +206,7 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
         idx = np.argsort(penetrations)
 
         pretty_state = state_type.replace('simple no agg', 'minimal').replace('simple agg', 'minimal + aggregate').replace('complex agg', 'radar + aggregate')
-        plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=pretty_state + ' state space') #, color='orange')
+        plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=pretty_state) #, color='orange')
         plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
                          mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
 
