@@ -53,7 +53,7 @@ class DefaultMapping(collections.defaultdict):
 def default_policy_agent_mapping(unused_agent_id):
     return DEFAULT_POLICY_ID
 
-@ray.remote(memory=1500 * 1024 * 1024)
+@ray.remote(memory=5000 * 1024 * 1024)
 def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render_mode,
                    checkpoint_num,
                    end_len,
