@@ -131,7 +131,6 @@ def visualizer_rllib(args):
     # Start the environment with the gui turned on and a path for the
     # emission file
     env_params = flow_params['env']
-    sim_params.restart_instance = False
     if args.evaluate:
         env_params.evaluate = True
 

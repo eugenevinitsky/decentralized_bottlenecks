@@ -476,7 +476,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             av_frac = float(np.random.uniform(0.05, 0.4))
             print('TRAINING WITH AV_FRAC ', str(av_frac))
 
-        if add_params.get("reset_inflow") and self.sim_params.restart_instance: # True?
+        if add_params.get("reset_inflow") and self.sim_params.restart_instance:
             inflow_range = add_params.get("inflow_range")
             if new_inflow_rate:
                 flow_rate = new_inflow_rate
