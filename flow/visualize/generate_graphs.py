@@ -37,9 +37,9 @@ if __name__ == '__main__':
     print("exp cp path: ", exp_cp_path)
     print("cp: ", cp)
     print("penetration: ", penetration)
-    exp_title = exp_cp_path.replace('/', '_') + "_CHECKPOINT_" + str(cp)
+    exp_title = exp_cp_path.replace('/', '_') + "_CP_" + str(cp)
     if penetration is not None:
-        exp_title += f'_PENETRATION_{penetration}'
+        exp_title += f'_PEN_{penetration}'
 
     # download checkpoints from AWS
     try:
@@ -49,7 +49,7 @@ if __name__ == '__main__':
     aws_sync('s3://nathan.experiments/trb_bottleneck_paper/' + exp_cp_path,
              os.path.expanduser("~/ray_results/trb_bottleneck_paper/" + exp_cp_path))
 
-    ray.init()
+    ray.init(num_cpus=35)
     
     output_path = os.path.join(os.path.expanduser('~/bottleneck_results'))
     try:
