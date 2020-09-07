@@ -7,6 +7,7 @@ def get_multiagent_bottleneck_parser():
     
     # required input parameters for tune
     parser.add_argument('exp_title', type=str, help='Informative experiment title to help distinguish results')
+    parser.add_argument('--restore', type=str, help='Checkpoint to restore from')
     parser.add_argument('--use_s3', action='store_true', help='If true, upload results to s3')
     parser.add_argument('--n_cpus', type=int, default=1, help='Number of cpus to run experiment with')
     parser.add_argument('--multi_node', action='store_true', help='Set to true if this will '

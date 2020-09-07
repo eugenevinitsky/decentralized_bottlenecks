@@ -593,7 +593,7 @@ if __name__ == '__main__':
     if args.use_s3:
         exp_dict['upload_dir'] = s3_string
 
-    run(**exp_dict, queue_trials=False, raise_on_failed_trial=False)
+    run(**exp_dict, queue_trials=False, raise_on_failed_trial=False, restore=args.restore)
 
     # Now we add code to loop through the results and create scores of the results
     if args.create_inflow_graph:
