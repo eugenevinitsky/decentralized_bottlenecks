@@ -126,16 +126,10 @@ gen_graph_universal_controller 1600 09-04-2020/bottleneck_nrzod_randompen_simple
 gen_graph_universal_controller 1200 09-04-2020/bottleneck_riiod_randompen_simpleagg_nolstm/bottleneck_riiod_randompen_simpleagg_nolstm/TD3_9_actor_lr=0.0001,critic_lr=0.001,n_step=1,prioritized_replay=False_2020-09-05_01-06-39achysxl7
 gen_graph_universal_controller 400 09-04-2020/bottleneck_msdor_randompen_simplenoagg_nolstm/bottleneck_msdor_randompen_simplenoagg_nolstm/TD3_13_actor_lr=0.0001,critic_lr=0.001,n_step=5,prioritized_replay=False_2020-09-05_01-06-41jc1ppsvu
 
-09-04-2020/bottleneck_etjza_randompen_complexagg_nolstm/bottleneck_etjza_randompen_complexagg_nolstm/TD3_15_actor_lr=0.0001,critic_lr=0.0001,n_step=5,prioritized_replay=False_2020-09-05_01-06-48vg3zcr39
-     ray exec scripts/ray_autoscale.yaml \
-        "python flow/flow/visualize/generate_graphs.py 09-04-2020/bottleneck_etjza_randompen_complexagg_nolstm/bottleneck_etjza_randompen_complexagg_nolstm/TD3_15_actor_lr=0.0001,critic_lr=0.0001,n_step=5,prioritized_replay=False_2020-09-05_01-06-48vg3zcr39
- 800 0.1" \
-        --start --stop --tmux --cluster-name nathan_graphs_0.1_$(od -N 4 -t uL -An /dev/urandom | tr -d " ") 
-
+## took TD13 (see below) for simple agg in the end
 
 
 # tmp graphs random not converged
-# todo generate all these for each of the 5 cps and keep the best ones each time
 for exp in 09-04-2020/bottleneck_etjza_randompen_complexagg_nolstm/bottleneck_etjza_randompen_complexagg_nolstm/TD3_15_actor_lr=0.0001,critic_lr=0.0001,n_step=5,prioritized_replay=False_2020-09-05_01-06-48vg3zcr39 \
            09-04-2020/bottleneck_fodld_randompen_simpleagg_lstm/bottleneck_fodld_randompen_simpleagg_lstm/TD3_5_actor_lr=0.0001,critic_lr=0.001,n_step=5,prioritized_replay=True_2020-09-05_01-06-39j51sapfu \
            09-04-2020/bottleneck_nrzod_randompen_simplenoagg_lstm/bottleneck_nrzod_randompen_simplenoagg_lstm/TD3_12_actor_lr=0.001,critic_lr=0.001,n_step=5,prioritized_replay=False_2020-09-05_01-06-40vb748u5w \
@@ -161,11 +155,5 @@ do
         --start --stop --tmux --cluster-name nathan_graphs_${pen}_$(od -N 4 -t uL -An /dev/urandom | tr -d " ") &
     done
 done
-
-
-
-
-
-nathan.experiments/trb_bottleneck_paper/09-04-2020/bottleneck_riiod_randompen_simpleagg_nolstm/bottleneck_riiod_randompen_simpleagg_nolstm/TD3_13_actor_lr=0.0001,critic_lr=0.001,n_step=5,prioritized_replay=False_2020-09-05_01-06-39a820ojqf
 
 

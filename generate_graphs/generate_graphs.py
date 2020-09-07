@@ -219,23 +219,26 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
     # get comparison of controller trained at random penetration with the ones trained at fixed penetration
     init_plt_figure('Outflow' + r'$ \ \frac{vehs}{hour}$', 'Penetration' + r'$ \ \%$')
 
+    # best universal controllers:
+    # simple no agg: nolstm, not cp2000
+    # simple agg: nolstm, not cp2000
+    # complex agg: nolstm, cp2000
+
     for i, state_type in enumerate(['simple no agg', 'simple agg', 'complex agg']):
         color = ['orange', 'blue', 'green'][i]
         # first universal controller
-        for j, additional in enumerate(['_lstm_', '_nolstm_']):
-            linestyle = [':', '--'][j]
-            all_data = []
-            for data in data_rl:
-                if data.type == state_type and data.penetration == -1 and additional in data.filename:
-                    all_data.append(data)
-            assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
-            mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
-            std_outflows = np.array([d.std_outflows[20] for d in all_data])
-            penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
-            idx = np.argsort(penetrations)
-            plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'universal {state_type} {additional}', color=color, linestyle=linestyle)
-            # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
-            #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
+        all_data = []
+        for data in data_rl:
+            if data.type == state_type and data.penetration == -1:
+                all_data.append(data)
+        assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
+        mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
+        std_outflows = np.array([d.std_outflows[20] for d in all_data])
+        penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
+        idx = np.argsort(penetrations)
+        plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'universal {state_type}', color=color, linestyle='--')
+        # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
+        #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
 
         # then concatenate the ones trained at random penetration
         all_data = []
@@ -308,8 +311,8 @@ if __name__ == '__main__':
     print(f'{len(data_rl)} RL data + {len(data_baseline)} baseline data')
 
     # generate graphs
-    generate_outflow_inflow_graphs(data_rl, data_baseline)
+    # generate_outflow_inflow_graphs(data_rl, data_baseline)
     generate_outflow2400_penetration_graphs(data_rl, data_baseline)
 
     # print stuff
-    get_outflows_at_3500_inflow(data_rl)
+    # get_outflows_at_3500_inflow(data_rl)
