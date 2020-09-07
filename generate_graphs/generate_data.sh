@@ -7,7 +7,8 @@ aws s3 sync s3://nathan.experiments/trb_bottleneck_paper/graphs_data ./data/
 # including alinea_vs_controller (baseline)
 aws s3 sync s3://nathan.experiments/trb_bottleneck_paper/alinea_vs_controller ./data/alinea_vs_controller
 # graphs trained at random penetration
-aws s3 sync s3://nathan.experiments/trb_bottleneck_paper/graphs_random_pen ./data/
+# aws s3 sync s3://nathan.experiments/trb_bottleneck_paper/graphs_random_pen ./data/
+aws s3 sync s3://nathan.experiments/trb_bottleneck_paper/graphs_random_final ./data/
 
 
 # the following is to generate all graphs on AWS for the following experiments
@@ -84,6 +85,7 @@ if false; then
 fi
 
 
+
 # generate graphs for best policy trained at random penetration
 if false; then
     for exp in 08-22-2020/simple_agg_random_pen_gjdhr/simple_agg_random_pen_gjdhr/TD3_15_actor_lr=0.0001,critic_lr=0.0001,n_step=5,prioritized_replay=False_2020-08-22_23-50-10n21ily9j
@@ -97,3 +99,73 @@ if false; then
         done
     done
 fi
+
+# generate graphs for best policy trained at random penetration
+gen_graph_universal_controller() {
+    for pen in 0.05 0.1 0.2 0.4
+    do
+        echo exp $2 cp $1 pen ${pen}
+
+        ray exec scripts/ray_autoscale.yaml \
+        "python flow/flow/visualize/generate_graphs.py $2 $1 ${pen}" \
+        --start --stop --tmux --cluster-name nathan_graphs_${pen}_$(od -N 4 -t uL -An /dev/urandom | tr -d " ") &
+    done  
+}
+
+gen_graph_universal_controller 2000 09-04-2020/bottleneck_etjza_randompen_complexagg_nolstm/bottleneck_etjza_randompen_complexagg_nolstm/TD3_15_actor_lr=0.0001,critic_lr=0.0001,n_step=5,prioritized_replay=False_2020-09-05_01-06-48vg3zcr39
+gen_graph_universal_controller 2000 09-04-2020/bottleneck_fodld_randompen_simpleagg_lstm/bottleneck_fodld_randompen_simpleagg_lstm/TD3_14_actor_lr=0.001,critic_lr=0.0001,n_step=5,prioritized_replay=False_2020-09-05_01-06-39kow4g_f4
+gen_graph_universal_controller 2000 09-04-2020/bottleneck_nrzod_randompen_simplenoagg_lstm/bottleneck_nrzod_randompen_simplenoagg_lstm/TD3_15_actor_lr=0.0001,critic_lr=0.0001,n_step=5,prioritized_replay=False_2020-09-05_01-06-40fd5lzgmm
+gen_graph_universal_controller 2000 09-04-2020/bottleneck_pxanz_randompen_complexagg_lstm/bottleneck_pxanz_randompen_complexagg_lstm/TD3_1_actor_lr=0.0001,critic_lr=0.001,n_step=1,prioritized_replay=True_2020-09-05_01-06-37b4zv0_0n
+gen_graph_universal_controller 2000 09-04-2020/bottleneck_riiod_randompen_simpleagg_nolstm/bottleneck_riiod_randompen_simpleagg_nolstm/TD3_4_actor_lr=0.001,critic_lr=0.001,n_step=5,prioritized_replay=True_2020-09-05_01-06-38ob13w45p
+gen_graph_universal_controller 2000 09-04-2020/bottleneck_msdor_randompen_simplenoagg_nolstm/bottleneck_msdor_randompen_simplenoagg_nolstm/TD3_15_actor_lr=0.0001,critic_lr=0.0001,n_step=5,prioritized_replay=False_2020-09-05_01-06-41d0q8ie4m
+
+gen_graph_universal_controller 800 09-04-2020/bottleneck_etjza_randompen_complexagg_nolstm/bottleneck_etjza_randompen_complexagg_nolstm/TD3_15_actor_lr=0.0001,critic_lr=0.0001,n_step=5,prioritized_replay=False_2020-09-05_01-06-48vg3zcr39
+gen_graph_universal_controller 800 09-04-2020/bottleneck_pxanz_randompen_complexagg_lstm/bottleneck_pxanz_randompen_complexagg_lstm/TD3_13_actor_lr=0.0001,critic_lr=0.001,n_step=5,prioritized_replay=False_2020-09-05_01-06-38y90x5yq1
+gen_graph_universal_controller 1600 09-04-2020/bottleneck_fodld_randompen_simpleagg_lstm/bottleneck_fodld_randompen_simpleagg_lstm/TD3_5_actor_lr=0.0001,critic_lr=0.001,n_step=5,prioritized_replay=True_2020-09-05_01-06-39j51sapfu
+gen_graph_universal_controller 1600 09-04-2020/bottleneck_nrzod_randompen_simplenoagg_lstm/bottleneck_nrzod_randompen_simplenoagg_lstm/TD3_12_actor_lr=0.001,critic_lr=0.001,n_step=5,prioritized_replay=False_2020-09-05_01-06-40vb748u5w
+gen_graph_universal_controller 1200 09-04-2020/bottleneck_riiod_randompen_simpleagg_nolstm/bottleneck_riiod_randompen_simpleagg_nolstm/TD3_9_actor_lr=0.0001,critic_lr=0.001,n_step=1,prioritized_replay=False_2020-09-05_01-06-39achysxl7
+gen_graph_universal_controller 400 09-04-2020/bottleneck_msdor_randompen_simplenoagg_nolstm/bottleneck_msdor_randompen_simplenoagg_nolstm/TD3_13_actor_lr=0.0001,critic_lr=0.001,n_step=5,prioritized_replay=False_2020-09-05_01-06-41jc1ppsvu
+
+09-04-2020/bottleneck_etjza_randompen_complexagg_nolstm/bottleneck_etjza_randompen_complexagg_nolstm/TD3_15_actor_lr=0.0001,critic_lr=0.0001,n_step=5,prioritized_replay=False_2020-09-05_01-06-48vg3zcr39
+     ray exec scripts/ray_autoscale.yaml \
+        "python flow/flow/visualize/generate_graphs.py 09-04-2020/bottleneck_etjza_randompen_complexagg_nolstm/bottleneck_etjza_randompen_complexagg_nolstm/TD3_15_actor_lr=0.0001,critic_lr=0.0001,n_step=5,prioritized_replay=False_2020-09-05_01-06-48vg3zcr39
+ 800 0.1" \
+        --start --stop --tmux --cluster-name nathan_graphs_0.1_$(od -N 4 -t uL -An /dev/urandom | tr -d " ") 
+
+
+
+# tmp graphs random not converged
+# todo generate all these for each of the 5 cps and keep the best ones each time
+for exp in 09-04-2020/bottleneck_etjza_randompen_complexagg_nolstm/bottleneck_etjza_randompen_complexagg_nolstm/TD3_15_actor_lr=0.0001,critic_lr=0.0001,n_step=5,prioritized_replay=False_2020-09-05_01-06-48vg3zcr39 \
+           09-04-2020/bottleneck_fodld_randompen_simpleagg_lstm/bottleneck_fodld_randompen_simpleagg_lstm/TD3_5_actor_lr=0.0001,critic_lr=0.001,n_step=5,prioritized_replay=True_2020-09-05_01-06-39j51sapfu \
+           09-04-2020/bottleneck_nrzod_randompen_simplenoagg_lstm/bottleneck_nrzod_randompen_simplenoagg_lstm/TD3_12_actor_lr=0.001,critic_lr=0.001,n_step=5,prioritized_replay=False_2020-09-05_01-06-40vb748u5w \
+           09-04-2020/bottleneck_pxanz_randompen_complexagg_lstm/bottleneck_pxanz_randompen_complexagg_lstm/TD3_13_actor_lr=0.0001,critic_lr=0.001,n_step=5,prioritized_replay=False_2020-09-05_01-06-38y90x5yq1
+do
+    for pen in 0.05 0.1 0.2 0.4
+    do
+        echo ${exp} ${pen}
+        ray exec ray_autoscale.yaml \
+        "python flow/flow/visualize/generate_graphs.py ${exp} 800 ${pen}" \
+        --start --stop --tmux --cluster-name nathan_graphs_${pen}_$(od -N 4 -t uL -An /dev/urandom | tr -d " ") &
+    done
+done
+
+for exp in 09-04-2020/bottleneck_riiod_randompen_simpleagg_nolstm/bottleneck_riiod_randompen_simpleagg_nolstm/TD3_13_actor_lr=0.0001,critic_lr=0.001,n_step=5,prioritized_replay=False_2020-09-05_01-06-39a820ojqf \
+           09-04-2020/bottleneck_msdor_randompen_simplenoagg_nolstm/bottleneck_msdor_randompen_simplenoagg_nolstm/TD3_13_actor_lr=0.0001,critic_lr=0.001,n_step=5,prioritized_replay=False_2020-09-05_01-06-41jc1ppsvu
+do
+    for pen in 0.05 0.1 0.2 0.4
+    do
+        echo ${exp} ${pen}
+        ray exec ray_autoscale.yaml \
+        "python flow/flow/visualize/generate_graphs.py ${exp} 400 ${pen}" \
+        --start --stop --tmux --cluster-name nathan_graphs_${pen}_$(od -N 4 -t uL -An /dev/urandom | tr -d " ") &
+    done
+done
+
+
+
+
+
+nathan.experiments/trb_bottleneck_paper/09-04-2020/bottleneck_riiod_randompen_simpleagg_nolstm/bottleneck_riiod_randompen_simpleagg_nolstm/TD3_13_actor_lr=0.0001,critic_lr=0.001,n_step=5,prioritized_replay=False_2020-09-05_01-06-39a820ojqf
+
+
