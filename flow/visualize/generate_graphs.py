@@ -37,10 +37,10 @@ if __name__ == '__main__':
     print("exp cp path: ", exp_cp_path)
     print("cp: ", cp)
     print("penetration: ", penetration)
+    exp_title = '/'.join(exp_title.split('/')[1:])
     exp_title = exp_cp_path.replace('/', '_') + "_CP_" + str(cp)
     if penetration is not None:
         exp_title += f'_PEN_{penetration}'
-    exp_title = '/'.join(exp_title.split('/')[1:])
 
     # download checkpoints from AWS
     try:
