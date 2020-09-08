@@ -38,7 +38,7 @@ if __name__ == '__main__':
     print("cp: ", cp)
     print("penetration: ", penetration)
     exp_title_lst = exp_cp_path.split('/')
-    exp_title = '/'.join(exp_title_lst[0] + exp_title_lst[2:])
+    exp_title = '/'.join([exp_title_lst[0]] + exp_title_lst[2:])
     exp_title = exp_title.replace('/', '_') + "_CP_" + str(cp)
     if penetration is not None:
         exp_title += f'_PEN_{penetration}'
