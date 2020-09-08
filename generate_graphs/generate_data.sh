@@ -157,3 +157,19 @@ do
 done
 
 
+
+# try fine tuning
+gen_graph_universal_controller() {
+    for pen in 0.05 0.1 0.2 0.4
+    do
+        echo exp $2 cp $1 pen ${pen}
+
+        ray exec scripts/ray_autoscale.yaml \
+        "python flow/flow/visualize/generate_graphs.py $2 $1 ${pen}" \
+        --start --stop --tmux --cluster-name nathan_graphs_${pen}_$(od -N 4 -t uL -An /dev/urandom | tr -d " ") &
+    done  
+}
+
+gen_graph_universal_controller 588 09-07-2020/bottleneck_abcde_randompen_simpleagg_nolstm_finetune/bottleneck_abcde_randompen_simpleagg_nolstm_finetune/TD3_13_actor_lr=0.0001,critic_lr=0.001,n_step=5,prioritized_replay=False_2020-09-07_19-44-25nhu_qfh2
+gen_graph_universal_controller 686 09-07-2020/bottleneck_abcde_randompen_simpleagg_nolstm_finetune/bottleneck_abcde_randompen_simpleagg_nolstm_finetune/TD3_13_actor_lr=0.0001,critic_lr=0.001,n_step=5,prioritized_replay=False_2020-09-07_19-44-25nhu_qfh2
+
