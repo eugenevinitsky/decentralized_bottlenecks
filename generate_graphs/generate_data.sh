@@ -173,4 +173,3 @@ gen_graph_universal_controller() {
 gen_graph_universal_controller 588 09-07-2020/bottleneck_abcde_randompen_simpleagg_nolstm_finetune/bottleneck_abcde_randompen_simpleagg_nolstm_finetune/TD3_13_actor_lr=0.0001,critic_lr=0.001,n_step=5,prioritized_replay=False_2020-09-07_19-44-25nhu_qfh2
 gen_graph_universal_controller 686 09-07-2020/bottleneck_abcde_randompen_simpleagg_nolstm_finetune/bottleneck_abcde_randompen_simpleagg_nolstm_finetune/TD3_13_actor_lr=0.0001,critic_lr=0.001,n_step=5,prioritized_replay=False_2020-09-07_19-44-25nhu_qfh2
 
-python flow/visualize/generate_graphs.py 09-07-2020/bottleneck_abcde_randompen_simpleagg_nolstm_finetune/bottleneck_abcde_randompen_simpleagg_nolstm_finetune/TD3_13_actor_lr=0.0001,critic_lr=0.001,n_step=5,prioritized_replay=False_2020-09-07_19-44-25nhu_qfh2 588 0.05

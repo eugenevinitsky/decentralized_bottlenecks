@@ -63,6 +63,7 @@ class Data(object):
                 self.pretty_label += f', evaluated at {int(self.eval_penetration * 100)}% penetration'
 
             self.label_type, self.label_penetration = self.pretty_label.split(',')
+            self.label_eval_penetration = f'evaluated at {int(self.eval_penetration * 100)}% penetration'
         else:
             self.label = label
             self.pretty_label = self.label
@@ -121,6 +122,8 @@ def generate_outflow_inflow_graphs(data_rl, data_baseline):
             label = data.label_type
         if label_type == 'penetration':
             label = data.label_penetration
+        if label_type == 'eval_penetration':
+            label = data.label_eval_penetration
         plt.plot(data.unique_inflows, data.mean_outflows, linewidth=2, label=label) #, color='orange')
         if std:
             plt.fill_between(data.unique_inflows, data.mean_outflows - data.std_outflows,
@@ -142,11 +145,25 @@ def generate_outflow_inflow_graphs(data_rl, data_baseline):
                 if data.penetration == penetration and data.eval_penetration == eval_penetration:
                     plot_outflow_inflow(data, 'type')
             plot_outflow_inflow(data_baseline, 'type')
-            title = f'Inflow vs. Outflow for controllers trained at {int(penetration * 100)}% and evaluated at {int(eval_penetration * 100)}% penetration' \
+            title = f'Inflow vs. Outflow at {int(eval_penetration * 100)}% Penetration (Trained at {int(penetration * 100)}%)' \
                 if penetration != eval_penetration \
                 else f'Inflow vs. Outflow at {int(penetration * 100)}% Penetration'
             save_plt_figure(title,
                 f'outflow_inflow_{penetration}_eval_{eval_penetration}', save_dir='figs/outflow_inflow_all', legend_loc='lower right')
+
+    # inflow vs outflow transfers (0p1 eval all simple agg)
+    for penetration in [0.1]:
+        for state_type in ['simple no agg', 'simple agg', 'complex agg']:
+            init_plt_figure('Outflow' + r'$ \ \frac{vehs}{hour}$', 'Inflow' + r'$ \ \frac{vehs}{hour}$')
+            for eval_penetration in [0.05, 0.1, 0.2, 0.4]:
+                for data in data_rl:
+                    if data.penetration == penetration and data.eval_penetration == eval_penetration and data.type == state_type:
+                        plot_outflow_inflow(data, 'eval_penetration')
+            # plot_outflow_inflow(data_baseline, 'type')
+            title = f'Inflow vs. Outflow Transfer'
+            save_plt_figure(title,
+                f'outflow_inflow_{penetration}_eval_all_{state_type.replace(" ", "_")}', save_dir='figs/outflow_inflow_all', legend_loc='lower right')
+                
 
     # outflow as a function of inflow (by state type)
     for state_type in ['simple no agg', 'simple agg', 'complex agg']:
@@ -225,7 +242,8 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
     # complex agg: nolstm, cp2000
 
     for i, state_type in enumerate(['simple no agg', 'simple agg', 'complex agg']):
-        color = ['orange', 'blue', 'green'][i]
+        pretty_state = state_type.replace('simple no agg', 'minimal').replace('simple agg', 'minimal + aggregate').replace('complex agg', 'radar + aggregate')
+        color = ['#377eb8', '#ff7f00', '#4daf4a'][i]
         # first universal controller
         all_data = []
         for data in data_rl:
@@ -236,7 +254,7 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
         std_outflows = np.array([d.std_outflows[20] for d in all_data])
         penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
         idx = np.argsort(penetrations)
-        plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'universal {state_type}', color=color, linestyle='--')
+        plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'{pretty_state} (universal)', color=color, linestyle='--')
         # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
         #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
 
@@ -250,13 +268,13 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
         std_outflows = np.array([d.std_outflows[20] for d in all_data])
         penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
         idx = np.argsort(penetrations)
-        plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'fixed pen {state_type}', color=color)
+        plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'{pretty_state} (independent)', color=color)
         # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
         #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
 
-    save_plt_figure(f'Penetration vs. Outflow at 2400 Inflow (controllers trained on random penetration)',
+    save_plt_figure(f'Penetration vs. Outflow at 2400 Inflow',
         f'outflow2400_penetration_universal', save_dir='figs/outflow_inflow_random',
-        legend_loc='upper left')
+        legend_loc='lower right')
 
 
 
