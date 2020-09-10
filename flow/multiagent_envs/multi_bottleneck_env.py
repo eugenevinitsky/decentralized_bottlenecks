@@ -634,6 +634,19 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             lane_follower_speed += diff * [-1]
             is_leader_rl += diff * [-1]
             is_follow_rl += diff * [-1]
+
+        threshold = 20  # max radar distance in meters
+        for i in range(len(lane_headways)):
+            if abs(lane_headways[i]) > threshold:
+                lane_headways[i] = -1
+                lane_leader_speed[i] = -1
+                is_leader_rl[i] = -1
+        for i in range(len(lane_tailways)):
+            if abs(lane_tailways[i]) > threshold:
+                lane_tailways[i] = -1
+                lane_follower_speed[i] = -1
+                is_follow_rl[i] = -1
+
         lane_headways = np.asarray(lane_headways) / 1000
         lane_tailways = np.asarray(lane_tailways) / 1000
         lane_leader_speed = np.asarray(lane_leader_speed) / 100

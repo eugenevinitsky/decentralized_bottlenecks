@@ -41,7 +41,7 @@ if __name__ == '__main__':
     exp_title = '/'.join([exp_title_lst[0]] + exp_title_lst[2:])
     exp_title = exp_title.replace('/', '_') + "_CP_" + str(cp)
     if penetration is not None:
-        exp_title += f'_PEN_{penetration}'
+        exp_title += f'_PEN_{penetration}_RD'
 
     # download checkpoints from AWS
     try:
