@@ -176,7 +176,7 @@ gen_graph_universal_controller 686 09-07-2020/bottleneck_abcde_randompen_simplea
 
 
 
-# reduced radar env
+# reduced radar env & lane change
 for exp in 07-26-2020/seedsearch_o9di2_0p05/seedsearch_o9di2_0p05/TD3_15_seed=14_2020-07-26_19-50-079dxaty9f \
         07-26-2020/seedsearch_o9di2_0p1/seedsearch_o9di2_0p1/TD3_17_seed=16_2020-07-26_19-53-16cx7riof4 \
         07-26-2020/seedsearch_o9di2_0p2/seedsearch_o9di2_0p2/TD3_18_seed=17_2020-07-26_19-56-22fcx3lomy \
@@ -185,8 +185,25 @@ do
     for pen in 0.05 0.1 0.2 0.4
     do
         echo ${exp} ${pen}
-        ray exec ray_autoscale.yaml \
+        ray exec scripts/ray_autoscale.yaml \
         "python flow/flow/visualize/generate_graphs.py ${exp} 2000 ${pen}" \
         --start --stop --tmux --cluster-name nathan_graphs_${pen}_$(od -N 4 -t uL -An /dev/urandom | tr -d " ") &
+    done
+done
+
+
+
+# no congest nb
+for exp in 09-03-2020/bottleneck_pseot_cna_0p1_nc_nada/bottleneck_pseot_cna_0p1_nc_nada/TD3_13_actor_lr=0.0001,critic_lr=0.001,n_step=5,prioritized_replay=False_2020-09-03_23-17-08jclcpt7i
+do
+    for pen in 0.1
+    do
+        for cp in 400 800 1200 1600 2000
+        do
+            echo ${exp} ${pen} ${cp}
+            ray exec scripts/ray_autoscale.yaml \
+            "python flow/flow/visualize/generate_graphs.py ${exp} ${cp} ${pen}" \
+            --start --stop --tmux --cluster-name nathan_graphs_${pen}_$(od -N 4 -t uL -An /dev/urandom | tr -d " ") &
+        done
     done
 done

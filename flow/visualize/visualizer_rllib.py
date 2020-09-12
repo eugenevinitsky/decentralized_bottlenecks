@@ -68,10 +68,12 @@ def visualizer_rllib(args):
         else args.result_dir[:-1]
 
     config = get_rllib_pkl(result_dir)
-    for _ in range(100):
-        print('ENABLING LANE CHANGE')
-    config['env_config']['flow_params'] = config['env_config']['flow_params'].replace("\"lane_change_mode\": 0", "\"lane_change_mode\": \"1621\"")
-    config['env_config']['flow_params'] = config['env_config']['flow_params'].replace("\"lc_mode\": 0", "\"lc_mode\": 1621")
+
+    if False:
+        for _ in range(100):
+            print('ENABLING LANE CHANGE')
+        config['env_config']['flow_params'] = config['env_config']['flow_params'].replace("\"lane_change_mode\": 0", "\"lane_change_mode\": \"1621\"")
+        config['env_config']['flow_params'] = config['env_config']['flow_params'].replace("\"lc_mode\": 0", "\"lc_mode\": 1621")
 
     # Run on only one cpu for rendering purposes
     config['num_workers'] = 0

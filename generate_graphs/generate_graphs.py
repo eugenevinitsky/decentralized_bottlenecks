@@ -142,7 +142,7 @@ def generate_outflow_inflow_graphs(data_rl, data_baseline):
         for eval_penetration in [0.05, 0.1, 0.2, 0.4]:
             init_plt_figure('Outflow' + r'$ \ \frac{vehs}{hour}$', 'Inflow' + r'$ \ \frac{vehs}{hour}$')
             for data in data_rl:
-                if data.penetration == penetration and data.eval_penetration == eval_penetration:
+                if data.penetration == penetration and data.eval_penetration == eval_penetration and "RD" not in data.filename:
                     plot_outflow_inflow(data, 'type')
             plot_outflow_inflow(data_baseline, 'type')
             title = f'Inflow vs. Outflow at {int(eval_penetration * 100)}% Penetration (Trained at {int(penetration * 100)}%)' \
@@ -157,7 +157,7 @@ def generate_outflow_inflow_graphs(data_rl, data_baseline):
             init_plt_figure('Outflow' + r'$ \ \frac{vehs}{hour}$', 'Inflow' + r'$ \ \frac{vehs}{hour}$')
             for eval_penetration in [0.05, 0.1, 0.2, 0.4]:
                 for data in data_rl:
-                    if data.penetration == penetration and data.eval_penetration == eval_penetration and data.type == state_type:
+                    if data.penetration == penetration and data.eval_penetration == eval_penetration and data.type == state_type and "RD" not in data.filename:
                         plot_outflow_inflow(data, 'eval_penetration')
             # plot_outflow_inflow(data_baseline, 'type')
             title = f'Inflow vs. Outflow Transfer'
@@ -169,7 +169,7 @@ def generate_outflow_inflow_graphs(data_rl, data_baseline):
     for state_type in ['simple no agg', 'simple agg', 'complex agg']:
         init_plt_figure('Outflow' + r'$ \ \frac{vehs}{hour}$', 'Inflow' + r'$ \ \frac{vehs}{hour}$')
         for data in data_rl:
-            if data.type == state_type and not data.transferred:
+            if data.type == state_type and not data.transferred and "RD" not in data.filename:
                 plot_outflow_inflow(data, 'penetration')
         plot_outflow_inflow(data_baseline, 'penetration')
         save_plt_figure(f'Inflow vs. Outflow for {state_type} State Space',
@@ -181,7 +181,7 @@ def generate_outflow_inflow_graphs(data_rl, data_baseline):
             init_plt_figure('Outflow' + r'$ \ \frac{vehs}{hour}$', 'Inflow' + r'$ \ \frac{vehs}{hour}$')
             for eval_penetration in [0.05, 0.1, 0.2, 0.4]:
                 for data in data_rl:
-                    if additional in data.filename and data.type == state_type and data.random_pen and data.eval_penetration == eval_penetration:
+                    if additional in data.filename and data.type == state_type and data.random_pen and data.eval_penetration == eval_penetration and "RD" not in data.filename:
                         plot_outflow_inflow(data, 'penetration')
             plot_outflow_inflow(data_baseline, 'penetration')
             save_plt_figure('Inflow vs. Outflow for Universal Controller',
@@ -194,7 +194,7 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
         init_plt_figure('Outflow' + r'$ \ \frac{vehs}{hour}$', 'Penetration' + r'$ \ \%$')
         all_data = []
         for data in data_rl:
-            if data.type == state_type and not data.transferred:
+            if data.type == state_type and not data.transferred and "RD" not in data.filename:
                 all_data.append(data)
         assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
         mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
@@ -216,7 +216,7 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
     for state_type in ['simple no agg', 'simple agg', 'complex agg']:
         all_data = []
         for data in data_rl:
-            if data.type == state_type and not data.transferred:
+            if data.type == state_type and not data.transferred and "RD" not in data.filename:
                 all_data.append(data)
         assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
         mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
@@ -247,7 +247,7 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
         # first universal controller
         all_data = []
         for data in data_rl:
-            if data.type == state_type and data.penetration == -1:
+            if data.type == state_type and data.penetration == -1 and "RD" not in data.filename:
                 all_data.append(data)
         assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
         mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
@@ -261,7 +261,7 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
         # then concatenate the ones trained at random penetration
         all_data = []
         for data in data_rl:
-            if data.type == state_type and data.penetration == data.eval_penetration:
+            if data.type == state_type and data.penetration == data.eval_penetration and "RD" not in data.filename:
                 all_data.append(data)
         assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
         mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
@@ -276,6 +276,40 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
         f'outflow2400_penetration_universal', save_dir='figs/outflow_inflow_random',
         legend_loc='lower right')
 
+    ## reduced radar env (evaluated with 20meters cap)
+    init_plt_figure('Outflow' + r'$ \ \frac{vehs}{hour}$', 'Penetration' + r'$ \ \%$')
+
+    all_data = []
+    for data in data_rl:
+        if data.type == 'complex agg' and "RD_reduced_radar" in data.filename:
+            all_data.append(data)
+    assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
+    mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
+    std_outflows = np.array([d.std_outflows[20] for d in all_data])
+    penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
+    idx = np.argsort(penetrations)
+    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'20m radar', color='#377eb8', linestyle='--')
+    # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
+    #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
+
+    # then concatenate the ones trained at random penetration
+    all_data = []
+    for data in data_rl:
+        if data.type == 'complex agg' and data.penetration == data.eval_penetration and "RD" not in data.filename:
+            all_data.append(data)
+    assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
+    mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
+    std_outflows = np.array([d.std_outflows[20] for d in all_data])
+    penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
+    idx = np.argsort(penetrations)
+    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'radar', color='#377eb8')
+    # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
+    #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
+
+    save_plt_figure(f'Penetration vs. Outflow at 2400 Inflow for Reduced Radar',
+        f'outflow2400_reduced_radar', save_dir='figs/misc/',
+        legend_loc='lower right')
+
 
 
 
@@ -286,7 +320,7 @@ def get_outflows_at_3500_inflow(data_rl):
     for state_type in ['simple no agg', 'simple agg', 'complex agg']:
         all_data = []
         for data in data_rl:
-            if data.type == state_type and not data.transferred:
+            if data.type == state_type and not data.transferred and "RD" not in data.filename:
                 all_data.append(data)
         assert(list(set([d.unique_inflows[31] for d in all_data]))[0] == 3500.0)
         mean_outflows = np.array([d.mean_outflows[31] for d in all_data])
