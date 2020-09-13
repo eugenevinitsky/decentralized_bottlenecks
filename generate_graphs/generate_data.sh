@@ -207,3 +207,22 @@ do
         done
     done
 done
+
+
+
+
+
+# reduced radar env & lane change
+for i in 1 2 3 4
+do
+    for exp in 07-26-2020/seedsearch_o9di2_0p05/seedsearch_o9di2_0p05/TD3_15_seed=14_2020-07-26_19-50-079dxaty9f
+    do
+        for pen in 0.05
+        do
+            echo ${exp} ${pen}
+            ray exec scripts/ray_autoscale.yaml \
+            "python flow/flow/visualize/generate_graphs.py ${exp} 2000 ${pen}" \
+            --start --stop --tmux --cluster-name nathan_graphs_${pen}_$(od -N 4 -t uL -An /dev/urandom | tr -d " ") &
+        done
+    done
+done

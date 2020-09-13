@@ -329,7 +329,6 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
     all_data = []
     for data in data_rl:
         if data.type == 'complex agg' and "RD_lc" in data.filename:
-            print('hi')
             all_data.append(data)
     assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
     mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
@@ -411,7 +410,7 @@ if __name__ == '__main__':
 
     # generate graphs
     generate_outflow_inflow_graphs(data_rl, data_baseline)
-    # generate_outflow2400_penetration_graphs(data_rl, data_baseline)
+    generate_outflow2400_penetration_graphs(data_rl, data_baseline)
 
     # print stuff
-    # get_outflows_at_3500_inflow(data_rl)
+    get_outflows_at_3500_inflow(data_rl)
