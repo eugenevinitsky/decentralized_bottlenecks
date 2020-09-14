@@ -195,7 +195,9 @@ def generate_outflow_inflow_graphs(data_rl, data_baseline):
     init_plt_figure('Outflow' + r'$ \ \frac{vehs}{hour}$', 'Inflow' + r'$ \ \frac{vehs}{hour}$')
     for data in data_rl:
         if "RD_nc" in data.filename and f'CP_1600' in data.filename:
-            plot_outflow_inflow(data, 'RL without congest number')
+            plot_outflow_inflow(data, '10% RL on radar')
+        if data.type == 'complex agg' and "RD" not in data.filename and data.penetration == 0.1 and data.eval_penetration == 0.1:
+            plot_outflow_inflow(data, '10% RL on radar + aggregate')
     plot_outflow_inflow(data_baseline, 'type')
     title = f'Inflow vs. Outflow without Congest Number'
     save_plt_figure(title,
