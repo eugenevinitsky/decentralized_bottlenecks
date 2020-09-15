@@ -212,7 +212,6 @@ done
 
 
 # reduced radar env & lane change, without extra
-
 gen_graphs() {
     echo exp $1 pen $2
     ray exec scripts/ray_autoscale.yaml \
@@ -226,4 +225,17 @@ do
     gen_graphs 07-26-2020/seedsearch_o9di2_0p1/seedsearch_o9di2_0p1/TD3_17_seed=16_2020-07-26_19-53-16cx7riof4 0.1
     gen_graphs 07-26-2020/seedsearch_o9di2_0p2/seedsearch_o9di2_0p2/TD3_18_seed=17_2020-07-26_19-56-22fcx3lomy 0.2
     gen_graphs 07-26-2020/seedsearch_o9di2_0p4/seedsearch_o9di2_0p4/TD3_20_seed=19_2020-07-26_19-59-47qydk6h9_ 0.4
+done
+
+
+# reduced radar on universal
+for exp in 09-04-2020/bottleneck_etjza_randompen_complexagg_nolstm/bottleneck_etjza_randompen_complexagg_nolstm/TD3_15_actor_lr=0.0001,critic_lr=0.0001,n_step=5,prioritized_replay=False_2020-09-05_01-06-48vg3zcr39
+do
+    for pen in 0.05 0.1 0.2 0.4
+    do
+        echo ${exp} ${pen}
+        ray exec scripts/ray_autoscale.yaml \
+        "python flow/flow/visualize/generate_graphs.py ${exp} 2000 ${pen}" \
+        --start --stop --tmux --cluster-name nathan_graphs_${pen}_$(od -N 4 -t uL -An /dev/urandom | tr -d " ") &
+    done
 done

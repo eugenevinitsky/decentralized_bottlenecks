@@ -640,12 +640,12 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             for i in range(len(lane_headways)):
                 if abs(lane_headways[i]) > threshold:
                     lane_headways[i] = 140
-                    lane_leader_speed[i] = 0
+                    lane_leader_speed[i] = 5
                     is_leader_rl[i] = 0
             for i in range(len(lane_tailways)):
                 if abs(lane_tailways[i]) > threshold:
                     lane_tailways[i] = 140
-                    lane_follower_speed[i] = 0
+                    lane_follower_speed[i] = 5
                     is_follow_rl[i] = 0
 
         lane_headways = np.asarray(lane_headways) / 1000
