@@ -305,43 +305,43 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
     ## reduced radar env (evaluated with 20meters cap)
     init_plt_figure('Outflow' + r'$ \ \frac{vehs}{hour}$', 'Penetration' + r'$ \ \%$')
 
+    # all_data = []
+    # for data in data_rl:
+    #     if data.type == 'complex agg' and "RD_reduced_radar20" in data.filename:
+    #         all_data.append(data)
+    # assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
+    # mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
+    # std_outflows = np.array([d.std_outflows[20] for d in all_data])
+    # penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
+    # idx = np.argsort(penetrations)
+    # plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'20m radar', color='#377eb8', linestyle='--')
+    # # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
+    # #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
+
     all_data = []
     for data in data_rl:
-        if data.type == 'complex agg' and "RD_reduced_radar20" in data.filename:
+        if "RD_rr140fake5_uni" in data.filename: # and data.type == 'complex agg':
             all_data.append(data)
     assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
     mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
     std_outflows = np.array([d.std_outflows[20] for d in all_data])
     penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
     idx = np.argsort(penetrations)
-    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'20m radar', color='#377eb8', linestyle='--')
+    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'140m fake radar (speed 5, universal) + agg', color='#377eb8', linestyle=':')
     # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
     #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
 
+
     all_data = []
     for data in data_rl:
-        if data.type == 'complex agg' and "RD_reducedradar140fake2" in data.filename:
+        if data.type == 'complex agg' and "RD" not in data.filename and data.penetration == -1: #data.eval_penetration :
             all_data.append(data)
     assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
     mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
     std_outflows = np.array([d.std_outflows[20] for d in all_data])
     penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
     idx = np.argsort(penetrations)
-    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'140m radar fake speed0', color='#377eb8', linestyle=':')
-    # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
-    #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
-
-
-    all_data = []
-    for data in data_rl:
-        if data.type == 'complex agg' and data.penetration == data.eval_penetration and "RD" not in data.filename:
-            all_data.append(data)
-    assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
-    mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
-    std_outflows = np.array([d.std_outflows[20] for d in all_data])
-    penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
-    idx = np.argsort(penetrations)
-    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'radar', color='#377eb8')
+    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'radar+agg (universal)', color='#377eb8')
     # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
     #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
 
