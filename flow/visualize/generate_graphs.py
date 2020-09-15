@@ -41,7 +41,7 @@ if __name__ == '__main__':
     exp_title = '/'.join([exp_title_lst[0]] + exp_title_lst[2:])
     exp_title = exp_title.replace('/', '_') + "_CP_" + str(cp)
     if penetration is not None:
-        exp_title += f'_PEN_{penetration}_RD_reducedradar20fake'
+        exp_title += f'_PEN_{penetration}_RD_reducedradar140fake2'
 
     # download checkpoints from AWS
     try:
@@ -65,4 +65,4 @@ if __name__ == '__main__':
                             horizon=400, end_len=500, penetration=penetration)  
 
     aws_sync(output_path,
-            os.path.join("s3://nathan.experiments/trb_bottleneck_paper/graphs_random_final5/", exp_title))
+            os.path.join("s3://nathan.experiments/trb_bottleneck_paper/graphs_random_final6/", exp_title))
