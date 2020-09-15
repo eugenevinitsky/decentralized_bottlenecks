@@ -211,18 +211,19 @@ done
 
 
 
+# reduced radar env & lane change, without extra
 
-# reduced radar env & lane change
-for i in 1 2 3 4
+gen_graphs() {
+    echo exp $1 pen $2
+    ray exec scripts/ray_autoscale.yaml \
+    "python flow/flow/visualize/generate_graphs.py $1 2000 $2" \
+    --start --stop --tmux --cluster-name nathan_graphs_$2_$(od -N 4 -t uL -An /dev/urandom | tr -d " ") &
+}
+
+for i in 1 2
 do
-    for exp in 07-26-2020/seedsearch_o9di2_0p05/seedsearch_o9di2_0p05/TD3_15_seed=14_2020-07-26_19-50-079dxaty9f
-    do
-        for pen in 0.05
-        do
-            echo ${exp} ${pen}
-            ray exec scripts/ray_autoscale.yaml \
-            "python flow/flow/visualize/generate_graphs.py ${exp} 2000 ${pen}" \
-            --start --stop --tmux --cluster-name nathan_graphs_${pen}_$(od -N 4 -t uL -An /dev/urandom | tr -d " ") &
-        done
-    done
+    gen_graphs 07-26-2020/seedsearch_o9di2_0p05/seedsearch_o9di2_0p05/TD3_15_seed=14_2020-07-26_19-50-079dxaty9f 0.05
+    gen_graphs 07-26-2020/seedsearch_o9di2_0p1/seedsearch_o9di2_0p1/TD3_17_seed=16_2020-07-26_19-53-16cx7riof4 0.1
+    gen_graphs 07-26-2020/seedsearch_o9di2_0p2/seedsearch_o9di2_0p2/TD3_18_seed=17_2020-07-26_19-56-22fcx3lomy 0.2
+    gen_graphs 07-26-2020/seedsearch_o9di2_0p4/seedsearch_o9di2_0p4/TD3_20_seed=19_2020-07-26_19-59-47qydk6h9_ 0.4
 done

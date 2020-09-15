@@ -104,12 +104,12 @@ def init_plt_figure(ylabel, xlabel):
     plt.minorticks_on()
     plt.grid()
 
-def save_plt_figure(title, filename, save_dir='fig', legend_loc='lower left'):
+def save_plt_figure(title, filename, save_dir='fig', legend_loc='lower left', cols=1):
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     filename = filename.replace('.', 'p')
     print('Generated', filename)
-    plt.legend(loc=legend_loc)
+    plt.legend(loc=legend_loc, ncol=cols)
     plt.title(title.replace('simple no agg', 'Minimal').replace('simple agg', 'Minimal + Aggregate').replace('complex agg', 'Radar + Aggregate'))
     plt.savefig(fname=os.path.join(save_dir, filename))
 
@@ -163,6 +163,9 @@ def generate_outflow_inflow_graphs(data_rl, data_baseline):
                 for data in data_rl:
                     if data.penetration == penetration and data.eval_penetration == eval_penetration and data.type == state_type and "RD" not in data.filename:
                         plot_outflow_inflow(data, 'eval_penetration')
+            for data in data_baseline:
+                if data.label == 'human':
+                    plot_outflow_inflow(data, 'type')
             # plot_outflow_inflow(data_baseline, 'type')
             title = f'Inflow vs. Outflow Transfer'
             save_plt_figure(title,
@@ -222,6 +225,7 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
         plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=pretty_state) #, color='orange')
         plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
                          mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
+        plt.plot([5, 10, 20, 40], [1500, 1500, 1500, 1500], linewidth=2, label='human')
 
         save_plt_figure(f'Penetration vs. Outflow at 2400 Inflow for {state_type} State Space',
             f'outflow2400_penetration_{state_type.replace(" ", "_")}', save_dir='figs/outflow2400_penetration',
@@ -244,6 +248,9 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
         plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=pretty_state) #, color='orange')
         plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
                          mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
+
+    plt.plot([5, 10, 20, 40], [1500, 1500, 1500, 1500], linewidth=2, label='human')
+    plt.ylim(bottom=1220)
 
     save_plt_figure('Penetration vs. Outflow at 2400 Inflow',
         f'outflow2400_penetration_all', save_dir='figs/outflow2400_penetration',
@@ -284,20 +291,23 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
         std_outflows = np.array([d.std_outflows[20] for d in all_data])
         penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
         idx = np.argsort(penetrations)
-        plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'{pretty_state} (independent)', color=color)
+        plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'{pretty_state} (separate)', color=color)
         # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
         #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
 
+    plt.plot([5, 10, 20, 40], [1500, 1500, 1500, 1500], linewidth=2, label='human', color='#f781bf')
+    plt.ylim(bottom=1220)
+
     save_plt_figure(f'Penetration vs. Outflow at 2400 Inflow',
         f'outflow2400_penetration_universal', save_dir='figs/outflow_inflow_random',
-        legend_loc='lower right')
+        legend_loc='lower right', cols=2)
 
     ## reduced radar env (evaluated with 20meters cap)
     init_plt_figure('Outflow' + r'$ \ \frac{vehs}{hour}$', 'Penetration' + r'$ \ \%$')
 
     all_data = []
     for data in data_rl:
-        if data.type == 'complex agg' and "RD_reduced_radar" in data.filename:
+        if data.type == 'complex agg' and "RD_reduced_radar20" in data.filename:
             all_data.append(data)
     assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
     mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
@@ -307,6 +317,20 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
     plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'20m radar', color='#377eb8', linestyle='--')
     # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
     #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
+
+    all_data = []
+    for data in data_rl:
+        if data.type == 'complex agg' and "RD_reducedradar140fake" in data.filename:
+            all_data.append(data)
+    assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
+    mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
+    std_outflows = np.array([d.std_outflows[20] for d in all_data])
+    penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
+    idx = np.argsort(penetrations)
+    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'140m radar fake', color='#377eb8', linestyle=':')
+    # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
+    #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
+
 
     all_data = []
     for data in data_rl:
@@ -320,6 +344,9 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
     plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'radar', color='#377eb8')
     # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
     #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
+
+    plt.plot([5, 10, 20, 40], [1500, 1500, 1500, 1500], linewidth=2, label='human', color='#f781bf')
+    plt.ylim(bottom=1220)
 
     save_plt_figure(f'Penetration vs. Outflow at 2400 Inflow for Reduced Radar',
         f'outflow2400_reduced_radar_eval_complex_agg', save_dir='figs/misc/',
@@ -353,6 +380,9 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
     plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'no lane change', color='#377eb8')
     # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
     #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
+
+    plt.plot([5, 10, 20, 40], [1500, 1500, 1500, 1500], linewidth=2, label='human', color='#f781bf')
+    plt.ylim(bottom=1220)
 
     save_plt_figure(f'Penetration vs. Outflow at 2400 Inflow for Lane Change',
         f'outflow2400_lane_change_eval_complex_agg', save_dir='figs/misc/',
