@@ -320,14 +320,14 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
 
     all_data = []
     for data in data_rl:
-        if "RD_rr50fake5_uni" in data.filename: # and data.type == 'complex agg':
+        if "RD_rr20_fake5_uni" in data.filename: # and data.type == 'complex agg':
             all_data.append(data)
     assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
     mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
     std_outflows = np.array([d.std_outflows[20] for d in all_data])
     penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
     idx = np.argsort(penetrations)
-    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'50m fake radar (speed 5, universal) + agg', color='#377eb8', linestyle=':')
+    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'50m non fake radar (speed -1, universal) + agg', color='#377eb8', linestyle=':')
     # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
     #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
 
