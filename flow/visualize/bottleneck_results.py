@@ -64,7 +64,7 @@ def run_bottleneck(checkpoint_dir, inflow_rate, num_trials, gen_emission, render
 
     config = get_rllib_pkl(checkpoint_dir)
 
-    if False:
+    if True:
         for _ in range(100):
             print('ENABLING LANE CHANGE')
         config['env_config']['flow_params'] = config['env_config']['flow_params'].replace("\"lane_change_mode\": 0", "\"lane_change_mode\": \"1621\"")

@@ -635,7 +635,7 @@ class MultiBottleneckEnv(MultiEnv, DesiredVelocityEnv):
             is_leader_rl += diff * [-1]
             is_follow_rl += diff * [-1]
 
-        if True:
+        if False:
             threshold = 20  # max radar distance in meters
             fake = True
             for i in range(len(lane_headways)):
