@@ -20,7 +20,6 @@ mpl.rc('ytick', labelsize=13)  # fontsize of the tick labels
 mpl.rc('legend', fontsize=13)  # legend fontsize
 mpl.rc('figure', titlesize=20)  # fontsize of the figure title
 
-
 class Data(object):
     def __init__(self, filename, label=None):
         self.filename = filename
@@ -115,11 +114,22 @@ def save_plt_figure(title, filename, save_dir='fig', legend_loc='lower left', co
 
 def generate_outflow_inflow_graphs(data_rl, data_baseline):
     """Outflow as a function of inflow."""
-    def plot_outflow_inflow(data, label_type, std=True):
+    def plot_outflow_inflow(data, label_type, std=True, baseline=False, cut1200=False):
         if isinstance(data, list):
             for d in data:
-                plot_outflow_inflow(d, label_type, std)
+                plot_outflow_inflow(d, label_type, std, baseline, cut1200)
             return
+
+        unique_inflows = np.copy(data.unique_inflows)
+        mean_outflows = np.copy(data.mean_outflows)
+        std_outflows = np.copy(data.std_outflows)
+
+        if cut1200:
+            while unique_inflows[0] < 1200:
+                unique_inflows = unique_inflows[1:]
+                mean_outflows = mean_outflows[1:]
+                std_outflows = std_outflows[1:]
+
         if label_type == 'type':
             label = data.label_type
         elif label_type == 'penetration':
@@ -128,10 +138,16 @@ def generate_outflow_inflow_graphs(data_rl, data_baseline):
             label = data.label_eval_penetration
         else:
             label = label_type
-        plt.plot(data.unique_inflows, data.mean_outflows, linewidth=2, label=label) #, color='orange')
+        if baseline:
+            print('before', label)
+            label = ("$\\it{" + label + "}$").replace("%", "\\%").replace(" ", "\\ ")
+            print('after', label)   
+            plt.plot(unique_inflows, mean_outflows, linewidth=2, label=label, linestyle="--") #, color='orange')
+        else:
+            plt.plot(unique_inflows, mean_outflows, linewidth=2, label=label) #, color='orange')
         if std:
-            plt.fill_between(data.unique_inflows, data.mean_outflows - data.std_outflows,
-                             data.mean_outflows + data.std_outflows, alpha=0.25) #, color='orange')
+            plt.fill_between(unique_inflows, mean_outflows - std_outflows,
+                             mean_outflows + std_outflows, alpha=0.25) #, color='orange')
 
     # baseline
     init_plt_figure('Outflow' + r'$ \ \frac{vehs}{hour}$', 'Inflow' + r'$ \ \frac{vehs}{hour}$')
@@ -177,8 +193,8 @@ def generate_outflow_inflow_graphs(data_rl, data_baseline):
         init_plt_figure('Outflow' + r'$ \ \frac{vehs}{hour}$', 'Inflow' + r'$ \ \frac{vehs}{hour}$')
         for data in data_rl:
             if data.type == state_type and not data.transferred and "RD" not in data.filename:
-                plot_outflow_inflow(data, 'penetration')
-        plot_outflow_inflow(data_baseline, 'penetration')
+                plot_outflow_inflow(data, 'penetration', cut1200=False)
+        plot_outflow_inflow(data_baseline, 'penetration', baseline=True, cut1200=False)
         save_plt_figure(f'Inflow vs. Outflow for {state_type} State Space',
             f'outflow_inflow_{state_type.replace(" ", "_")}', save_dir='figs/outflow_inflow_no_transfer', legend_loc='lower right')
 
