@@ -228,7 +228,7 @@ do
 done
 
 
-# reduced radar on universal
+# reduced radar or lane change on universal
 for exp in 09-04-2020/bottleneck_etjza_randompen_complexagg_nolstm/bottleneck_etjza_randompen_complexagg_nolstm/TD3_15_actor_lr=0.0001,critic_lr=0.0001,n_step=5,prioritized_replay=False_2020-09-05_01-06-48vg3zcr39
 do
     for pen in 0.05 0.1 0.2 0.4

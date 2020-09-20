@@ -327,7 +327,7 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
     std_outflows = np.array([d.std_outflows[20] for d in all_data])
     penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
     idx = np.argsort(penetrations)
-    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'radar+agg (separate)', color='#ff7f00')
+    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'radar + aggregate (separate)', color='#ff7f00')
     # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
     #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
 
@@ -340,7 +340,7 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
     std_outflows = np.array([d.std_outflows[20] for d in all_data])
     penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
     idx = np.argsort(penetrations)
-    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'20m radar (separate) + agg', color='#ff7f00', linestyle='--')
+    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'20m radar + aggregate (separate)', color='#ff7f00', linestyle='--')
     # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
     #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
 
@@ -353,7 +353,7 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
     std_outflows = np.array([d.std_outflows[20] for d in all_data])
     penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
     idx = np.argsort(penetrations)
-    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'140m radar (separate) + agg', color='#ff7f00', linestyle=':')
+    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'140m radar + aggregate (separate)', color='#ff7f00', linestyle=':')
     # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
     #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
 
@@ -366,7 +366,7 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
     std_outflows = np.array([d.std_outflows[20] for d in all_data])
     penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
     idx = np.argsort(penetrations)
-    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'radar+agg (universal)', color='#377eb8')
+    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'radar + aggregate (universal)', color='#377eb8')
     # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
     #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
 
@@ -379,7 +379,7 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
     std_outflows = np.array([d.std_outflows[20] for d in all_data])
     penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
     idx = np.argsort(penetrations)
-    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'20m radar (universal) + agg', color='#377eb8', linestyle='--')
+    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'20m radar + aggregate (universal)', color='#377eb8', linestyle='--')
     # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
     #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
 
@@ -395,19 +395,6 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
 
     all_data = []
     for data in data_rl:
-        if data.type == 'complex agg' and "RD_lc" in data.filename:
-            all_data.append(data)
-    assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
-    mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
-    std_outflows = np.array([d.std_outflows[20] for d in all_data])
-    penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
-    idx = np.argsort(penetrations)
-    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'lane change', color='#377eb8', linestyle='--')
-    # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
-    #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
-
-    all_data = []
-    for data in data_rl:
         if data.type == 'complex agg' and data.penetration == data.eval_penetration and "RD" not in data.filename:
             all_data.append(data)
     assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
@@ -415,12 +402,53 @@ def generate_outflow2400_penetration_graphs(data_rl, data_baseline):
     std_outflows = np.array([d.std_outflows[20] for d in all_data])
     penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
     idx = np.argsort(penetrations)
-    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'no lane change', color='#377eb8')
+    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'lane changing disabled (separate)', color='#377eb8')
     # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
     #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
 
+    all_data = []
+    for data in data_rl:
+        if data.type == 'complex agg' and "RD_lc" in data.filename and "RD_lc_uni" not in data.filename:
+            all_data.append(data)
+    assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
+    mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
+    std_outflows = np.array([d.std_outflows[20] for d in all_data])
+    penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
+    idx = np.argsort(penetrations)
+    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'lane changing enabled (separate)', color='#377eb8', linestyle='--')
+    # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
+    #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
+
+
+    all_data = []
+    for data in data_rl:
+        if data.type == 'complex agg' and data.penetration == -1 and "RD" not in data.filename:
+            all_data.append(data)
+    assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
+    mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
+    std_outflows = np.array([d.std_outflows[20] for d in all_data])
+    penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
+    idx = np.argsort(penetrations)
+    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'lane changing disabled (universal)', color='#ff7f00')
+    # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
+    #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
+
+    all_data = []
+    for data in data_rl:
+        if data.type == 'complex agg' and "RD_lc_uni" in data.filename:
+            all_data.append(data)
+    assert(list(set([d.unique_inflows[20] for d in all_data]))[0] == 2400.0)
+    mean_outflows = np.array([d.mean_outflows[20] for d in all_data])
+    std_outflows = np.array([d.std_outflows[20] for d in all_data])
+    penetrations = np.array([100 * d.eval_penetration for d in all_data], dtype=np.int)
+    idx = np.argsort(penetrations)
+    plt.plot(penetrations[idx], mean_outflows[idx], linewidth=2, label=f'lane changing enabled (universal)', color='#ff7f00', linestyle='--')
+    # plt.fill_between(penetrations[idx], mean_outflows[idx] - std_outflows[idx],
+    #                     mean_outflows[idx] + std_outflows[idx], alpha=0.25) #, color='orange')
+
+
     plt.plot([5, 10, 20, 40], [1500, 1500, 1500, 1500], linewidth=2, label='human', color='#f781bf')
-    plt.ylim(bottom=1220)
+    plt.ylim(bottom=1120)
 
     save_plt_figure(f'Penetration vs. Outflow at 2400 Inflow for Lane Change',
         f'outflow2400_lane_change_eval_complex_agg', save_dir='figs/misc/',
