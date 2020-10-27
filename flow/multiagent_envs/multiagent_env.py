@@ -1,20 +1,23 @@
+"""Environment for training multi-agent experiments."""
+
 from copy import deepcopy
 import numpy as np
 import random
 import traceback
-from gym.spaces import Box
+from gym.spaces import Box, Dict
 
 from traci.exceptions import FatalTraCIError
 from traci.exceptions import TraCIException
 
 from ray.rllib.env import MultiAgentEnv
 
+from flow.controllers.rlcontroller import RLController
 from flow.envs.base_env import Env
 from flow.utils.exceptions import FatalFlowError
 
 
 class MultiEnv(MultiAgentEnv, Env):
-    """Multi-agent version of base env. See parent class for info"""
+    """Multi-agent version of base env. See parent class for info."""
 
     def step(self, rl_actions):
         """Advance the environment by one step.
@@ -32,23 +35,31 @@ class MultiEnv(MultiAgentEnv, Env):
 
         Parameters
         ----------
-        rl_actions: numpy ndarray
+        rl_actions : array_like
             an list of actions provided by the rl algorithm
 
         Returns
         -------
-        observation: dict of numpy ndarrays
+        observation : dict of array_like
             agent's observation of the current environment
-        reward: dict of floats
+        reward : dict of floats
             amount of reward associated with the previous state/action pair
-        done: dict of bools
+        done : dict of bool
             indicates whether the episode has ended
-        info: dict
+        info : dict
             contains other diagnostic information from the previous action
         """
+        self.step_counter += 1
+        self.left_av_list = []
+        done = {}
+        states = {}
+        reward = {}
+
         for _ in range(self.env_params.sims_per_step):
+            self.observed_rl_cars.update(self.k.vehicle.get_rl_ids())
+            if self.time_counter < self.env_params.sims_per_step * self.env_params.warmup_steps:
+                self.observed_cars.update(self.k.vehicle.get_ids())
             self.time_counter += 1
-            self.step_counter += 1
 
             # perform acceleration actions for controlled human-driven vehicles
             if len(self.k.vehicle.get_controlled_ids()) > 0:
@@ -90,6 +101,11 @@ class MultiEnv(MultiAgentEnv, Env):
             self.additional_command()
 
             # advance the simulation in the simulator by one step
+
+            left_cars = self.k.vehicle.get_arrived_ids()
+            left_avs = [veh_id for veh_id in left_cars if veh_id in self.observed_rl_cars]
+            self.left_av_list.extend(left_avs)
+            self.left_av_time_dict.update({left_av: self.time_counter * self.sim_params.sim_step for left_av in left_avs})
             self.k.simulation.simulation_step()
 
             # store new observations in the vehicles and traffic lights class
@@ -104,22 +120,48 @@ class MultiEnv(MultiAgentEnv, Env):
 
             # stop collecting new simulation steps if there is a collision
             if crash:
+                self.crash_count += 1
+                print('there are {} crashes already'.format(self.crash_count))
                 break
 
             # render a frame
             self.render()
 
-        states = self.get_state()
-        done = {key: key in self.k.vehicle.get_arrived_ids()
-                for key in states.keys()}
+            for rl_id in self.k.vehicle.get_arrived_rl_ids():
+                done[rl_id] = True
+                reward[rl_id] = 0
+                if isinstance(self.observation_space, Dict):
+                    states[rl_id] = self.observation_space.sample()
+                else:
+                    states[rl_id] = np.zeros(self.observation_space.shape[0])
+
+        states.update(self.get_state(rl_actions))
         if crash:
+            print(
+                "**********************************************************\n"
+                "**********************************************************\n"
+                "**********************************************************\n"
+                "WARNING: THERE WAS A COLLISION.\n"
+                "**********************************************************\n"
+                "**********************************************************\n"
+                "**********************************************************"
+            )
+
+        if (self.time_counter >= self.env_params.sims_per_step *
+                (self.env_params.warmup_steps + self.env_params.horizon)):
+            # TODO(@ev) clean this up
             done['__all__'] = True
         else:
             done['__all__'] = False
-        infos = {key: {} for key in states.keys()}
+        infos = {key: {'id': key} for key in states.keys()}
 
-        clipped_actions = self.clip_actions(rl_actions)
-        reward = self.compute_reward(clipped_actions, fail=crash)
+        # compute the reward
+        if self.env_params.clip_actions:
+            clipped_actions = self.clip_actions(rl_actions)
+            reward.update(self.compute_reward(clipped_actions, fail=crash))
+        else:
+            reward.update(self.compute_reward(rl_actions, fail=crash))
+
 
         return states, reward, done, infos
 
@@ -135,16 +177,26 @@ class MultiEnv(MultiAgentEnv, Env):
 
         Returns
         -------
-        observation: dict of numpy ndarrays
+        observation : dict of array_like
             the initial observation of the space. The initial reward is assumed
             to be zero.
         """
+
+        self.observed_rl_cars = set()
+        self.observed_cars = set()
+        self.left_av_time_dict = {}
+        # set rendering to true
+        self.num_resets += 1
+        if self.num_resets > 0 and self.should_render:
+            self.sim_params.render = True
+            # got to restart the simulation to make it actually display anything
+            self.restart_simulation(self.sim_params)
+
         # reset the time counter
         self.time_counter = 0
 
         # warn about not using restart_instance when using inflows
-        if len(self.scenario.net_params.inflows.get()) > 0 and \
-                not self.sim_params.restart_instance:
+        if len(self.net_params.inflows.get()) > 0:
             print(
                 "**********************************************************\n"
                 "**********************************************************\n"
@@ -169,7 +221,7 @@ class MultiEnv(MultiAgentEnv, Env):
             self.restart_simulation(self.sim_params)
 
         # perform shuffling (if requested)
-        elif self.scenario.initial_config.shuffle:
+        elif self.initial_config.shuffle:
             self.setup_initial_state()
 
         # clear all vehicles from the network and the vehicles class
@@ -231,15 +283,21 @@ class MultiEnv(MultiAgentEnv, Env):
         if self.sim_params.render:
             self.k.vehicle.update_vehicle_colors()
 
+        if self.simulator == 'traci':
+            initial_ids = self.k.kernel_api.vehicle.getIDList()
+        else:
+            initial_ids = self.initial_ids
+
         # check to make sure all vehicles have been spawned
-        if len(self.initial_ids) > self.k.vehicle.num_vehicles:
-            missing_vehicles = list(
-                set(self.initial_ids) - set(self.k.vehicle.get_ids()))
+        if len(self.initial_ids) > len(initial_ids):
+            missing_vehicles = list(set(self.initial_ids) - set(initial_ids))
             msg = '\nNot enough vehicles have spawned! Bad start?\n' \
                   'Missing vehicles / initial state:\n'
             for veh_id in missing_vehicles:
                 msg += '- {}: {}\n'.format(veh_id, self.initial_state[veh_id])
             raise FatalFlowError(msg=msg)
+
+        observation = self.get_state()
 
         # perform (optional) warm-up steps before training
         for _ in range(self.env_params.warmup_steps):
@@ -248,22 +306,22 @@ class MultiEnv(MultiAgentEnv, Env):
         # render a frame
         self.render(reset=True)
 
-        return self.get_state()
+        return observation
 
     def clip_actions(self, rl_actions=None):
-        """Clip the actions passed from the RL agent
+        """Clip the actions passed from the RL agent.
 
         If no actions are provided at any given step, the rl agents default to
         performing actions specified by sumo.
 
         Parameters
         ----------
-        rl_actions: list or numpy ndarray
+        rl_actions : array_like
             list of actions provided by the RL algorithm
 
         Returns
         -------
-        rl_clipped: np.ndarray (float)
+        rl_clipped : array_like
             The rl_actions clipped according to the box
         """
         # ignore if no actions are issued
@@ -287,7 +345,7 @@ class MultiEnv(MultiAgentEnv, Env):
 
         Parameters
         ----------
-        rl_actions: dict of list or numpy ndarray
+        rl_actions : dict of array_like
             dict of list of actions provided by the RL algorithm
         """
         # ignore if no actions are issued

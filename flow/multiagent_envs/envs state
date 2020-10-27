@@ -1,0 +1,46 @@
+
+# super simple env
+- rl abs position
+- time since rl stopped
+- congest number (nb of vehs on edge 4)
+
+# simple env
+- states from super simple env
+- duration (?)
+- rl speed
+- leader speed 
+- rl headway
+- aggregate_statistics (IF aggregate_info) #new
+
+# complex env
+- rl veh_statistics
+- rl state_util
+- rl get_signal (IF communicate)
+- aggregate_statistics (IF aggregate_info)
+
+
+
+# veh_statistics(rl_id)
+- rl speed
+- rl edge
+- rl lane
+- rl headway
+- rl position on edge
+- rl absolute position 
+- time counter
+- time since stopped
+
+# state_util(rl_id)
+- headway
+- tailway
+- leader speed
+- follower speed
+- leader is rl?
+- follower is rl?
+all that for each lane, filled with -1 if not enough (but only filled at end?)
+
+# aggregate_statistics()
+- time step
+- outflow over last 10 seconds (always 0 with reroute)
+- number of vehicles in congested area (edge 4)
+- average velocities of edges 3, 4, 5

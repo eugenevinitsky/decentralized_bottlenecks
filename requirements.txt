@@ -1,5 +1,5 @@
 gym==0.10.5
-numpy==1.14.0
+numpy==1.17.1
 scipy==1.1.0
 lxml==4.2.4
 pyprind==2.11.2
@@ -13,7 +13,11 @@ cloudpickle==0.5.3
 pyglet==1.3.2
 matplotlib==3.0.0
 imutils==0.5.1
-
-# theano==0.8.2 # for rllab
-# lasagne # for rllab
-# tensorflow==1.8.0
+numpydoc
+ray==0.8.0
+tabulate
+tensorflow==1.15.0
+tensorflow-probability==0.7.0
+pandas
+opencv-python
+lz4
