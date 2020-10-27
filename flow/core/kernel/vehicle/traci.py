@@ -987,22 +987,22 @@ class TraCIVehicle(KernelVehicle):
             self.remove_observed(veh_id)
 
 
-        # for veh_id in self.get_ids():
-        #     if veh_id == 'flow_0.194':
-        #         self._multi_lane_headways()
-        #         self.set_color(veh_id=veh_id, color=RED)
-        #         leader_ids = self.get_lane_leaders(veh_id).copy()
-        #         follower_ids = self.get_lane_followers(veh_id).copy()
-        #         for vid in leader_ids + follower_ids:
-        #             if vid and vid != -1:
-        #                 self.set_color(veh_id=vid, color=CYAN)
-        #         lane = self.get_lane(veh_id)
-        #         vid1 = leader_ids[lane]
-        #         vid2 = follower_ids[lane]
-        #         if vid1 and vid1 != -1:
-        #             self.set_color(veh_id=vid1, color=(0,255,0))
-                # if vid2 and vid2 != -1:
-                #     self.set_color(veh_id=vid2, color=(0,255,0))
+        for veh_id in self.get_ids():
+            if veh_id == 'flow_0.194' or veh_id == 'flow_0.231':
+                self._multi_lane_headways()
+                self.set_color(veh_id=veh_id, color=RED)
+                leader_ids = self.get_lane_leaders(veh_id).copy()
+                follower_ids = self.get_lane_followers(veh_id).copy()
+                for vid in leader_ids + follower_ids:
+                    if vid and vid != -1:
+                        self.set_color(veh_id=vid, color=CYAN)
+                lane = self.get_lane(veh_id)
+                vid1 = leader_ids[lane]
+                vid2 = follower_ids[lane]
+                if vid1 and vid1 != -1:
+                    self.set_color(veh_id=vid1, color=(0,255,0))
+                if vid2 and vid2 != -1:
+                    self.set_color(veh_id=vid2, color=(0,255,0))
 
 
     def get_color(self, veh_id):
