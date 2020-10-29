@@ -15,3 +15,17 @@ To run the experiments used to generate the paper, follow the instructions to se
 `./scripts/run_bottleneck_exps.sh` to launch a set of AWS scripts. 
 
 Alternately, you can generate all the graphs from the paper and process them by running XXXX.
+
+## todo
+
+branches: 
+- old_working_commit (TODO rename into master?) -> training, visualize exps
+- generate_graphs -> generate graphs for paper
+
+```
+python flow/examples/rllib/multiagent_exps/multiagent_bottleneck.py expname --num_iters 2000 --checkpoint_freq 200 --av_frac 0.1 \
+    --num_samples 1 --rollout_scale_factor 1.0 --horizon 400 --low_inflow 2400 --high_inflow 2400 --simple_env --aggregate_info \
+    --sim_step 0.5 --sims_per_step 5 --reroute_on_exit \
+    --grid_search --use_s3 --td3
+```
+
