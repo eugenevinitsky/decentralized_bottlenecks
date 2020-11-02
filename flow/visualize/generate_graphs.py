@@ -26,7 +26,7 @@ if __name__ == '__main__':
     
     
     if len(sys.argv) <= 3:
-        print('usage: generate_graphs.py exp_cp_path cp_number [new_penetration_fraction]')
+        print('usage: generate_graphs.py exp_cp_path cp_number [evaluation penetration]')
     exp_cp_path = sys.argv[1]
     cp = sys.argv[2]
     if len(sys.argv) >= 4:
