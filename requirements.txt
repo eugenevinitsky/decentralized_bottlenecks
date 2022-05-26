@@ -16,7 +16,7 @@ imutils==0.5.1
 numpydoc
 ray==0.8.0
 tabulate
-tensorflow==1.15.0
+tensorflow==2.7.2
 tensorflow-probability==0.7.0
 pandas
 opencv-python
